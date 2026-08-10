@@ -241,18 +241,23 @@ function sliderMethods:SetControlEnabled(enabled, disabledTooltip)
     lib:SetControlTooltipEnabled(self, enabled, disabledTooltip)
 end
 
-lib:RegisterControlType("slider", createSlider, sliderMethods)
-
-function lib:CreateSlider(parent, options)
-    options = options or {}
-
-    local slider = self:CreateControl("slider", parent, options)
-
+local function initializeSlider(slider, options)
     slider:SetValue(options.value or options.minValue)
     slider:SetControlEnabled(
         options.enabled ~= false,
         options.disabledTooltip
     )
+end
 
-    return slider
+lib:RegisterControlType(
+    "slider",
+    createSlider,
+    sliderMethods,
+    initializeSlider
+)
+
+function lib:CreateSlider(parent, options)
+    options = options or {}
+
+    return self:CreateControl("slider", parent, options)
 end

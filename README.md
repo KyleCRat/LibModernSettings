@@ -2,9 +2,9 @@
 
 LibModernSettings provides consistent modern controls for custom World of
 Warcraft Settings canvas pages. It owns control construction, Blizzard art,
-value synchronization, and enabled or disabled tooltip behavior. The consuming
-addon continues to own SavedVariables, category registration, page layout, and
-runtime callbacks.
+value synchronization, enabled or disabled tooltip behavior, and optional
+canvas layout and table geometry. The consuming addon continues to own
+SavedVariables, category registration, page composition, and runtime callbacks.
 
 ## Embedding
 
@@ -38,18 +38,88 @@ operations apply. `SetControlEnabled(false, reason)` disables the complete
 input and shows `reason` from every registered tooltip target. Re-enabling the
 control restores its normal tooltip.
 
-## Extending the Library
+## Canvas Layouts
 
-Additional control types register a factory and a method prototype:
+`CreateCanvasLayout(parent, options)` measures `options.measurementFrame` and
+creates a per-page layout object. Geometry is never stored in shared mutable
+library state, so independently embedded addons cannot overwrite one another's
+page measurements.
+
+Every page reserves the same scrollbar area, whether or not it scrolls. Default
+geometry is 8px left padding, an 8px scrollbar gap, a 17px scrollbar
+reservation, a 15px column gap, a 16px indent, and 8px table padding. Override
+defaults through `options.style` when a consumer intentionally needs a distinct
+visual system.
+
+The root flow is full width. `BeginColumns()` creates independent half-width
+flows, allowing one column to contain more controls without inserting empty
+rows into the other:
 
 ```lua
-ModernSettings:RegisterControlType("example", factory, methods)
+local layout = ModernSettings:CreateCanvasLayout(pageFrame, {
+    measurementFrame = SettingsPanel:GetSettingsCanvas(),
+    scrollable = true,
+})
+local root = layout:GetRootFlow()
+
+layout:AddHeader("Example", "Example settings page.")
+root:AddControl("checkbox", {
+    label = "Full-width setting",
+    onChanged = onChanged,
+})
+
+local columns = root:BeginColumns()
+
+columns.left:AddSection("Left")
+columns.left:AddControl("slider", sliderOptions)
+columns.right:AddSection("Right")
+columns.right:AddControl("dropdown", dropdownOptions)
+columns:Finish()
+
+layout:Finalize()
+```
+
+Flows provide `AddControl`, `AddText`, `AddSection`, `AddCustom`, `AddFrame`,
+`AddSpacer`, and nested `BeginColumns`. Pass `indent = 1` to a placement table
+for standard sub-input indentation. Custom regions keep complex addon-owned
+positioning local without returning the whole page to absolute coordinates.
+
+Spacing follows CSS-style terminology: `padding*` is internal container space,
+`marginTop` and `marginBottom` surround one placed element, and `rowGap` or
+`columnGap` separate sibling items or tracks. `Columns:Finish()` accepts
+`marginBottom` when the completed column region needs additional space below it.
+
+Scrollable layouts use `WowScrollBox` with `MinimalScrollBar`. `Finalize()`
+derives the content height from the completed flow and refreshes the ScrollBox.
+
+## Settings Tables
+
+`CreateSettingsTable(parent, options)` creates a fixed table scaffold with 8px
+left and right padding and alternating row backgrounds. Columns can use fixed
+`width` values or divide the remaining space with `weight` values. The table
+owns header, row, cell, padding, and stripe geometry; the addon owns row data,
+tooltips, callbacks, and setting persistence.
+
+Use `AddHeaderText`, `AddRow`, `row:AddText`, `row:AddControl`, and
+`row:GetCell` to populate it. Add the completed table frame to a flow with
+`flow:AddFrame(tableView:GetFrame())`.
+
+## Extending the Library
+
+Additional control types register a factory, method prototype, and optional
+initializer:
+
+```lua
+ModernSettings:RegisterControlType("example", factory, methods, initializer)
 local control = ModernSettings:CreateControl("example", parent, options)
 ```
 
 Method dispatch remains connected to the library's persistent prototypes, so
 existing controls receive compatible method updates when a newer LibStub MINOR
 of the same API family loads.
+
+The factory constructs the frame before dispatch methods are installed. The
+optional initializer then applies values or state through those methods.
 
 Custom controls should keep persistence and addon-specific callbacks in their
 consumer. Register only reusable construction and control behavior with the
@@ -65,6 +135,5 @@ scale from stored values.
 
 ## Testing
 
-Run `lua tests/run.lua` from the library root to validate the registry and live
-prototype dispatch under Lua 5.1. Blizzard frame templates require the game
-client; use the checklist in `tests/README.md` for control validation.
+Blizzard frame templates and the layout builders require the game client. Use
+the checklist in `tests/README.md` for in-game control and layout validation.

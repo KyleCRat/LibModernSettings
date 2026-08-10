@@ -42,13 +42,17 @@ local function installControlMethods(control, definition)
     end
 end
 
-function lib:RegisterControlType(controlType, factory, methods)
+function lib:RegisterControlType(controlType, factory, methods, initializer)
     assert(
         type(controlType) == "string" and controlType ~= "",
         "controlType must be a non-empty string"
     )
     assert(type(factory) == "function", "factory must be a function")
     assert(type(methods) == "table", "methods must be a table")
+    assert(
+        initializer == nil or type(initializer) == "function",
+        "initializer must be a function or nil"
+    )
 
     local definition = self._controlTypes[controlType]
 
@@ -58,6 +62,7 @@ function lib:RegisterControlType(controlType, factory, methods)
     end
 
     definition.factory = factory
+    definition.initializer = initializer
 
     for methodName in pairs(definition.methods) do
         definition.methods[methodName] = nil
@@ -101,6 +106,10 @@ function lib:CreateControl(controlType, parent, options)
     control._libModernSettingsControlType = controlType
     self._controlInstances[control] = controlType
     installControlMethods(control, definition)
+
+    if definition.initializer then
+        definition.initializer(control, options)
+    end
 
     return control
 end

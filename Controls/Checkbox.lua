@@ -151,18 +151,23 @@ function checkboxMethods:SetControlEnabled(enabled, disabledTooltip)
     lib:SetControlTooltipEnabled(self, enabled, disabledTooltip)
 end
 
-lib:RegisterControlType("checkbox", createCheckbox, checkboxMethods)
-
-function lib:CreateCheckbox(parent, options)
-    options = options or {}
-
-    local checkbox = self:CreateControl("checkbox", parent, options)
-
+local function initializeCheckbox(checkbox, options)
     checkbox:SetValue(options.value)
     checkbox:SetControlEnabled(
         options.enabled ~= false,
         options.disabledTooltip
     )
+end
 
-    return checkbox
+lib:RegisterControlType(
+    "checkbox",
+    createCheckbox,
+    checkboxMethods,
+    initializeCheckbox
+)
+
+function lib:CreateCheckbox(parent, options)
+    options = options or {}
+
+    return self:CreateControl("checkbox", parent, options)
 end

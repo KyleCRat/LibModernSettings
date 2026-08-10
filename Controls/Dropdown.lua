@@ -149,19 +149,24 @@ function dropdownMethods:SetControlEnabled(enabled, disabledTooltip)
     lib:SetControlTooltipEnabled(self, enabled, disabledTooltip)
 end
 
-lib:RegisterControlType("dropdown", createDropdown, dropdownMethods)
-
-function lib:CreateDropdown(parent, options)
-    options = options or {}
-
-    local dropdown = self:CreateControl("dropdown", parent, options)
-
+local function initializeDropdown(dropdown, options)
     dropdown:_InitializeMenu()
     dropdown:SetValue(options.value)
     dropdown:SetControlEnabled(
         options.enabled ~= false,
         options.disabledTooltip
     )
+end
 
-    return dropdown
+lib:RegisterControlType(
+    "dropdown",
+    createDropdown,
+    dropdownMethods,
+    initializeDropdown
+)
+
+function lib:CreateDropdown(parent, options)
+    options = options or {}
+
+    return self:CreateControl("dropdown", parent, options)
 end

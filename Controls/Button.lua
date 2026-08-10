@@ -104,17 +104,22 @@ function buttonMethods:SetControlEnabled(enabled, disabledTooltip)
     lib:SetControlTooltipEnabled(self, enabled, disabledTooltip)
 end
 
-lib:RegisterControlType("button", createButton, buttonMethods)
-
-function lib:CreateButton(parent, options)
-    options = options or {}
-
-    local button = self:CreateControl("button", parent, options)
-
+local function initializeButton(button, options)
     button:SetControlEnabled(
         options.enabled ~= false,
         options.disabledTooltip
     )
+end
 
-    return button
+lib:RegisterControlType(
+    "button",
+    createButton,
+    buttonMethods,
+    initializeButton
+)
+
+function lib:CreateButton(parent, options)
+    options = options or {}
+
+    return self:CreateControl("button", parent, options)
 end
