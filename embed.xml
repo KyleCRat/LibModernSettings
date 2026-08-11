@@ -8,6 +8,7 @@
     <Script file="Controls\Checkbox.lua"/>
     <Script file="Controls\Dropdown.lua"/>
     <Script file="Controls\Slider.lua"/>
+    <Script file="Controls\TextInput.lua"/>
     <Script file="Layouts\Canvas.lua"/>
     <Script file="Layouts\Table.lua"/>
 </Ui>

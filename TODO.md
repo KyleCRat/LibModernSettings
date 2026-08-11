@@ -5,7 +5,6 @@
 These are placeholders only. They are not registered or included in the public
 API until a real addon consumer defines their required behavior.
 
-- [ ] Full-width single-line text input using `SharedEditBoxTemplate`.
 - [ ] Standalone compact numeric input.
 - [ ] Multi-line text input with scrolling and a character limit.
 - [ ] Color picker with optional alpha support.

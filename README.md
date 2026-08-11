@@ -19,7 +19,13 @@ local ModernSettings = LibStub("LibModernSettings-1.0")
 Every control uses an options table:
 
 - `CreateButton(parent, options)` creates regular or small tertiary buttons.
-  Use `text`, `width`, `height`, `variant`, `tooltip`, and `onClick`.
+  Use `text`, `width`, `height`, `variant`, `tooltip`, and `onClick`. Pass
+  `iconAtlas` for a centered icon-and-text command and `fitToContent = true`
+  to derive the width from the complete content group. Use regular buttons by
+  default; reserve `variant = "small"` for dense rows or constrained layouts.
+  Small buttons automatically constrain native atlas icons to 14px while
+  preserving aspect ratio. `maxIconSize` changes that cap while preserving the
+  atlas ratio; `iconSize` explicitly forces a square size.
 - `CreateCheckbox(parent, options)` creates a 34px tertiary-square checkbox.
   Use `label`, `width`, `value`, `tooltip`, and `onChanged`.
 - `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
@@ -27,6 +33,11 @@ Every control uses an options table:
   `tooltip`, and `onChanged`.
 - `CreateSlider(parent, options)` creates a stepped slider with an editable
   compact value field. Its numeric options are described below.
+- `CreateTextInput(parent, options)` creates a full-width single-line text
+  input with the same single-piece sliced tertiary background used by slider
+  value inputs. It defaults to 34px high. Use `value`, `width`, `height`,
+  `maxLetters`, `textInset`, `onCommit`, and `onError`. Omitting `maxLetters`
+  leaves the input unbounded.
 - `CreateText(parent, options)` creates consistently aligned canvas text.
 - `SetTooltip(frame, options)` attaches a dynamic tooltip to any frame.
 
@@ -38,6 +49,12 @@ Controls expose `SetValue`, `GetValue`, and `SetControlEnabled` where those
 operations apply. `SetControlEnabled(false, reason)` disables the complete
 input and shows `reason` from every registered tooltip target. Re-enabling the
 control restores its normal tooltip.
+
+Text inputs commit on Enter or focus loss and cancel on Escape. `onCommit`
+receives the edited text and returns the accepted string, or `nil`/`false` plus
+an optional error value to restore the previous value. `CommitAndClearFocus`,
+`CancelAndClearFocus`, and `FocusValue` are available for consumer-owned
+selection workflows.
 
 ## Canvas Layouts
 
