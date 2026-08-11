@@ -30,8 +30,9 @@ Every control uses an options table:
 - `CreateText(parent, options)` creates consistently aligned canvas text.
 - `SetTooltip(frame, options)` attaches a dynamic tooltip to any frame.
 
-Implemented inputs live in separate files under `Controls/`. See `TODO.md` for
-planned control types that are intentionally not part of the public API yet.
+Implemented inputs live in separate files under `Controls/`. Additional
+control types are intentionally not part of the public API until a consumer
+defines their required behavior.
 
 Controls expose `SetValue`, `GetValue`, and `SetControlEnabled` where those
 operations apply. `SetControlEnabled(false, reason)` disables the complete
@@ -133,7 +134,8 @@ Sliders require `minValue`, `maxValue`, and `step`. Common optional fields are
 `20s` or `100%`. Supply `inputParser` when displayed values use a different
 scale from stored values.
 
-## Testing
+## Validation
 
-Blizzard frame templates and the layout builders require the game client. Use
-the checklist in `tests/README.md` for in-game control and layout validation.
+Blizzard frame templates and the layout builders require the game client.
+Consumers should smoke-test their settings pages in game before updating a
+pinned library release.

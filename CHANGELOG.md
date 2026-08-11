@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## [1.0.0] - 2026-08-10
 
 - Add the initial `LibModernSettings-1.0` API family.
 - Add modern tertiary buttons, checkboxes, dropdowns, and editable sliders.
