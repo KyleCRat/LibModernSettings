@@ -1,11 +1,10 @@
 # Changelog
 
-## Unreleased
+## [1.1.0] - 2026-08-11
 
 - Add a reusable full-width single-line text input with a seamless, sliced
-  tertiary background,
-  safe text insets, commit/cancel behavior, validation callbacks, and focus
-  helpers.
+  tertiary background, safe text insets, commit/cancel behavior, validation
+  callbacks, and focus helpers.
 - Add centered icon-and-text button content and optional content-fitted widths.
 - Constrain native atlas icons to 14px in small buttons while preserving their
   aspect ratio.
