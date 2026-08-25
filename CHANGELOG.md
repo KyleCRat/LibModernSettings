@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Allow editable slider values to remain below or above the slider track range
+  while keeping the thumb clamped to the nearest endpoint.
+
 ## [1.1.0] - 2026-08-11
 
 - Add a reusable full-width single-line text input with a seamless, sliced

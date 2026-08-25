@@ -136,17 +136,22 @@ end
 
 local sliderMethods = {}
 
-function sliderMethods:_NormalizeValue(value)
+function sliderMethods:_SnapValue(value)
     local options = self._libModernSettingsSliderOptions
-    local clamped = math.max(
-        options.minValue,
-        math.min(options.maxValue, value)
-    )
     local stepIndex = math.floor(
-        ((clamped - options.minValue) / options.step) + 0.5
+        ((value - options.minValue) / options.step) + 0.5
     )
 
     return options.minValue + (stepIndex * options.step)
+end
+
+function sliderMethods:_GetTrackValue(value)
+    local options = self._libModernSettingsSliderOptions
+
+    return math.max(
+        options.minValue,
+        math.min(options.maxValue, value)
+    )
 end
 
 function sliderMethods:_FormatValue(value)
@@ -181,13 +186,23 @@ function sliderMethods:_ParseInput()
 end
 
 function sliderMethods:_HandleSliderValueChanged(value)
-    self.currentValue = value
-    self:_SyncValueBox(value)
+    if self._libModernSettingsSyncing then return end
 
-    if not self._libModernSettingsSyncing
-        and self._libModernSettingsOnChanged
-    then
-        self._libModernSettingsOnChanged(value)
+    self:_SetCurrentValue(value, true)
+end
+
+function sliderMethods:_SetCurrentValue(value, notify)
+    local normalized = self:_SnapValue(value)
+    local changed = self.currentValue ~= normalized
+
+    self.currentValue = normalized
+    self._libModernSettingsSyncing = true
+    self.slider:SetValue(self:_GetTrackValue(normalized))
+    self._libModernSettingsSyncing = false
+    self:_SyncValueBox(normalized)
+
+    if notify and changed and self._libModernSettingsOnChanged then
+        self._libModernSettingsOnChanged(normalized)
     end
 end
 
@@ -199,23 +214,13 @@ function sliderMethods:_FinalizeInput()
         return
     end
 
-    local normalized = self:_NormalizeValue(value)
-
-    self.slider:SetValue(normalized)
-    self.currentValue = normalized
-    self:_SyncValueBox(normalized)
+    self:_SetCurrentValue(value, true)
 end
 
 function sliderMethods:SetValue(value)
     assert(type(value) == "number", "slider value must be a number")
 
-    local normalized = self:_NormalizeValue(value)
-
-    self.currentValue = normalized
-    self._libModernSettingsSyncing = true
-    self.slider:SetValue(normalized)
-    self:_SyncValueBox(normalized)
-    self._libModernSettingsSyncing = false
+    self:_SetCurrentValue(value, false)
 end
 
 function sliderMethods:GetValue()

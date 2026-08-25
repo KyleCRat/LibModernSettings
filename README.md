@@ -32,7 +32,10 @@ Every control uses an options table:
   selector. Use `label`, `width`, `value`, `choices` or `getChoices`,
   `tooltip`, and `onChanged`.
 - `CreateSlider(parent, options)` creates a stepped slider with an editable
-  compact value field. Its numeric options are described below.
+  compact value field. `minValue` and `maxValue` bound the slider track and
+  steppers, while typed values and `SetValue` may remain outside that range.
+  Out-of-range values still snap to `step`; the thumb stays at the nearest
+  track endpoint without replacing the entered value.
 - `CreateTextInput(parent, options)` creates a full-width single-line text
   input with the same single-piece sliced tertiary background used by slider
   value inputs. It defaults to 34px high. Use `value`, `width`, `height`,

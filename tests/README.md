@@ -13,7 +13,9 @@ behavior in game:
 - Toggle checked, unchecked, disabled, and disabled-checked checkboxes.
 - Open a dropdown, change its selection, disable it, and reopen the canvas.
 - Move sliders with the thumb and both steppers.
-- Type valid, invalid, below-minimum, and above-maximum slider values.
+- Type valid, invalid, below-minimum, and above-maximum slider values. Confirm
+  valid out-of-range values remain in the input and SavedVariables while the
+  slider thumb stays at the nearest endpoint.
 - Confirm formatted suffixes and custom parsers round-trip to stored values.
 - Confirm full-width text inputs use the single tertiary background without
   visible joins, keep text inside both ends, commit on Enter and focus loss,
