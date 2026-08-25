@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## [1.2.0] - 2026-08-25
 
 - Allow editable slider values to remain below or above the slider track range
   while keeping the thumb clamped to the nearest endpoint.
