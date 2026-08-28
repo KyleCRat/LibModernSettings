@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibModernSettings-1.0", 3
+local MAJOR, MINOR = "LibModernSettings-1.0", 4
 local lib = LibStub(MAJOR, true)
 
 if not lib or lib._implementationMinor ~= MINOR then
@@ -30,6 +30,21 @@ local BUTTON_STYLES = {
         normalFont = GameFontNormalSmall,
         highlightFont = GameFontHighlightSmall,
         disabledFont = GameFontDisableSmall,
+    },
+    square = {
+        height = 34,
+        minWidth = 34,
+        defaultWidth = 34,
+        paddingX = 0,
+        maxIconSize = 16,
+        normal = "common-button-tertiary-square-normal",
+        pressed = "common-button-tertiary-square-pressed",
+        disabled = "common-button-tertiary-square-disabled",
+        highlight = "common-button-tertiary-square-normal",
+        normalFont = GameFontNormal,
+        highlightFont = GameFontHighlight,
+        disabledFont = GameFontDisable,
+        iconOnly = true,
     },
 }
 
@@ -135,7 +150,10 @@ end
 local function createButton(parent, options)
     local style = BUTTON_STYLES[options.variant or "regular"]
 
-    assert(style, "button variant must be 'regular' or 'small'")
+    assert(
+        style,
+        "button variant must be 'regular', 'small', or 'square'"
+    )
     assert(
         options.onClick == nil or type(options.onClick) == "function",
         "onClick must be a function or nil"
@@ -156,13 +174,39 @@ local function createButton(parent, options)
                 and options.maxIconSize > 0),
         "maxIconSize must be a positive number or nil"
     )
+    assert(
+        not style.iconOnly or type(options.iconAtlas) == "string",
+        "square buttons require iconAtlas"
+    )
+    assert(
+        not style.iconOnly or options.text == nil or options.text == "",
+        "square buttons do not support text"
+    )
 
     local button = CreateFrame("Button", nil, parent)
     local initialWidth = options.width
         or (options.fitToContent and style.minWidth)
+        or style.defaultWidth
         or 100
+    local initialHeight = options.height or style.height
 
-    button:SetSize(initialWidth, options.height or style.height)
+    if style.iconOnly then
+        assert(
+            options.width == nil
+                or options.height == nil
+                or options.width == options.height,
+            "square button width and height must match"
+        )
+
+        local squareSize = options.width
+            or options.height
+            or style.defaultWidth
+
+        initialWidth = squareSize
+        initialHeight = squareSize
+    end
+
+    button:SetSize(initialWidth, initialHeight)
     button._libModernSettingsButtonStyle = style
     button._libModernSettingsFitToContent = options.fitToContent == true
     button._libModernSettingsMinWidth = options.minWidth
@@ -204,6 +248,18 @@ local function createButton(parent, options)
         "BACKGROUND",
         style.disabled
     ))
+
+    if style.highlight then
+        local highlightTexture = lib:_CreateAtlasTexture(
+            button,
+            "HIGHLIGHT",
+            style.highlight
+        )
+
+        highlightTexture:SetBlendMode("ADD")
+        button:SetHighlightTexture(highlightTexture)
+    end
+
     button:SetText(options.text or "")
     button.label = label
 
@@ -218,12 +274,14 @@ local function createButton(parent, options)
 
     layoutButtonContent(button)
     button._libModernSettingsOnClick = options.onClick
-    button:SetScript("OnEnter", function()
-        normalTexture:SetAtlas(style.hover, false)
-    end)
-    button:SetScript("OnLeave", function()
-        normalTexture:SetAtlas(style.normal, false)
-    end)
+    if style.hover then
+        button:SetScript("OnEnter", function()
+            normalTexture:SetAtlas(style.hover, false)
+        end)
+        button:SetScript("OnLeave", function()
+            normalTexture:SetAtlas(style.normal, false)
+        end)
+    end
     button:SetScript("OnClick", function(self, ...)
         self:_HandleClick(...)
     end)
@@ -256,6 +314,10 @@ end
 
 function buttonMethods:SetButtonText(text)
     assert(type(text) == "string", "button text must be a string")
+    assert(
+        not getButtonStyle(self).iconOnly or text == "",
+        "square buttons do not support text"
+    )
     self:SetText(text)
     layoutButtonContent(self)
 end

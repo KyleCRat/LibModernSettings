@@ -1,8 +1,27 @@
-local MAJOR, MINOR = "LibModernSettings-1.0", 3
+local MAJOR, MINOR = "LibModernSettings-1.0", 4
 local lib = LibStub(MAJOR, true)
 
 if not lib or lib._implementationMinor ~= MINOR then
     return
+end
+
+local DEFAULT_WIDTH = 270
+local LABELED_HEIGHT = 60
+local UNLABELED_HEIGHT = 34
+local DROPDOWN_INSET = 8
+
+local function setControlWidth(control, width)
+    assert(
+        type(width) == "number" and width > 0,
+        "dropdown width must be a positive number"
+    )
+
+    control:SetWidth(width)
+    control.label:SetWidth(width)
+    control.dropdown:SetWidth(math.max(
+        1,
+        width - (DROPDOWN_INSET * 2)
+    ))
 end
 
 local function createDropdown(parent, options)
@@ -19,11 +38,20 @@ local function createDropdown(parent, options)
         options.onChanged == nil or type(options.onChanged) == "function",
         "onChanged must be a function or nil"
     )
+    assert(
+        options.showLabel == nil or type(options.showLabel) == "boolean",
+        "showLabel must be a boolean or nil"
+    )
 
     local control = CreateFrame("Frame", nil, parent)
-    local width = options.width or 270
+    local width = options.width or DEFAULT_WIDTH
+    local showLabel = options.showLabel ~= false
 
-    control:SetSize(width, options.height or 60)
+    control:SetSize(
+        width,
+        options.height
+            or (showLabel and LABELED_HEIGHT or UNLABELED_HEIGHT)
+    )
     control._libModernSettingsChoices = options.choices or {}
     control._libModernSettingsGetChoices = options.getChoices
     control._libModernSettingsOnChanged = options.onChanged
@@ -33,7 +61,6 @@ local function createDropdown(parent, options)
         text = options.label,
         width = width,
     })
-    label:SetPoint("TOPLEFT", control, "TOPLEFT", 0, 0)
 
     local dropdown = CreateFrame(
         "DropdownButton",
@@ -41,12 +68,32 @@ local function createDropdown(parent, options)
         control,
         "WowStyle1DropdownTemplate"
     )
-    dropdown:SetWidth(width - 16)
-    dropdown:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 8, -7)
 
     control.label = label
     control.dropdown = dropdown
     control.currentValue = options.value
+
+    setControlWidth(control, width)
+
+    if showLabel then
+        label:SetPoint("TOPLEFT", control, "TOPLEFT", 0, 0)
+        dropdown:SetPoint(
+            "TOPLEFT",
+            label,
+            "BOTTOMLEFT",
+            DROPDOWN_INSET,
+            -7
+        )
+    else
+        label:Hide()
+        dropdown:SetPoint(
+            "LEFT",
+            control,
+            "LEFT",
+            DROPDOWN_INSET,
+            0
+        )
+    end
 
     if options.tooltip then
         lib:SetTooltip(control, {
@@ -138,6 +185,10 @@ function dropdownMethods:SetOnChanged(onChanged)
         "onChanged must be a function or nil"
     )
     self._libModernSettingsOnChanged = onChanged
+end
+
+function dropdownMethods:SetControlWidth(width)
+    setControlWidth(self, width)
 end
 
 function dropdownMethods:SetControlEnabled(enabled, disabledTooltip)
