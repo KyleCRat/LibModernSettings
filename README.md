@@ -18,19 +18,27 @@ local ModernSettings = LibStub("LibModernSettings-1.0")
 
 Every control uses an options table:
 
-- `CreateButton(parent, options)` creates regular or small tertiary buttons.
+- `CreateButton(parent, options)` creates regular, small, or square tertiary
+  buttons.
   Use `text`, `width`, `height`, `variant`, `tooltip`, and `onClick`. Pass
   `iconAtlas` for a centered icon-and-text command and `fitToContent = true`
   to derive the width from the complete content group. Use regular buttons by
   default; reserve `variant = "small"` for dense rows or constrained layouts.
   Small buttons automatically constrain native atlas icons to 14px while
   preserving aspect ratio. `maxIconSize` changes that cap while preserving the
-  atlas ratio; `iconSize` explicitly forces a square size.
+  atlas ratio; `iconSize` explicitly forces a square size. Use
+  `variant = "square"` with `iconAtlas` for an icon-only action button. It
+  defaults to 34px square with an icon no larger than 16px; custom `width` or
+  `height` keeps both dimensions equal. Buttons retain Blizzard's normal
+  mouse-up activation timing.
 - `CreateCheckbox(parent, options)` creates a 34px tertiary-square checkbox.
   Use `label`, `width`, `value`, `tooltip`, and `onChanged`.
 - `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
   selector. Use `label`, `width`, `value`, `choices` or `getChoices`,
-  `tooltip`, and `onChanged`.
+  `tooltip`, and `onChanged`. Pass `showLabel = false` for a compact 34px
+  unlabeled selector. Call `SetControlWidth(width)` when a responsive layout
+  changes its width; the method updates the wrapper, semantic label, and native
+  dropdown together.
 - `CreateSlider(parent, options)` creates a stepped slider with an editable
   compact value field. `minValue` and `maxValue` bound the slider track and
   steppers, while typed values and `SetValue` may remain outside that range.

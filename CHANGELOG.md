@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0] - 2026-08-28
+
+- Add `variant = "square"` for 34px tertiary icon buttons with constrained icon
+  sizing.
+- Add compact dropdowns through `showLabel = false` and a public
+  `SetControlWidth(width)` method for resizing complete control geometry.
+
 ## [1.2.0] - 2026-08-25
 
 - Allow editable slider values to remain below or above the slider track range

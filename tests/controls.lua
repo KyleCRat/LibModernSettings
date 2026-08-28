@@ -35,6 +35,14 @@ local function makeRegion()
         self.height = height
     end
 
+    function region:SetWidth(width)
+        self.width = width
+    end
+
+    function region:SetHeight(height)
+        self.height = height
+    end
+
     function region:GetWidth()
         return self.width or 0
     end
@@ -59,11 +67,35 @@ local function makeRegion()
         self.alpha = alpha
     end
 
+    function region:SetBlendMode(blendMode)
+        self.blendMode = blendMode
+    end
+
+    function region:SetTextColor(r, g, b)
+        self.textColor = { r, g, b }
+    end
+
+    function region:Hide()
+        self.shown = false
+    end
+
+    function region:Show()
+        self.shown = true
+    end
+
+    function region:IsShown()
+        return self.shown ~= false
+    end
+
     return region
 end
 
 local function makeFontString()
     local fontString = makeRegion()
+
+    function fontString:SetFontObject(fontObject)
+        self.fontObject = fontObject
+    end
 
     function fontString:SetJustifyH(justify)
         self.justifyH = justify
@@ -110,8 +142,20 @@ local function makeFrame(frameType, parent, template)
         self.width = width
     end
 
+    function frame:GetWidth()
+        return self.width
+    end
+
     function frame:GetHeight()
         return self.height
+    end
+
+    function frame:ClearAllPoints()
+        self.point = nil
+    end
+
+    function frame:SetPoint(...)
+        self.point = { ... }
     end
 
     function frame:CreateTexture(_, drawLayer)
@@ -185,6 +229,14 @@ local function makeFrame(frameType, parent, template)
 
     function frame:SetEnabled(enabled)
         self.enabled = enabled
+    end
+
+    function frame:SetupMenu(callback)
+        self.menuCallback = callback
+    end
+
+    function frame:GenerateMenu()
+        self.generateMenuCount = (self.generateMenuCount or 0) + 1
     end
 
     function frame:SetAutoFocus(autoFocus)
@@ -276,6 +328,11 @@ function lib:SetControlTooltipEnabled(owner, enabled, disabledTooltip)
     owner.disabledTooltip = disabledTooltip
 end
 
+function lib:AddTooltipTarget(owner, target)
+    owner.tooltipTargets = owner.tooltipTargets or {}
+    owner.tooltipTargets[#owner.tooltipTargets + 1] = target
+end
+
 lib:RegisterControlType("button", function(parent)
     local button = makeFrame("Button", parent)
     local label = makeFontString()
@@ -291,13 +348,35 @@ end, {
 
 local oldButton = lib:CreateControl("button", nil, {})
 
+lib:RegisterControlType("dropdown", function(parent)
+    local control = makeFrame("Frame", parent)
+
+    control:SetSize(270, 60)
+    control.label = makeFontString()
+    control.label:SetWidth(270)
+    control.dropdown = makeFrame("DropdownButton", control)
+    control.dropdown:SetWidth(254)
+    return control
+end, {
+    SetControlEnabled = function() end,
+})
+
+local oldDropdown = lib:CreateControl("dropdown", nil, {})
+
 dofile("Controls/Button.lua")
 dofile("Controls/TextInput.lua")
+dofile("Elements/Text.lua")
+dofile("Controls/Dropdown.lua")
 
 oldButton:SetButtonText("Updated")
 assert(oldButton.label.point[1] == "CENTER")
 oldButton:FitToContents()
 assert(oldButton.width == 65)
+
+oldDropdown:SetControlWidth(180)
+assert(oldDropdown.width == 180)
+assert(oldDropdown.label.width == 180)
+assert(oldDropdown.dropdown.width == 164)
 
 local button = lib:CreateButton(nil, {
     text = "Add Category",
@@ -354,6 +433,109 @@ local explicitIconButton = lib:CreateButton(nil, {
 
 assert(explicitIconButton.icon:GetWidth() == 18)
 assert(explicitIconButton.icon:GetHeight() == 18)
+
+local squareButton = lib:CreateButton(nil, {
+    variant = "square",
+    iconAtlas = "common-icon-plus",
+})
+
+assert(squareButton.width == 34)
+assert(squareButton.height == 34)
+assert(squareButton.icon:GetWidth() == 16)
+assert(squareButton.icon:GetHeight() == 16)
+assert(squareButton.icon.point[1] == "CENTER")
+assert(squareButton.normalTexture.atlas ==
+    "common-button-tertiary-square-normal")
+assert(squareButton.pushedTexture.atlas ==
+    "common-button-tertiary-square-pressed")
+assert(squareButton.disabledTexture.atlas ==
+    "common-button-tertiary-square-disabled")
+assert(squareButton.highlightTexture.atlas ==
+    "common-button-tertiary-square-normal")
+assert(squareButton.highlightTexture.blendMode == "ADD")
+assert(squareButton.scripts.OnEnter == nil)
+assert(squareButton.scripts.OnLeave == nil)
+
+local squareWithoutIconSucceeded = pcall(function()
+    lib:CreateButton(nil, { variant = "square" })
+end)
+
+assert(squareWithoutIconSucceeded == false)
+
+local squareWithTextSucceeded = pcall(function()
+    lib:CreateButton(nil, {
+        variant = "square",
+        iconAtlas = "common-icon-plus",
+        text = "Add",
+    })
+end)
+
+assert(squareWithTextSucceeded == false)
+
+local squareResize = lib:CreateButton(nil, {
+    variant = "square",
+    iconAtlas = "common-icon-plus",
+    width = 42,
+})
+
+assert(squareResize.width == 42)
+assert(squareResize.height == 42)
+
+local mismatchedSquareSizeSucceeded = pcall(function()
+    lib:CreateButton(nil, {
+        variant = "square",
+        iconAtlas = "common-icon-plus",
+        width = 42,
+        height = 34,
+    })
+end)
+
+assert(mismatchedSquareSizeSucceeded == false)
+
+local squareTextMutationSucceeded = pcall(function()
+    squareButton:SetButtonText("Add")
+end)
+
+assert(squareTextMutationSucceeded == false)
+
+local labeledDropdown = lib:CreateDropdown(nil, {
+    label = "Profile",
+    choices = {},
+})
+
+assert(labeledDropdown.width == 270)
+assert(labeledDropdown.height == 60)
+assert(labeledDropdown.label:IsShown() == true)
+assert(labeledDropdown.label.point[1] == "TOPLEFT")
+assert(labeledDropdown.dropdown.width == 254)
+assert(labeledDropdown.dropdown.point[1] == "TOPLEFT")
+
+local inlineDropdown = lib:CreateDropdown(nil, {
+    label = "Field",
+    showLabel = false,
+    choices = {},
+})
+
+assert(inlineDropdown.width == 270)
+assert(inlineDropdown.height == 34)
+assert(inlineDropdown.label:IsShown() == false)
+assert(inlineDropdown.dropdown.width == 254)
+assert(inlineDropdown.dropdown.point[1] == "LEFT")
+assert(inlineDropdown.dropdown.point[2] == inlineDropdown)
+assert(inlineDropdown.dropdown.point[3] == "LEFT")
+assert(inlineDropdown.dropdown.point[4] == 8)
+assert(inlineDropdown.dropdown.point[5] == 0)
+
+inlineDropdown:SetControlWidth(180)
+assert(inlineDropdown.width == 180)
+assert(inlineDropdown.label.width == 180)
+assert(inlineDropdown.dropdown.width == 164)
+
+local invalidDropdownWidthSucceeded = pcall(function()
+    inlineDropdown:SetControlWidth(0)
+end)
+
+assert(invalidDropdownWidthSucceeded == false)
 
 local commitCount = 0
 local reportedError

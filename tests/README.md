@@ -2,16 +2,21 @@
 
 Automated tests cover the library's Lua-only registry, live prototype dispatch,
 text-input commit/cancel behavior, button content geometry, and compatible
-button-instance upgrades. Validate Blizzard-owned templates and interaction
-behavior in game:
+button and dropdown instance upgrades. They also cover old-first and new-first
+mixed LibStub MINOR load order. Validate Blizzard-owned templates and
+interaction behavior in game:
 
 - Open, close, and reopen every consuming Settings canvas.
-- Click enabled and disabled regular and small buttons.
+- Click enabled and disabled regular, small, and square buttons. Confirm all
+  activate on mouse-up.
 - Confirm icon-and-text buttons retain their icon, center the complete content
   group, fit their contents, and vertically center the label. Confirm small
   buttons constrain oversized icons without changing their aspect ratio.
+  Confirm default square buttons remain 34px with a centered icon no larger
+  than 16px.
 - Toggle checked, unchecked, disabled, and disabled-checked checkboxes.
-- Open a dropdown, change its selection, disable it, and reopen the canvas.
+- Open labeled and unlabeled dropdowns, change their selections, resize them,
+  disable them, and reopen the canvas.
 - Move sliders with the thumb and both steppers.
 - Type valid, invalid, below-minimum, and above-maximum slider values. Confirm
   valid out-of-range values remain in the input and SavedVariables while the
