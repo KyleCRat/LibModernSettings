@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Cap dropdown menus at three quarters of the UI height and use Blizzard's
+  native scrolling menu for longer choice lists. Center scrolling menus
+  vertically while retaining their normal horizontal position.
+
 ## [1.4.0] - 2026-08-29
 
 - Allow dropdown consumers to override the default left and right insets

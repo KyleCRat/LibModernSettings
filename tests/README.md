@@ -17,7 +17,9 @@ interaction behavior in game:
 - Toggle checked, unchecked, disabled, and disabled-checked checkboxes.
 - Open labeled and unlabeled dropdowns, including asymmetric and flush-inset
   dropdowns; change their selections, resize them, disable them, and reopen the
-  canvas.
+  canvas. Open a dropdown with enough choices to exceed the screen height and
+  confirm it caps near three quarters of the UI, scrolls to the final choice,
+  remains vertically centered, and remains usable at 4K and common UI scales.
 - Move sliders with the thumb and both steppers.
 - Type valid, invalid, below-minimum, and above-maximum slider values. Confirm
   valid out-of-range values remain in the input and SavedVariables while the

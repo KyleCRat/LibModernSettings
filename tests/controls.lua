@@ -8,6 +8,11 @@ GameFontHighlightSmall = {}
 GameFontDisableSmall = {}
 HIGHLIGHT_FONT_COLOR = { r = 1, g = 1, b = 1 }
 GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
+UIParent = { height = 1000 }
+
+function UIParent:GetHeight()
+    return self.height
+end
 
 local atlasSizes = {
     ["common-icon-plus"] = { 16, 16 },
@@ -509,6 +514,89 @@ assert(labeledDropdown.label:IsShown() == true)
 assert(labeledDropdown.label.point[1] == "TOPLEFT")
 assert(labeledDropdown.dropdown.width == 254)
 assert(labeledDropdown.dropdown.point[1] == "TOPLEFT")
+
+local function buildDropdownMenu(control)
+    local rootDescription = {
+        menuAcquiredCallbacks = {},
+        radioButtons = {},
+    }
+
+    function rootDescription:SetScrollMode(maxScrollExtent)
+        self.maxScrollExtent = maxScrollExtent
+    end
+
+    function rootDescription:AddMenuAcquiredCallback(callback)
+        self.menuAcquiredCallbacks[#self.menuAcquiredCallbacks + 1] = callback
+    end
+
+    function rootDescription:CreateRadio(...)
+        self.radioButtons[#self.radioButtons + 1] = { ... }
+    end
+
+    control.dropdown.menuCallback(control.dropdown, rootDescription)
+    return rootDescription
+end
+
+local labeledMenu = buildDropdownMenu(labeledDropdown)
+
+assert(labeledMenu.maxScrollExtent == 750)
+
+UIParent.height = 1200
+labeledMenu = buildDropdownMenu(labeledDropdown)
+assert(labeledMenu.maxScrollExtent == 900)
+UIParent.height = 1000
+
+local function createMenuFrame(scrollShown)
+    local menuFrame = {
+        left = 125,
+        scripts = {},
+        ScrollBox = {},
+    }
+
+    function menuFrame.ScrollBox:IsShown()
+        return scrollShown
+    end
+
+    function menuFrame:SetScript(scriptName, script)
+        self.scripts[scriptName] = script
+    end
+
+    function menuFrame:GetLeft()
+        return self.left
+    end
+
+    function menuFrame:ClearAllPoints()
+        self.clearedPoints = true
+    end
+
+    function menuFrame:SetPoint(...)
+        self.point = { ... }
+    end
+
+    return menuFrame
+end
+
+local scrollingMenuFrame = createMenuFrame(true)
+local menuAcquiredCallback = labeledMenu.menuAcquiredCallbacks[1]
+
+assert(type(menuAcquiredCallback) == "function")
+menuAcquiredCallback(scrollingMenuFrame)
+scrollingMenuFrame.scripts.OnShow(scrollingMenuFrame)
+assert(scrollingMenuFrame.scripts.OnShow == nil)
+assert(scrollingMenuFrame.clearedPoints == true)
+assert(scrollingMenuFrame.point[1] == "LEFT")
+assert(scrollingMenuFrame.point[2] == UIParent)
+assert(scrollingMenuFrame.point[3] == "BOTTOMLEFT")
+assert(scrollingMenuFrame.point[4] == 125)
+assert(scrollingMenuFrame.point[5] == 500)
+
+local shortMenuFrame = createMenuFrame(false)
+
+menuAcquiredCallback(shortMenuFrame)
+shortMenuFrame.scripts.OnShow(shortMenuFrame)
+assert(shortMenuFrame.scripts.OnShow == nil)
+assert(shortMenuFrame.clearedPoints == nil)
+assert(shortMenuFrame.point == nil)
 
 local inlineDropdown = lib:CreateDropdown(nil, {
     label = "Field",

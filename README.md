@@ -41,7 +41,9 @@ Every control uses an options table:
   inset; set both to `0` to make the native dropdown fill the control width.
   Call `SetControlWidth(width)` when a responsive layout changes its width; the
   method updates the wrapper, semantic label, and native dropdown together
-  while preserving both insets.
+  while preserving both insets. Dropdown menus retain their natural height up
+  to three quarters of `UIParent`; longer lists use Blizzard's native
+  scrolling-menu behavior and are vertically centered on the screen.
 - `CreateSlider(parent, options)` creates a stepped slider with an editable
   compact value field. `minValue` and `maxValue` bound the slider track and
   steppers, while typed values and `SetValue` may remain outside that range.

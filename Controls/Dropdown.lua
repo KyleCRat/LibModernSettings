@@ -9,6 +9,35 @@ local DEFAULT_WIDTH = 270
 local LABELED_HEIGHT = 60
 local UNLABELED_HEIGHT = 34
 local DROPDOWN_INSET = 8
+local DEFAULT_MENU_HEIGHT_RATIO = 0.75
+
+local function getMaxMenuHeight()
+    return math.max(
+        1,
+        math.floor(UIParent:GetHeight() * DEFAULT_MENU_HEIGHT_RATIO)
+    )
+end
+
+local function centerScrollableMenuOnShow(menuFrame)
+    menuFrame:SetScript("OnShow", function(frame)
+        frame:SetScript("OnShow", nil)
+
+        if not frame.ScrollBox:IsShown() then
+            return
+        end
+
+        local left = frame:GetLeft()
+
+        frame:ClearAllPoints()
+        frame:SetPoint(
+            "LEFT",
+            UIParent,
+            "BOTTOMLEFT",
+            left,
+            UIParent:GetHeight() / 2
+        )
+    end)
+end
 
 local function setControlWidth(control, width)
     assert(
@@ -167,6 +196,9 @@ end
 function dropdownMethods:_BuildMenu(rootDescription)
     local choices = self:_GetChoices()
     local control = self
+
+    rootDescription:SetScrollMode(getMaxMenuHeight())
+    rootDescription:AddMenuAcquiredCallback(centerScrollableMenuOnShow)
 
     local function isSelected(value)
         return control:GetValue() == value
