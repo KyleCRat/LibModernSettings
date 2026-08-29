@@ -1,19 +1,20 @@
 # Changelog
 
-## Unreleased
+## [1.5.0] - 2026-08-29
 
-- Reconfigure live sliders and text inputs created by an older embedded copy
-  before current focus behavior uses their newly added glow textures.
-- Highlight focused text inputs and editable slider values with Blizzard's
-  neutral depressed tertiary glow.
-- Preserve mouse-up button actions when a text or slider input's focus-loss
-  commit refreshes its canvas. LMS buttons finalize the pending edit before
-  their callbacks, with a post-mouse-up fallback for other click targets.
 - Add reusable fields that compose registered control primitives with stacked
   or inline labels while preserving direct access to the underlying control.
 - Cap dropdown menus at three quarters of the UI height and use Blizzard's
   native scrolling menu for longer choice lists. Center scrolling menus
   vertically while retaining their normal horizontal position.
+- Highlight focused text inputs and editable slider values with Blizzard's
+  neutral depressed tertiary glow.
+- Preserve mouse-up button actions when a text or slider input's focus-loss
+  commit refreshes its canvas. LMS buttons finalize the pending edit before
+  their callbacks, with a post-mouse-up fallback for other click targets.
+- Upgrade live sliders and text inputs created by older embedded copies before
+  installing current focus behavior, preventing missing focus-texture errors
+  in mixed-copy load orders.
 
 ## [1.4.0] - 2026-08-29
 
