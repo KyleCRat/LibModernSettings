@@ -372,6 +372,7 @@ dofile("Controls/Button.lua")
 dofile("Controls/TextInput.lua")
 dofile("Elements/Text.lua")
 dofile("Controls/Dropdown.lua")
+dofile("Layouts/Field.lua")
 
 oldButton:SetButtonText("Updated")
 assert(oldButton.label.point[1] == "CENTER")
@@ -746,5 +747,101 @@ textInput:SetControlEnabled(false, "Disabled")
 assert(textInput.enabled == false)
 assert(textInput.tooltipEnabled == false)
 assert(textInput.textColor[1] == GRAY_FONT_COLOR.r)
+
+local stackedControlOptions = {
+    value = "Stacked",
+    width = 120,
+}
+local stackedField = lib:CreateField(nil, {
+    label = "Name",
+    controlType = "textInput",
+    controlOptions = stackedControlOptions,
+})
+local stackedInput = stackedField:GetControl()
+
+assert(stackedField.width == 270)
+assert(stackedField.height == 60)
+assert(stackedField.label.width == 270)
+assert(stackedField.label.height == 18)
+assert(stackedField.label.point[1] == "TOPLEFT")
+assert(stackedField.label.point[2] == stackedField)
+assert(stackedField.label.point[3] == "TOPLEFT")
+assert(stackedInput.width == 270)
+assert(stackedInput.point[1] == "TOPLEFT")
+assert(stackedInput.point[2] == stackedField)
+assert(stackedInput.point[3] == "TOPLEFT")
+assert(stackedInput.point[4] == 0)
+assert(stackedInput.point[5] == -26)
+assert(stackedInput:GetValue() == "Stacked")
+assert(stackedControlOptions.width == 120)
+
+local inlineField = lib:CreateField(nil, {
+    label = "Name",
+    labelPosition = "left",
+    labelWidth = 48,
+    gap = 8,
+    width = 300,
+    controlType = "textInput",
+    controlOptions = {
+        value = "Inline",
+        tooltip = "Rename this category.",
+    },
+})
+local inlineInput = inlineField:GetControl()
+
+assert(inlineField.width == 300)
+assert(inlineField.height == 34)
+assert(inlineField.label.width == 48)
+assert(inlineField.label.height == 34)
+assert(inlineField.label.justifyV == "MIDDLE")
+assert(inlineField.label.point[1] == "LEFT")
+assert(inlineField.label.point[2] == inlineField)
+assert(inlineField.label.point[3] == "LEFT")
+assert(inlineInput.width == 244)
+assert(inlineInput.point[1] == "LEFT")
+assert(inlineInput.point[2] == inlineField)
+assert(inlineInput.point[3] == "LEFT")
+assert(inlineInput.point[4] == 56)
+assert(inlineInput.point[5] == 0)
+assert(inlineInput:GetValue() == "Inline")
+assert(inlineField.tooltip.text == "Rename this category.")
+assert(inlineInput.tooltip.text == "Rename this category.")
+
+inlineField:SetControlEnabled(false, "Disabled")
+assert(inlineInput.enabled == false)
+assert(inlineField.tooltipEnabled == false)
+assert(inlineInput.tooltipEnabled == false)
+assert(inlineField.label.textColor[1] == GRAY_FONT_COLOR.r)
+
+local invalidFieldPositionSucceeded = pcall(function()
+    lib:CreateField(nil, {
+        label = "Name",
+        labelPosition = "right",
+        controlType = "textInput",
+    })
+end)
+
+assert(invalidFieldPositionSucceeded == false)
+
+local invalidFieldWidthSucceeded = pcall(function()
+    lib:CreateField(nil, {
+        label = "Name",
+        labelPosition = "left",
+        labelWidth = 270,
+        width = 270,
+        controlType = "textInput",
+    })
+end)
+
+assert(invalidFieldWidthSucceeded == false)
+
+local nestedFieldSucceeded = pcall(function()
+    lib:CreateField(nil, {
+        label = "Outer",
+        controlType = "field",
+    })
+end)
+
+assert(nestedFieldSucceeded == false)
 
 print("LibModernSettings control tests passed")

@@ -9,6 +9,7 @@
     <Script file="Controls\Dropdown.lua"/>
     <Script file="Controls\Slider.lua"/>
     <Script file="Controls\TextInput.lua"/>
+    <Script file="Layouts\Field.lua"/>
     <Script file="Layouts\Canvas.lua"/>
     <Script file="Layouts\Table.lua"/>
 </Ui>

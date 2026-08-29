@@ -54,6 +54,14 @@ Every control uses an options table:
   value inputs. It defaults to 34px high. Use `value`, `width`, `height`,
   `maxLetters`, `textInset`, `onCommit`, and `onError`. Omitting `maxLetters`
   leaves the input unbounded.
+- `CreateField(parent, options)` composes a semantic label with a registered
+  control without changing the underlying control primitive. Use `label`,
+  `controlType`, and `controlOptions`, then choose `labelPosition = "top"`
+  for a stacked field or `labelPosition = "left"` for a compact inline field.
+  `width`, `labelWidth`, `labelHeight`, and `gap` control its geometry. Retrieve
+  the primitive with `GetControl()` and enable or disable the complete field
+  with `SetControlEnabled()`. The field clones `controlOptions` before assigning
+  the resolved control width.
 - `CreateText(parent, options)` creates consistently aligned canvas text.
 - `SetTooltip(frame, options)` attaches a dynamic tooltip to any frame.
 
@@ -65,6 +73,24 @@ Controls expose `SetValue`, `GetValue`, and `SetControlEnabled` where those
 operations apply. `SetControlEnabled(false, reason)` disables the complete
 input and shows `reason` from every registered tooltip target. Re-enabling the
 control restores its normal tooltip.
+
+Fields intentionally do not proxy value, focus, or control-specific methods.
+Call those methods on `field:GetControl()` so primitives remain independently
+usable and fields remain responsible only for label layout and complete-field
+enabled state.
+
+```lua
+local nameField = ModernSettings:CreateField(parent, {
+    label = "Name",
+    labelPosition = "left",
+    labelWidth = 48,
+    controlType = "textInput",
+    controlOptions = {
+        onCommit = commitName,
+    },
+})
+local nameInput = nameField:GetControl()
+```
 
 Text inputs commit on Enter or focus loss and cancel on Escape. `onCommit`
 receives the edited text and returns the accepted string, or `nil`/`false` plus
