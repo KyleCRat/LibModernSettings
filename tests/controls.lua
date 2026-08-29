@@ -531,6 +531,57 @@ assert(inlineDropdown.width == 180)
 assert(inlineDropdown.label.width == 180)
 assert(inlineDropdown.dropdown.width == 164)
 
+local flushDropdown = lib:CreateDropdown(nil, {
+    label = "Operator",
+    showLabel = false,
+    leftInset = 0,
+    rightInset = 0,
+    width = 180,
+    choices = {},
+})
+
+assert(flushDropdown.width == 180)
+assert(flushDropdown.dropdown.width == 180)
+assert(flushDropdown.dropdown.point[4] == 0)
+
+flushDropdown:SetControlWidth(220)
+assert(flushDropdown.width == 220)
+assert(flushDropdown.label.width == 220)
+assert(flushDropdown.dropdown.width == 220)
+
+local asymmetricDropdown = lib:CreateDropdown(nil, {
+    label = "Value",
+    showLabel = false,
+    leftInset = 3,
+    rightInset = 7,
+    width = 180,
+    choices = {},
+})
+
+assert(asymmetricDropdown.dropdown.width == 170)
+assert(asymmetricDropdown.dropdown.point[4] == 3)
+
+asymmetricDropdown:SetControlWidth(220)
+assert(asymmetricDropdown.dropdown.width == 210)
+
+local invalidLeftInsetSucceeded = pcall(function()
+    lib:CreateDropdown(nil, {
+        leftInset = -1,
+        choices = {},
+    })
+end)
+
+assert(invalidLeftInsetSucceeded == false)
+
+local invalidRightInsetSucceeded = pcall(function()
+    lib:CreateDropdown(nil, {
+        rightInset = -1,
+        choices = {},
+    })
+end)
+
+assert(invalidRightInsetSucceeded == false)
+
 local invalidDropdownWidthSucceeded = pcall(function()
     inlineDropdown:SetControlWidth(0)
 end)

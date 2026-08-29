@@ -36,9 +36,12 @@ Every control uses an options table:
 - `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
   selector. Use `label`, `width`, `value`, `choices` or `getChoices`,
   `tooltip`, and `onChanged`. Pass `showLabel = false` for a compact 34px
-  unlabeled selector. Call `SetControlWidth(width)` when a responsive layout
-  changes its width; the method updates the wrapper, semantic label, and native
-  dropdown together.
+  unlabeled selector. Set `leftInset` and `rightInset` independently to
+  non-negative numbers when the consumer needs to replace either default 8px
+  inset; set both to `0` to make the native dropdown fill the control width.
+  Call `SetControlWidth(width)` when a responsive layout changes its width; the
+  method updates the wrapper, semantic label, and native dropdown together
+  while preserving both insets.
 - `CreateSlider(parent, options)` creates a stepped slider with an editable
   compact value field. `minValue` and `maxValue` bound the slider track and
   steppers, while typed values and `SetValue` may remain outside that range.

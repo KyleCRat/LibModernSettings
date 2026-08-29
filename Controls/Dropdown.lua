@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibModernSettings-1.0", 4
+local MAJOR, MINOR = "LibModernSettings-1.0", 5
 local lib = LibStub(MAJOR, true)
 
 if not lib or lib._implementationMinor ~= MINOR then
@@ -16,11 +16,21 @@ local function setControlWidth(control, width)
         "dropdown width must be a positive number"
     )
 
+    local leftInset = control._libModernSettingsLeftInset
+    local rightInset = control._libModernSettingsRightInset
+
+    if leftInset == nil then
+        leftInset = DROPDOWN_INSET
+    end
+    if rightInset == nil then
+        rightInset = DROPDOWN_INSET
+    end
+
     control:SetWidth(width)
     control.label:SetWidth(width)
     control.dropdown:SetWidth(math.max(
         1,
-        width - (DROPDOWN_INSET * 2)
+        width - leftInset - rightInset
     ))
 end
 
@@ -42,10 +52,31 @@ local function createDropdown(parent, options)
         options.showLabel == nil or type(options.showLabel) == "boolean",
         "showLabel must be a boolean or nil"
     )
+    assert(
+        options.leftInset == nil
+            or (type(options.leftInset) == "number"
+                and options.leftInset >= 0),
+        "leftInset must be a non-negative number or nil"
+    )
+    assert(
+        options.rightInset == nil
+            or (type(options.rightInset) == "number"
+                and options.rightInset >= 0),
+        "rightInset must be a non-negative number or nil"
+    )
 
     local control = CreateFrame("Frame", nil, parent)
     local width = options.width or DEFAULT_WIDTH
     local showLabel = options.showLabel ~= false
+    local leftInset = options.leftInset
+    local rightInset = options.rightInset
+
+    if leftInset == nil then
+        leftInset = DROPDOWN_INSET
+    end
+    if rightInset == nil then
+        rightInset = DROPDOWN_INSET
+    end
 
     control:SetSize(
         width,
@@ -55,6 +86,8 @@ local function createDropdown(parent, options)
     control._libModernSettingsChoices = options.choices or {}
     control._libModernSettingsGetChoices = options.getChoices
     control._libModernSettingsOnChanged = options.onChanged
+    control._libModernSettingsLeftInset = leftInset
+    control._libModernSettingsRightInset = rightInset
 
     local label = lib:CreateText(control, {
         fontObject = options.fontObject or GameFontHighlight,
@@ -81,7 +114,7 @@ local function createDropdown(parent, options)
             "TOPLEFT",
             label,
             "BOTTOMLEFT",
-            DROPDOWN_INSET,
+            leftInset,
             -7
         )
     else
@@ -90,7 +123,7 @@ local function createDropdown(parent, options)
             "LEFT",
             control,
             "LEFT",
-            DROPDOWN_INSET,
+            leftInset,
             0
         )
     end

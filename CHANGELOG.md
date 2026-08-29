@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Allow dropdown consumers to override the default left and right insets
+  independently, including asymmetric and flush layouts.
+
 ## [1.3.0] - 2026-08-28
 
 - Add `variant = "square"` for 34px tertiary icon buttons with constrained icon

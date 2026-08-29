@@ -15,8 +15,9 @@ interaction behavior in game:
   Confirm default square buttons remain 34px with a centered icon no larger
   than 16px.
 - Toggle checked, unchecked, disabled, and disabled-checked checkboxes.
-- Open labeled and unlabeled dropdowns, change their selections, resize them,
-  disable them, and reopen the canvas.
+- Open labeled and unlabeled dropdowns, including asymmetric and flush-inset
+  dropdowns; change their selections, resize them, disable them, and reopen the
+  canvas.
 - Move sliders with the thumb and both steppers.
 - Type valid, invalid, below-minimum, and above-maximum slider values. Confirm
   valid out-of-range values remain in the input and SavedVariables while the
