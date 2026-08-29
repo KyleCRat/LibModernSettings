@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## [1.4.0] - 2026-08-29
 
 - Allow dropdown consumers to override the default left and right insets
   independently, including asymmetric and flush layouts.
