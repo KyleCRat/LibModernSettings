@@ -187,6 +187,10 @@ Method dispatch remains connected to the library's persistent prototypes, so
 existing controls receive compatible method updates when a newer LibStub MINOR
 of the same API family loads.
 
+When a compatible update adds or changes non-method frame state, the control
+module must idempotently reconfigure its existing tracked instances. Method
+dispatch alone cannot add textures, child frames, or replace scripts.
+
 The factory constructs the frame before dispatch methods are installed. The
 optional initializer then applies values or state through those methods.
 

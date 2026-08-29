@@ -45,6 +45,37 @@ local function finalizeTextInput(editBox)
     return editBox:Commit()
 end
 
+local function configureTextInput(editBox)
+    editBox.focusTexture = editBox.focusTexture
+        or lib:_CreateEditBoxFocusTexture(editBox)
+
+    editBox:SetScript("OnEnterPressed", function(self)
+        self:CommitAndClearFocus()
+    end)
+    editBox:SetScript("OnEscapePressed", function(self)
+        self:CancelAndClearFocus()
+    end)
+    editBox:SetScript("OnEditFocusGained", function(self)
+        lib:_CancelPendingEditBoxCommit(self)
+        self.focusTexture:Show()
+        EditBox_HighlightText(self)
+    end)
+    editBox:SetScript("OnEditFocusLost", function(self)
+        self.focusTexture:Hide()
+        EditBox_ClearHighlight(self)
+
+        if not self._libModernSettingsSuppressCommit then
+            lib:_FinalizeEditBoxOnFocusLost(self, finalizeTextInput)
+        end
+    end)
+
+    if editBox:HasFocus() then
+        editBox.focusTexture:Show()
+    else
+        editBox.focusTexture:Hide()
+    end
+end
+
 local function createTextInput(parent, options)
     validateOptions(options)
 
@@ -74,27 +105,7 @@ local function createTextInput(parent, options)
         "BACKGROUND",
         INPUT_ATLAS
     )
-    editBox.focusTexture = lib:_CreateEditBoxFocusTexture(editBox)
-
-    editBox:SetScript("OnEnterPressed", function(self)
-        self:CommitAndClearFocus()
-    end)
-    editBox:SetScript("OnEscapePressed", function(self)
-        self:CancelAndClearFocus()
-    end)
-    editBox:SetScript("OnEditFocusGained", function(self)
-        lib:_CancelPendingEditBoxCommit(self)
-        self.focusTexture:Show()
-        EditBox_HighlightText(self)
-    end)
-    editBox:SetScript("OnEditFocusLost", function(self)
-        self.focusTexture:Hide()
-        EditBox_ClearHighlight(self)
-
-        if not self._libModernSettingsSuppressCommit then
-            lib:_FinalizeEditBoxOnFocusLost(self, finalizeTextInput)
-        end
-    end)
+    configureTextInput(editBox)
 
     if options.tooltip then
         lib:SetTooltip(editBox, {
@@ -231,6 +242,13 @@ lib:RegisterControlType(
     textInputMethods,
     initializeTextInput
 )
+
+-- Compatible upgrades preserve controls but not construction-owned regions.
+for control, controlType in pairs(lib._controlInstances) do
+    if controlType == "textInput" then
+        configureTextInput(control)
+    end
+end
 
 function lib:CreateTextInput(parent, options)
     options = options or {}

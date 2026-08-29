@@ -12,6 +12,35 @@ local function finalizeSliderInput(valueBox)
     valueBox._libModernSettingsSlider:_FinalizeInput()
 end
 
+local function configureSliderInput(control)
+    local valueBox = control.valueBox
+
+    valueBox._libModernSettingsSlider = control
+    valueBox.focusTexture = valueBox.focusTexture
+        or lib:_CreateEditBoxFocusTexture(valueBox)
+
+    valueBox:SetScript("OnEnterPressed", function(self)
+        self:ClearFocus()
+    end)
+    valueBox:SetScript("OnEscapePressed", EditBox_ClearFocus)
+    valueBox:SetScript("OnEditFocusGained", function(self)
+        lib:_CancelPendingEditBoxCommit(self)
+        self.focusTexture:Show()
+        EditBox_HighlightText(self)
+    end)
+    valueBox:SetScript("OnEditFocusLost", function(self)
+        self.focusTexture:Hide()
+        EditBox_ClearHighlight(self)
+        lib:_FinalizeEditBoxOnFocusLost(self, finalizeSliderInput)
+    end)
+
+    if valueBox:HasFocus() then
+        valueBox.focusTexture:Show()
+    else
+        valueBox.focusTexture:Hide()
+    end
+end
+
 local function validateOptions(options)
     assert(type(options.minValue) == "number", "minValue must be a number")
     assert(type(options.maxValue) == "number", "maxValue must be a number")
@@ -99,12 +128,11 @@ local function createSlider(parent, options)
 
     valueBoxBackground:SetAllPoints(valueBox)
     valueBoxBackground:SetAtlas(INPUT_ATLAS, false)
-    valueBox.focusTexture = lib:_CreateEditBoxFocusTexture(valueBox)
 
     control.label = label
     control.slider = slider
     control.valueBox = valueBox
-    valueBox._libModernSettingsSlider = control
+    configureSliderInput(control)
     control.currentValue = options.value or options.minValue
     control.callbackHandles = EventUtil.CreateCallbackHandleContainer()
     control.callbackHandles:RegisterCallback(
@@ -114,21 +142,6 @@ local function createSlider(parent, options)
             control:_HandleSliderValueChanged(value)
         end
     )
-
-    valueBox:SetScript("OnEnterPressed", function(self)
-        self:ClearFocus()
-    end)
-    valueBox:SetScript("OnEscapePressed", EditBox_ClearFocus)
-    valueBox:SetScript("OnEditFocusGained", function(self)
-        lib:_CancelPendingEditBoxCommit(self)
-        self.focusTexture:Show()
-        EditBox_HighlightText(self)
-    end)
-    valueBox:SetScript("OnEditFocusLost", function(self)
-        self.focusTexture:Hide()
-        EditBox_ClearHighlight(self)
-        lib:_FinalizeEditBoxOnFocusLost(self, finalizeSliderInput)
-    end)
 
     if options.tooltip then
         lib:SetTooltip(control, {
@@ -278,6 +291,13 @@ lib:RegisterControlType(
     sliderMethods,
     initializeSlider
 )
+
+-- Compatible upgrades preserve controls but not construction-owned regions.
+for control, controlType in pairs(lib._controlInstances) do
+    if controlType == "slider" then
+        configureSliderInput(control)
+    end
+end
 
 function lib:CreateSlider(parent, options)
     options = options or {}

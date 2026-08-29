@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reconfigure live sliders and text inputs created by an older embedded copy
+  before current focus behavior uses their newly added glow textures.
 - Highlight focused text inputs and editable slider values with Blizzard's
   neutral depressed tertiary glow.
 - Preserve mouse-up button actions when a text or slider input's focus-loss

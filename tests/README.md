@@ -3,9 +3,9 @@
 Automated tests cover the library's Lua-only registry, live prototype dispatch,
 text-input commit/cancel behavior, mouse-safe focus-loss commits, field
 composition, button content geometry, and compatible button and dropdown
-instance upgrades. They also cover
-old-first and new-first mixed LibStub MINOR load order. Validate Blizzard-owned
-templates and interaction behavior in game:
+instance upgrades, including focus-state upgrades for live text inputs and
+sliders. Old-first and new-first mixed LibStub MINOR load orders are covered as
+well. Validate Blizzard-owned templates and interaction behavior in game:
 
 - Open, close, and reopen every consuming Settings canvas.
 - Click enabled and disabled regular, small, and square buttons. Confirm all

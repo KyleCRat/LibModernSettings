@@ -418,6 +418,55 @@ end, {
 
 local oldDropdown = lib:CreateControl("dropdown", nil, {})
 
+lib:RegisterControlType("slider", function(parent)
+    local control = makeFrame("Frame", parent)
+
+    control:SetSize(270, 60)
+    control.label = makeFontString()
+    control.slider = CreateFrame(
+        "Frame",
+        nil,
+        control,
+        "MinimalSliderWithSteppersTemplate"
+    )
+    control.valueBox = makeFrame(
+        "EditBox",
+        control,
+        "InputBoxScriptTemplate"
+    )
+    control.valueBox:SetText("60")
+    control.currentValue = 60
+    control._libModernSettingsSliderOptions = {
+        minValue = 0,
+        maxValue = 100,
+        step = 1,
+        suffix = "",
+    }
+
+    return control
+end, {
+    SetControlEnabled = function() end,
+})
+
+local oldSlider = lib:CreateControl("slider", nil, {})
+
+lib:RegisterControlType("textInput", function(parent)
+    local editBox = makeFrame(
+        "EditBox",
+        parent,
+        "InputBoxScriptTemplate"
+    )
+
+    editBox._libModernSettingsCommittedValue = "Old"
+    editBox:SetText("Old")
+
+    return editBox
+end, {
+    SetControlEnabled = function() end,
+})
+
+local oldTextInput = lib:CreateControl("textInput", nil, {})
+
 dofile("Utilities/Atlas.lua")
 dofile("Utilities/EditBoxCommit.lua")
 dofile("Controls/Button.lua")
@@ -436,6 +485,36 @@ oldDropdown:SetControlWidth(180)
 assert(oldDropdown.width == 180)
 assert(oldDropdown.label.width == 180)
 assert(oldDropdown.dropdown.width == 164)
+
+assert(oldSlider.valueBox._libModernSettingsSlider == oldSlider)
+assert(oldSlider.valueBox.focusTexture.atlas ==
+    "common-button-tertiary-depressed-normal-glow")
+oldSlider:SetControlEnabled(false, "Disabled")
+assert(oldSlider.valueBox.focusTexture:IsShown() == false)
+oldSlider:SetControlEnabled(true)
+oldSlider.valueBox:SetFocus()
+assert(oldSlider.valueBox.focusTexture:IsShown() == true)
+oldSlider.valueBox:ClearFocus()
+assert(oldSlider.valueBox.focusTexture:IsShown() == false)
+
+assert(oldTextInput.focusTexture.atlas ==
+    "common-button-tertiary-depressed-normal-glow")
+oldTextInput:SetControlEnabled(false, "Disabled")
+assert(oldTextInput.focusTexture:IsShown() == false)
+oldTextInput:SetControlEnabled(true)
+oldTextInput:FocusValue()
+assert(oldTextInput.focusTexture:IsShown() == true)
+oldTextInput:CancelAndClearFocus()
+assert(oldTextInput.focusTexture:IsShown() == false)
+
+local oldSliderFocusTexture = oldSlider.valueBox.focusTexture
+local oldTextInputFocusTexture = oldTextInput.focusTexture
+
+dofile("Controls/Slider.lua")
+dofile("Controls/TextInput.lua")
+
+assert(oldSlider.valueBox.focusTexture == oldSliderFocusTexture)
+assert(oldTextInput.focusTexture == oldTextInputFocusTexture)
 
 local button = lib:CreateButton(nil, {
     text = "Add Category",
