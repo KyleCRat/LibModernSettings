@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Highlight focused text inputs and editable slider values with Blizzard's
+  neutral depressed tertiary glow.
 - Preserve mouse-up button actions when a text or slider input's focus-loss
   commit refreshes its canvas. LMS buttons finalize the pending edit before
   their callbacks, with a post-mouse-up fallback for other click targets.

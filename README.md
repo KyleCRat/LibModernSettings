@@ -49,12 +49,14 @@ Every control uses an options table:
   compact value field. `minValue` and `maxValue` bound the slider track and
   steppers, while typed values and `SetValue` may remain outside that range.
   Out-of-range values still snap to `step`; the thumb stays at the nearest
-  track endpoint without replacing the entered value.
+  track endpoint without replacing the entered value. The editable value field
+  shows Blizzard's neutral depressed tertiary glow while focused.
 - `CreateTextInput(parent, options)` creates a full-width single-line text
   input with the same single-piece sliced tertiary background used by slider
   value inputs. It defaults to 34px high. Use `value`, `width`, `height`,
   `maxLetters`, `textInset`, `onCommit`, and `onError`. Omitting `maxLetters`
-  leaves the input unbounded.
+  leaves the input unbounded. Focus shows Blizzard's neutral depressed
+  tertiary glow without changing the consumer API.
 - `CreateField(parent, options)` composes a semantic label with a registered
   control without changing the underlying control primitive. Use `label`,
   `controlType`, and `controlOptions`, then choose `labelPosition = "top"`

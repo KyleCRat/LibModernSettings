@@ -59,10 +59,13 @@ local function makeRegion()
 
     function region:ClearAllPoints()
         self.point = nil
+        self.points = nil
     end
 
     function region:SetPoint(...)
         self.point = { ... }
+        self.points = self.points or {}
+        self.points[#self.points + 1] = self.point
     end
 
     function region:SetDesaturated(desaturated)
@@ -289,7 +292,13 @@ local function makeFrame(frameType, parent, template)
     end
 
     function frame:SetFocus()
+        local hadFocus = self.hasFocus
+
         self.hasFocus = true
+
+        if not hadFocus and self.scripts.OnEditFocusGained then
+            self.scripts.OnEditFocusGained(self)
+        end
     end
 
     function frame:ClearFocus()
@@ -316,6 +325,20 @@ end
 function CreateFrame(frameType, _, parent, template)
     local frame = makeFrame(frameType, parent, template)
 
+    if template == "MinimalSliderWithSteppersTemplate" then
+        frame.Slider = makeFrame("Slider", frame)
+        frame.Back = makeFrame("Button", frame)
+        frame.Forward = makeFrame("Button", frame)
+
+        function frame:Init(value)
+            self.value = value
+        end
+
+        function frame:SetValue(value)
+            self.value = value
+        end
+    end
+
     return frame
 end
 
@@ -331,13 +354,24 @@ function IsMouseButtonDown()
     return mouseButtonDown
 end
 
-function lib:_CreateAtlasTexture(owner, layer, atlas)
-    local texture = owner:CreateTexture(nil, layer)
+C_Texture = {}
 
-    texture:SetAllPoints(owner)
-    texture:SetAtlas(atlas, false)
+function C_Texture.GetAtlasInfo()
+    return { width = 51, height = 39 }
+end
 
-    return texture
+MinimalSliderWithSteppersMixin = {
+    Event = {
+        OnValueChanged = "OnValueChanged",
+    },
+}
+
+EventUtil = {}
+
+function EventUtil.CreateCallbackHandleContainer()
+    return {
+        RegisterCallback = function() end,
+    }
 end
 
 function lib:SetTooltip(owner, options)
@@ -384,8 +418,10 @@ end, {
 
 local oldDropdown = lib:CreateControl("dropdown", nil, {})
 
+dofile("Utilities/Atlas.lua")
 dofile("Utilities/EditBoxCommit.lua")
 dofile("Controls/Button.lua")
+dofile("Controls/Slider.lua")
 dofile("Controls/TextInput.lua")
 dofile("Elements/Text.lua")
 dofile("Controls/Dropdown.lua")
@@ -720,6 +756,21 @@ assert(textInput.background.atlas ==
     "common-button-tertiary-depressed-normal")
 assert(textInput.background.drawLayer == "BACKGROUND")
 assert(textInput.background.allPoints == textInput)
+assert(textInput.focusTexture.atlas ==
+    "common-button-tertiary-depressed-normal-glow")
+assert(textInput.focusTexture.drawLayer == "BORDER")
+assert(textInput.focusTexture.allPoints == nil)
+assert(textInput.focusTexture.points[1][1] == "TOPLEFT")
+assert(textInput.focusTexture.points[1][2] == textInput)
+assert(textInput.focusTexture.points[1][3] == "TOPLEFT")
+assert(textInput.focusTexture.points[1][4] == -2)
+assert(textInput.focusTexture.points[1][5] == 3)
+assert(textInput.focusTexture.points[2][1] == "BOTTOMRIGHT")
+assert(textInput.focusTexture.points[2][2] == textInput)
+assert(textInput.focusTexture.points[2][3] == "BOTTOMRIGHT")
+assert(textInput.focusTexture.points[2][4] == 2)
+assert(textInput.focusTexture.points[2][5] == -1)
+assert(textInput.focusTexture:IsShown() == false)
 assert(textInput.textInsets[1] == 12)
 assert(textInput.textInsets[2] == 12)
 assert(textInput.maxLetters == 0)
@@ -730,12 +781,30 @@ local customHeightInput = lib:CreateTextInput(nil, { height = 30 })
 
 assert(customHeightInput.height == 30)
 
+local sliderControl = lib:CreateSlider(nil, {
+    label = "Scale",
+    minValue = 0,
+    maxValue = 2,
+    step = 0.1,
+    value = 1,
+})
+
+assert(sliderControl.valueBox.focusTexture.atlas ==
+    "common-button-tertiary-depressed-normal-glow")
+assert(sliderControl.valueBox.focusTexture:IsShown() == false)
+sliderControl.valueBox:SetFocus()
+assert(sliderControl.valueBox.focusTexture:IsShown() == true)
+sliderControl.valueBox:ClearFocus()
+assert(sliderControl.valueBox.focusTexture:IsShown() == false)
+
 textInput:FocusValue()
+assert(textInput.focusTexture:IsShown() == true)
 textInput:SetText("custom")
 textInput.scripts.OnEnterPressed(textInput)
 assert(textInput:GetValue() == "CUSTOM")
 assert(textInput:GetText() == "CUSTOM")
 assert(textInput:HasFocus() == false)
+assert(textInput.focusTexture:IsShown() == false)
 assert(commitCount == 1)
 
 textInput:FocusValue()
@@ -800,6 +869,7 @@ assert(commitCount == 5)
 
 textInput:SetControlEnabled(false, "Disabled")
 assert(textInput.enabled == false)
+assert(textInput.focusTexture:IsShown() == false)
 assert(textInput.tooltipEnabled == false)
 assert(textInput.textColor[1] == GRAY_FONT_COLOR.r)
 

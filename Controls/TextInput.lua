@@ -74,6 +74,7 @@ local function createTextInput(parent, options)
         "BACKGROUND",
         INPUT_ATLAS
     )
+    editBox.focusTexture = lib:_CreateEditBoxFocusTexture(editBox)
 
     editBox:SetScript("OnEnterPressed", function(self)
         self:CommitAndClearFocus()
@@ -83,9 +84,11 @@ local function createTextInput(parent, options)
     end)
     editBox:SetScript("OnEditFocusGained", function(self)
         lib:_CancelPendingEditBoxCommit(self)
+        self.focusTexture:Show()
         EditBox_HighlightText(self)
     end)
     editBox:SetScript("OnEditFocusLost", function(self)
+        self.focusTexture:Hide()
         EditBox_ClearHighlight(self)
 
         if not self._libModernSettingsSuppressCommit then
@@ -201,6 +204,12 @@ end
 
 function textInputMethods:SetControlEnabled(enabled, disabledTooltip)
     self:SetEnabled(enabled == true)
+
+    if enabled and self:HasFocus() then
+        self.focusTexture:Show()
+    else
+        self.focusTexture:Hide()
+    end
 
     local color = enabled and HIGHLIGHT_FONT_COLOR or GRAY_FONT_COLOR
 

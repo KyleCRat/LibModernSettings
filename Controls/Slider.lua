@@ -99,6 +99,7 @@ local function createSlider(parent, options)
 
     valueBoxBackground:SetAllPoints(valueBox)
     valueBoxBackground:SetAtlas(INPUT_ATLAS, false)
+    valueBox.focusTexture = lib:_CreateEditBoxFocusTexture(valueBox)
 
     control.label = label
     control.slider = slider
@@ -120,9 +121,11 @@ local function createSlider(parent, options)
     valueBox:SetScript("OnEscapePressed", EditBox_ClearFocus)
     valueBox:SetScript("OnEditFocusGained", function(self)
         lib:_CancelPendingEditBoxCommit(self)
+        self.focusTexture:Show()
         EditBox_HighlightText(self)
     end)
     valueBox:SetScript("OnEditFocusLost", function(self)
+        self.focusTexture:Hide()
         EditBox_ClearHighlight(self)
         lib:_FinalizeEditBoxOnFocusLost(self, finalizeSliderInput)
     end)
@@ -247,6 +250,12 @@ end
 function sliderMethods:SetControlEnabled(enabled, disabledTooltip)
     self.slider:SetEnabled(enabled == true)
     self.valueBox:SetEnabled(enabled == true)
+
+    if enabled and self.valueBox:HasFocus() then
+        self.valueBox.focusTexture:Show()
+    else
+        self.valueBox.focusTexture:Hide()
+    end
 
     local color = enabled and HIGHLIGHT_FONT_COLOR or GRAY_FONT_COLOR
 
