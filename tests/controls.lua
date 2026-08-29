@@ -852,6 +852,30 @@ commitFrame.scripts.OnUpdate(commitFrame, 0)
 assert(textInput:GetValue() == "GLOBAL MOUSE UP")
 assert(commitCount == 4)
 
+local transferredValue
+local focusTransferSource = lib:CreateTextInput(nil, {
+    value = "Source",
+    onCommit = function(value)
+        transferredValue = value
+        return value
+    end,
+})
+local focusTransferTarget = lib:CreateTextInput(nil, {
+    value = "Target",
+})
+
+focusTransferSource:FocusValue()
+focusTransferSource:SetText("Transferred")
+mouseButtonDown = true
+focusTransferSource:ClearFocus()
+focusTransferTarget:FocusValue()
+mouseButtonDown = false
+commitFrame.scripts.OnEvent(commitFrame, "GLOBAL_MOUSE_UP", "LeftButton")
+commitFrame.scripts.OnUpdate(commitFrame, 0)
+assert(transferredValue == "Transferred")
+assert(focusTransferTarget:HasFocus() == true)
+focusTransferTarget:CancelAndClearFocus()
+
 textInput:FocusValue()
 textInput:SetText("invalid")
 textInput.scripts.OnEnterPressed(textInput)

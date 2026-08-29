@@ -103,7 +103,9 @@ selection workflows. A mouse-caused focus loss defers its commit until the
 click reaches its target; this prevents a commit-driven canvas rebuild from
 consuming the button click. Clicking an LMS button flushes that edit before
 the button's callback, while clicks outside LMS finalize it immediately after
-the mouse is released.
+the mouse is released. Moving directly to another LMS edit box preserves that
+new focus while the previous value finalizes. Consumers should update
+value-only state in place instead of rebuilding unrelated focused controls.
 
 ## Canvas Layouts
 
