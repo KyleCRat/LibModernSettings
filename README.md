@@ -30,7 +30,8 @@ Every control uses an options table:
   `variant = "square"` with `iconAtlas` for an icon-only action button. It
   defaults to 34px square with an icon no larger than 16px; custom `width` or
   `height` keeps both dimensions equal. Buttons retain Blizzard's normal
-  mouse-up activation timing.
+  mouse-up activation timing and finalize a pending text edit before invoking
+  their consumer callback.
 - `CreateCheckbox(parent, options)` creates a 34px tertiary-square checkbox.
   Use `label`, `width`, `value`, `tooltip`, and `onChanged`.
 - `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
@@ -96,7 +97,11 @@ Text inputs commit on Enter or focus loss and cancel on Escape. `onCommit`
 receives the edited text and returns the accepted string, or `nil`/`false` plus
 an optional error value to restore the previous value. `CommitAndClearFocus`,
 `CancelAndClearFocus`, and `FocusValue` are available for consumer-owned
-selection workflows.
+selection workflows. A mouse-caused focus loss defers its commit until the
+click reaches its target; this prevents a commit-driven canvas rebuild from
+consuming the button click. Clicking an LMS button flushes that edit before
+the button's callback, while clicks outside LMS finalize it immediately after
+the mouse is released.
 
 ## Canvas Layouts
 

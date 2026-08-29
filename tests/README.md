@@ -1,8 +1,9 @@
 # In-Game Validation
 
 Automated tests cover the library's Lua-only registry, live prototype dispatch,
-text-input commit/cancel behavior, field composition, button content geometry,
-and compatible button and dropdown instance upgrades. They also cover
+text-input commit/cancel behavior, mouse-safe focus-loss commits, field
+composition, button content geometry, and compatible button and dropdown
+instance upgrades. They also cover
 old-first and new-first mixed LibStub MINOR load order. Validate Blizzard-owned
 templates and interaction behavior in game:
 
@@ -27,7 +28,9 @@ templates and interaction behavior in game:
 - Confirm formatted suffixes and custom parsers round-trip to stored values.
 - Confirm full-width text inputs use the single tertiary background without
   visible joins, keep text inside both ends, commit on Enter and focus loss,
-  restore rejected input, and cancel edits on Escape.
+  restore rejected input, and cancel edits on Escape. While editing, click LMS
+  action buttons and non-LMS click targets once; confirm the edit commits and
+  the target action still occurs on that first click.
 - Confirm stacked and inline fields align their labels consistently, give the
   wrapped control the remaining width, and disable the label and control as one
   field without changing the primitive's normal behavior.

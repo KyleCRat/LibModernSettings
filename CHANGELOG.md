@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Preserve mouse-up button actions when a text or slider input's focus-loss
+  commit refreshes its canvas. LMS buttons finalize the pending edit before
+  their callbacks, with a post-mouse-up fallback for other click targets.
 - Add reusable fields that compose registered control primitives with stacked
   or inline labels while preserving direct access to the underlying control.
 - Cap dropdown menus at three quarters of the UI height and use Blizzard's

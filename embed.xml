@@ -3,6 +3,7 @@
     <Script file="LibModernSettings-1.0.lua"/>
     <Script file="Utilities\Atlas.lua"/>
     <Script file="Utilities\Tooltip.lua"/>
+    <Script file="Utilities\EditBoxCommit.lua"/>
     <Script file="Elements\Text.lua"/>
     <Script file="Controls\Button.lua"/>
     <Script file="Controls\Checkbox.lua"/>

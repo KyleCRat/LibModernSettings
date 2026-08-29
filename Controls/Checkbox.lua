@@ -111,6 +111,9 @@ local checkboxMethods = {}
 
 function checkboxMethods:_HandleClick()
     local checked = self:GetChecked() == true
+    local onChanged = self._libModernSettingsOnChanged
+
+    lib:_FlushPendingEditBoxCommits()
 
     PlaySound(
         checked
@@ -118,8 +121,8 @@ function checkboxMethods:_HandleClick()
             or SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF
     )
 
-    if self._libModernSettingsOnChanged then
-        self._libModernSettingsOnChanged(checked)
+    if onChanged then
+        onChanged(checked)
     end
 end
 

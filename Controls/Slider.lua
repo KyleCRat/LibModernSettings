@@ -8,6 +8,10 @@ end
 local INPUT_ATLAS = "common-button-tertiary-depressed-normal"
 local DEFAULT_INPUT_WIDTH = 60
 
+local function finalizeSliderInput(valueBox)
+    valueBox._libModernSettingsSlider:_FinalizeInput()
+end
+
 local function validateOptions(options)
     assert(type(options.minValue) == "number", "minValue must be a number")
     assert(type(options.maxValue) == "number", "maxValue must be a number")
@@ -99,6 +103,7 @@ local function createSlider(parent, options)
     control.label = label
     control.slider = slider
     control.valueBox = valueBox
+    valueBox._libModernSettingsSlider = control
     control.currentValue = options.value or options.minValue
     control.callbackHandles = EventUtil.CreateCallbackHandleContainer()
     control.callbackHandles:RegisterCallback(
@@ -113,10 +118,13 @@ local function createSlider(parent, options)
         self:ClearFocus()
     end)
     valueBox:SetScript("OnEscapePressed", EditBox_ClearFocus)
-    valueBox:SetScript("OnEditFocusGained", EditBox_HighlightText)
+    valueBox:SetScript("OnEditFocusGained", function(self)
+        lib:_CancelPendingEditBoxCommit(self)
+        EditBox_HighlightText(self)
+    end)
     valueBox:SetScript("OnEditFocusLost", function(self)
         EditBox_ClearHighlight(self)
-        control:_FinalizeInput()
+        lib:_FinalizeEditBoxOnFocusLost(self, finalizeSliderInput)
     end)
 
     if options.tooltip then
@@ -168,6 +176,7 @@ function sliderMethods:_FormatValue(value)
 end
 
 function sliderMethods:_SyncValueBox(value)
+    lib:_CancelPendingEditBoxCommit(self.valueBox)
     self.valueBox:SetText(self:_FormatValue(value))
     self.valueBox:SetCursorPosition(0)
 end

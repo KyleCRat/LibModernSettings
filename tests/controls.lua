@@ -9,6 +9,7 @@ GameFontDisableSmall = {}
 HIGHLIGHT_FONT_COLOR = { r = 1, g = 1, b = 1 }
 GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 UIParent = { height = 1000 }
+local mouseButtonDown = false
 
 function UIParent:GetHeight()
     return self.height
@@ -232,6 +233,17 @@ local function makeFrame(frameType, parent, template)
         self.scripts[script] = callback
     end
 
+    function frame:RegisterEvent(event)
+        self.registeredEvents = self.registeredEvents or {}
+        self.registeredEvents[event] = true
+    end
+
+    function frame:UnregisterEvent(event)
+        if self.registeredEvents then
+            self.registeredEvents[event] = nil
+        end
+    end
+
     function frame:SetEnabled(enabled)
         self.enabled = enabled
     end
@@ -315,6 +327,10 @@ function EditBox_ClearHighlight(editBox)
     editBox.highlighted = false
 end
 
+function IsMouseButtonDown()
+    return mouseButtonDown
+end
+
 function lib:_CreateAtlasTexture(owner, layer, atlas)
     local texture = owner:CreateTexture(nil, layer)
 
@@ -368,6 +384,7 @@ end, {
 
 local oldDropdown = lib:CreateControl("dropdown", nil, {})
 
+dofile("Utilities/EditBoxCommit.lua")
 dofile("Controls/Button.lua")
 dofile("Controls/TextInput.lua")
 dofile("Elements/Text.lua")
@@ -728,20 +745,58 @@ assert(textInput:GetValue() == "FOCUS LOSS")
 assert(textInput:GetText() == "FOCUS LOSS")
 assert(commitCount == 2)
 
+local clickedValue
+local focusCommitButton = lib:CreateButton(nil, {
+    text = "Apply",
+    onClick = function()
+        clickedValue = textInput:GetValue()
+    end,
+})
+
+textInput:FocusValue()
+textInput:SetText("button click")
+mouseButtonDown = true
+textInput:ClearFocus()
+assert(textInput:GetValue() == "FOCUS LOSS")
+assert(commitCount == 2)
+mouseButtonDown = false
+focusCommitButton.scripts.OnClick(focusCommitButton, "LeftButton")
+assert(textInput:GetValue() == "BUTTON CLICK")
+assert(clickedValue == "BUTTON CLICK")
+assert(commitCount == 3)
+
+textInput:FocusValue()
+textInput:SetText("global mouse up")
+mouseButtonDown = true
+textInput:ClearFocus()
+assert(textInput:GetValue() == "BUTTON CLICK")
+mouseButtonDown = false
+local commitFrame = lib._editBoxCommitFrame
+
+commitFrame.scripts.OnEvent(
+    commitFrame,
+    "GLOBAL_MOUSE_UP",
+    "LeftButton"
+)
+assert(textInput:GetValue() == "BUTTON CLICK")
+commitFrame.scripts.OnUpdate(commitFrame, 0)
+assert(textInput:GetValue() == "GLOBAL MOUSE UP")
+assert(commitCount == 4)
+
 textInput:FocusValue()
 textInput:SetText("invalid")
 textInput.scripts.OnEnterPressed(textInput)
-assert(textInput:GetValue() == "FOCUS LOSS")
-assert(textInput:GetText() == "FOCUS LOSS")
+assert(textInput:GetValue() == "GLOBAL MOUSE UP")
+assert(textInput:GetText() == "GLOBAL MOUSE UP")
 assert(reportedError == "INVALID")
-assert(commitCount == 3)
+assert(commitCount == 5)
 
 textInput:FocusValue()
 textInput:SetText("discarded")
 textInput.scripts.OnEscapePressed(textInput)
-assert(textInput:GetValue() == "FOCUS LOSS")
-assert(textInput:GetText() == "FOCUS LOSS")
-assert(commitCount == 3)
+assert(textInput:GetValue() == "GLOBAL MOUSE UP")
+assert(textInput:GetText() == "GLOBAL MOUSE UP")
+assert(commitCount == 5)
 
 textInput:SetControlEnabled(false, "Disabled")
 assert(textInput.enabled == false)

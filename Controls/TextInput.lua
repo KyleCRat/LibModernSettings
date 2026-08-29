@@ -41,6 +41,10 @@ local function restoreCommittedValue(editBox)
     editBox:SetCursorPosition(0)
 end
 
+local function finalizeTextInput(editBox)
+    return editBox:Commit()
+end
+
 local function createTextInput(parent, options)
     validateOptions(options)
 
@@ -77,12 +81,15 @@ local function createTextInput(parent, options)
     editBox:SetScript("OnEscapePressed", function(self)
         self:CancelAndClearFocus()
     end)
-    editBox:SetScript("OnEditFocusGained", EditBox_HighlightText)
+    editBox:SetScript("OnEditFocusGained", function(self)
+        lib:_CancelPendingEditBoxCommit(self)
+        EditBox_HighlightText(self)
+    end)
     editBox:SetScript("OnEditFocusLost", function(self)
         EditBox_ClearHighlight(self)
 
         if not self._libModernSettingsSuppressCommit then
-            self:Commit()
+            lib:_FinalizeEditBoxOnFocusLost(self, finalizeTextInput)
         end
     end)
 
@@ -99,6 +106,8 @@ end
 local textInputMethods = {}
 
 function textInputMethods:Commit()
+    lib:_CancelPendingEditBoxCommit(self)
+
     local text = self:GetText()
     local value = text
     local errorCode
@@ -129,6 +138,13 @@ function textInputMethods:Commit()
 end
 
 function textInputMethods:CommitAndClearFocus()
+    local pending, committed, value =
+        lib:_FlushPendingEditBoxCommit(self)
+
+    if pending then
+        return committed ~= false, value
+    end
+
     if not self:HasFocus() then
         return true, self._libModernSettingsCommittedValue
     end
@@ -143,6 +159,7 @@ function textInputMethods:CommitAndClearFocus()
 end
 
 function textInputMethods:CancelAndClearFocus()
+    lib:_CancelPendingEditBoxCommit(self)
     restoreCommittedValue(self)
     self._libModernSettingsSuppressCommit = true
     self:ClearFocus()
@@ -151,6 +168,7 @@ end
 
 function textInputMethods:SetValue(value)
     assert(type(value) == "string", "text input value must be a string")
+    lib:_CancelPendingEditBoxCommit(self)
     self._libModernSettingsCommittedValue = value
     restoreCommittedValue(self)
 end
@@ -160,6 +178,7 @@ function textInputMethods:GetValue()
 end
 
 function textInputMethods:FocusValue()
+    lib:_CancelPendingEditBoxCommit(self)
     self:SetFocus()
     self:HighlightText()
 end

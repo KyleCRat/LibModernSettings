@@ -299,8 +299,12 @@ end
 local buttonMethods = {}
 
 function buttonMethods:_HandleClick(...)
-    if self._libModernSettingsOnClick then
-        self._libModernSettingsOnClick(self, ...)
+    local onClick = self._libModernSettingsOnClick
+
+    lib:_FlushPendingEditBoxCommits()
+
+    if onClick then
+        onClick(self, ...)
     end
 end
 
