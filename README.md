@@ -32,6 +32,15 @@ Every control uses an options table:
   `height` keeps both dimensions equal. Buttons retain Blizzard's normal
   mouse-up activation timing and finalize a pending text edit before invoking
   their consumer callback.
+- `CreateExpandableHeader(parent, options)` creates a full-width tertiary
+  section header with a right-aligned yellow arrow that points down while
+  collapsed and up while expanded. Use `text`, `width`, `height`, and
+  `expanded`; optionally pass `iconAtlas`, `iconSize`, and `iconDesaturated` for
+  a leading atlas icon. No icon spacing is reserved when `iconAtlas` is
+  omitted. `onExpandedChanged(header, expanded, button)` runs only for a user
+  click; `SetExpanded()` updates the displayed state without invoking it.
+  Headers also expose `IsExpanded()`, `SetHeaderText()`, `SetHeaderIcon()`,
+  `SetOnExpandedChanged()`, and `SetControlEnabled()`.
 - `CreateCheckbox(parent, options)` creates a 34px tertiary-square checkbox.
   Use `label`, `width`, `value`, `tooltip`, and `onChanged`.
 - `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
@@ -149,9 +158,11 @@ layout:Finalize()
 ```
 
 Flows provide `AddControl`, `AddText`, `AddSection`, `AddCustom`, `AddFrame`,
-`AddSpacer`, and nested `BeginColumns`. Pass `indent = 1` to a placement table
-for standard sub-input indentation. Custom regions keep complex addon-owned
-positioning local without returning the whole page to absolute coordinates.
+`AddSpacer`, and nested `BeginColumns`. An expandable header can be placed with
+`AddControl("expandableHeader", options)`. Pass `indent = 1` to a placement
+table for standard sub-input indentation. Custom regions keep complex
+addon-owned positioning local without returning the whole page to absolute
+coordinates.
 
 Spacing follows CSS-style terminology: `padding*` is internal container space,
 `marginTop` and `marginBottom` surround one placed element, and `rowGap` or

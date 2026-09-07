@@ -6,6 +6,9 @@ GameFontDisable = {}
 GameFontNormalSmall = {}
 GameFontHighlightSmall = {}
 GameFontDisableSmall = {}
+GameFontNormalLarge = {}
+GameFontHighlightLarge = {}
+GameFontDisableLarge = {}
 HIGHLIGHT_FONT_COLOR = { r = 1, g = 1, b = 1 }
 GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 UIParent = { height = 1000 }
@@ -17,6 +20,7 @@ end
 
 local atlasSizes = {
     ["common-icon-plus"] = { 16, 16 },
+    ["header-icon"] = { 40, 40 },
     ["wide-icon"] = { 20, 10 },
 }
 
@@ -78,6 +82,10 @@ local function makeRegion()
 
     function region:SetBlendMode(blendMode)
         self.blendMode = blendMode
+    end
+
+    function region:SetRotation(rotation)
+        self.rotation = rotation
     end
 
     function region:SetTextColor(r, g, b)
@@ -470,6 +478,7 @@ local oldTextInput = lib:CreateControl("textInput", nil, {})
 dofile("Utilities/Atlas.lua")
 dofile("Utilities/EditBoxCommit.lua")
 dofile("Controls/Button.lua")
+dofile("Controls/ExpandableHeader.lua")
 dofile("Controls/Slider.lua")
 dofile("Controls/TextInput.lua")
 dofile("Elements/Text.lua")
@@ -635,6 +644,95 @@ local squareTextMutationSucceeded = pcall(function()
 end)
 
 assert(squareTextMutationSucceeded == false)
+
+local expandedChanges = {}
+local expandableHeader = lib:CreateExpandableHeader(nil, {
+    text = "Mythic",
+    width = 300,
+    expanded = false,
+    iconAtlas = "header-icon",
+    iconSize = 20,
+    onExpandedChanged = function(header, expanded, button)
+        expandedChanges[#expandedChanges + 1] = {
+            header = header,
+            expanded = expanded,
+            button = button,
+        }
+    end,
+})
+
+assert(expandableHeader.width == 300)
+assert(expandableHeader.height == 34)
+assert(expandableHeader:GetText() == "Mythic")
+assert(expandableHeader._libModernSettingsHeaderNormalTexture.atlas ==
+    "common-button-tertiary-normal")
+assert(expandableHeader.pushedTexture.atlas ==
+    "common-button-tertiary-pressed")
+assert(expandableHeader.disabledTexture.atlas ==
+    "common-button-tertiary-disabled")
+assert(expandableHeader.icon.atlas == "header-icon")
+assert(expandableHeader.icon.drawLayer == "OVERLAY")
+assert(expandableHeader.icon:GetWidth() == 20)
+assert(expandableHeader.icon:GetHeight() == 20)
+assert(expandableHeader.icon:IsShown())
+assert(expandableHeader.label.points[1][2] == expandableHeader.icon)
+assert(expandableHeader.toggleIcon.drawLayer == "OVERLAY")
+assert(expandableHeader.toggleIcon.atlas ==
+    "common-dropdown-icon-next")
+assert(expandableHeader.toggleIcon:GetWidth() == 17)
+assert(expandableHeader.toggleIcon:GetHeight() == 17)
+assert(expandableHeader.toggleIcon.rotation == math.pi * 0.5)
+local collapsedToggleYOffset = expandableHeader.toggleIcon.point[5]
+assert(type(collapsedToggleYOffset) == "number")
+assert(expandableHeader:IsExpanded() == false)
+
+expandableHeader.scripts.OnEnter(expandableHeader)
+assert(expandableHeader._libModernSettingsHeaderNormalTexture.atlas ==
+    "common-button-tertiary-hover")
+expandableHeader.scripts.OnLeave(expandableHeader)
+assert(expandableHeader._libModernSettingsHeaderNormalTexture.atlas ==
+    "common-button-tertiary-normal")
+
+expandableHeader.scripts.OnClick(expandableHeader, "LeftButton")
+assert(expandableHeader:IsExpanded() == true)
+assert(expandableHeader.toggleIcon.rotation == math.pi * 1.5)
+local expandedToggleYOffset = expandableHeader.toggleIcon.point[5]
+assert(type(expandedToggleYOffset) == "number")
+assert(#expandedChanges == 1)
+assert(expandedChanges[1].header == expandableHeader)
+assert(expandedChanges[1].expanded == true)
+assert(expandedChanges[1].button == "LeftButton")
+
+expandableHeader:SetExpanded(false)
+assert(expandableHeader.toggleIcon.point[5] == collapsedToggleYOffset)
+assert(#expandedChanges == 1)
+expandableHeader:SetHeaderText("Heroic")
+assert(expandableHeader:GetText() == "Heroic")
+
+expandableHeader:SetHeaderIcon(nil)
+assert(expandableHeader.icon:IsShown() == false)
+assert(expandableHeader.label.points[1][2] == expandableHeader)
+expandableHeader:SetHeaderIcon("header-icon", false)
+assert(expandableHeader.icon:IsShown())
+
+expandableHeader:SetControlEnabled(false, "Unavailable")
+assert(expandableHeader.enabled == false)
+assert(expandableHeader.icon.desaturated == true)
+assert(expandableHeader.icon.alpha == 0.5)
+assert(expandableHeader.toggleIcon.atlas ==
+    "common-dropdown-icon-next-disabled")
+assert(expandableHeader.toggleIcon.desaturated == false)
+assert(expandableHeader.toggleIcon.alpha == 1)
+assert(expandableHeader.disabledTooltip == "Unavailable")
+
+expandableHeader:SetControlEnabled(true)
+assert(expandableHeader.enabled == true)
+assert(expandableHeader.icon.desaturated == false)
+assert(expandableHeader.icon.alpha == 1)
+assert(expandableHeader.toggleIcon.atlas ==
+    "common-dropdown-icon-next")
+assert(expandableHeader.toggleIcon.desaturated == false)
+assert(expandableHeader.toggleIcon.alpha == 1)
 
 local labeledDropdown = lib:CreateDropdown(nil, {
     label = "Profile",

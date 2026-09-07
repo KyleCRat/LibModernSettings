@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add a full-width tertiary expandable section header with an optional leading
+  atlas icon, an optically aligned borderless yellow down/up state arrow with
+  dedicated disabled art, and a user-input expansion callback.
+
 ## [1.5.0] - 2026-08-29
 
 - Add reusable fields that compose registered control primitives with stacked

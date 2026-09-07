@@ -6,6 +6,7 @@
     <Script file="Utilities\EditBoxCommit.lua"/>
     <Script file="Elements\Text.lua"/>
     <Script file="Controls\Button.lua"/>
+    <Script file="Controls\ExpandableHeader.lua"/>
     <Script file="Controls\Checkbox.lua"/>
     <Script file="Controls\Dropdown.lua"/>
     <Script file="Controls\Slider.lua"/>
