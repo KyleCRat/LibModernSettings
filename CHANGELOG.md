@@ -5,6 +5,9 @@
 - Add a full-width tertiary expandable section header with an optional leading
   atlas icon, an optically aligned borderless yellow down/up state arrow with
   dedicated disabled art, and a user-input expansion callback.
+- Allow settings-table rows to grow beneath their fixed-height control cells at
+  runtime, reflow following rows, and notify consumers when the table's total
+  height changes.
 
 ## [1.5.0] - 2026-08-29
 

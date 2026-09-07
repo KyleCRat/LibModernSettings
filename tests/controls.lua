@@ -159,6 +159,10 @@ local function makeFrame(frameType, parent, template)
         self.width = width
     end
 
+    function frame:SetHeight(height)
+        self.height = height
+    end
+
     function frame:GetWidth()
         return self.width
     end

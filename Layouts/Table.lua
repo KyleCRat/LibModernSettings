@@ -144,6 +144,48 @@ function TableView:GetColumnWidth(columnKey)
     return column.resolvedWidth
 end
 
+function TableView:GetHeight()
+    return self.frame:GetHeight()
+end
+
+function TableView:SetOnHeightChanged(callback)
+    assert(
+        callback == nil or type(callback) == "function",
+        "settings table height callback must be a function or nil"
+    )
+
+    self.onHeightChanged = callback
+end
+
+function TableView:_ReflowRows()
+    local oldHeight = self.frame:GetHeight()
+    local rowsHeight = 0
+
+    for index = 1, #self.rows do
+        local row = self.rows[index]
+        local rowFrame = row.frame
+
+        rowFrame:ClearAllPoints()
+        rowFrame:SetPoint(
+            "TOPLEFT",
+            self.frame,
+            "TOPLEFT",
+            0,
+            -(self.headerHeight + rowsHeight)
+        )
+        rowsHeight = rowsHeight + rowFrame:GetHeight()
+    end
+
+    self.rowsHeight = rowsHeight
+
+    local newHeight = self.headerHeight + rowsHeight
+
+    self.frame:SetHeight(newHeight)
+    if self.onHeightChanged and newHeight ~= oldHeight then
+        self.onHeightChanged(self, newHeight, oldHeight)
+    end
+end
+
 function TableView:AddHeaderText(columnKey, text, options)
     local column = self.columnsByKey[columnKey]
 
@@ -204,14 +246,31 @@ function TableView:AddRow(options)
     }, { __index = TableRow })
 
     self.rows[index] = row
-    self.rowsHeight = self.rowsHeight + rowHeight
-    self.frame:SetHeight(self.headerHeight + self.rowsHeight)
+    self:_ReflowRows()
 
     return row
 end
 
 function TableRow:GetFrame()
     return self.frame
+end
+
+function TableRow:GetHeight()
+    return self.frame:GetHeight()
+end
+
+function TableRow:SetHeight(height)
+    assert(
+        type(height) == "number" and height > 0,
+        "settings table row height must be positive"
+    )
+
+    if self.frame:GetHeight() == height then
+        return
+    end
+
+    self.frame:SetHeight(height)
+    self.tableView:_ReflowRows()
 end
 
 function TableRow:GetCell(columnKey)
@@ -312,7 +371,14 @@ function lib:CreateSettingsTable(parent, options)
         columnsByKey = {},
         rows = {},
         rowsHeight = 0,
+        onHeightChanged = options.onHeightChanged,
     }, { __index = TableView })
+
+    assert(
+        tableView.onHeightChanged == nil
+            or type(tableView.onHeightChanged) == "function",
+        "settings table height callback must be a function or nil"
+    )
 
     for index = 1, #columns do
         local column = columns[index]

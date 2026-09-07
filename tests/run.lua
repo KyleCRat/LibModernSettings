@@ -80,4 +80,5 @@ assert(succeeded == false)
 print("LibModernSettings core tests passed")
 
 dofile("tests/controls.lua")
+dofile("tests/table.lua")
 dofile("tests/load_order.lua")

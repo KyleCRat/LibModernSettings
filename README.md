@@ -184,6 +184,14 @@ Use `AddHeaderText`, `AddRow`, `row:AddText`, `row:AddControl`, and
 `row:GetCell` to populate it. Add the completed table frame to a flow with
 `flow:AddFrame(tableView:GetFrame())`.
 
+Rows can grow beneath their original fixed-height cell band with
+`row:SetHeight(height)`. Added and resized rows reflow following rows and the
+table frame automatically. Register
+`tableView:SetOnHeightChanged(function(tableView, newHeight, oldHeight) ... end)`
+(or pass `onHeightChanged` when creating the table) when the surrounding canvas
+or container must recompute its own height. `row:GetHeight()` and
+`tableView:GetHeight()` return the current dimensions.
+
 ## Extending the Library
 
 Additional control types register a factory, method prototype, and optional
