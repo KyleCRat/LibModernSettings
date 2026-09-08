@@ -76,6 +76,10 @@ Every control uses an options table:
   the resolved control width.
 - `CreateText(parent, options)` creates consistently aligned canvas text.
 - `SetTooltip(frame, options)` attaches a dynamic tooltip to any frame.
+  After changing its contents, call `RefreshTooltip(owner, target)` to redraw
+  it only when `target` currently owns the visible tooltip; `target` defaults
+  to `owner`. `HideOwnedTooltip(target)` hides the tooltip only when that
+  target owns it. Both ownership-aware methods return whether they acted.
 
 Implemented inputs live in separate files under `Controls/`. Additional
 control types are intentionally not part of the public API until a consumer

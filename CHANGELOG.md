@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add public ownership-aware `RefreshTooltip` and `HideOwnedTooltip` methods
+  for dynamic or reused tooltip targets.
 - Add a full-width tertiary expandable section header with an optional leading
   atlas icon, an optically aligned borderless yellow down/up state arrow with
   dedicated disabled art, and a user-input expansion callback.

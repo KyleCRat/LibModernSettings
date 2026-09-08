@@ -50,6 +50,30 @@ function lib:_ShowTooltip(owner, target)
     GameTooltip:Show()
 end
 
+function lib:HideOwnedTooltip(target)
+    assert(target, "tooltip target is required")
+
+    if GameTooltip:GetOwner() ~= target then
+        return false
+    end
+
+    GameTooltip:Hide()
+    return true
+end
+
+function lib:RefreshTooltip(owner, target)
+    assert(owner, "tooltip owner is required")
+
+    target = target or owner
+    if GameTooltip:GetOwner() ~= target then
+        return false
+    end
+
+    GameTooltip:Hide()
+    self:_ShowTooltip(owner, target)
+    return true
+end
+
 function lib:AddTooltipTarget(owner, target)
     assert(owner, "tooltip owner is required")
     assert(target, "tooltip target is required")
@@ -75,8 +99,8 @@ function lib:AddTooltipTarget(owner, target)
             self
         )
     end)
-    target:HookScript("OnLeave", function()
-        GameTooltip:Hide()
+    target:HookScript("OnLeave", function(self)
+        lib:HideOwnedTooltip(self)
     end)
 end
 
