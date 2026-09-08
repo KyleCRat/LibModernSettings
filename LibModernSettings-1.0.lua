@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibModernSettings-1.0", 6
+local MAJOR, MINOR = "LibModernSettings-1.0", 7
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not lib then
