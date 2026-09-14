@@ -5,7 +5,9 @@ text-input commit/cancel behavior, mouse-safe focus-loss commits, field
 composition, button content geometry, and compatible button and dropdown
 instance upgrades, including focus-state upgrades for live text inputs and
 sliders. Old-first and new-first mixed LibStub MINOR load orders are covered as
-well. Validate Blizzard-owned templates and interaction behavior in game:
+well, alongside content-sized controls, Field descriptions, canvas reflows,
+retained appearance overrides, and duplicate-module initialization.
+Validate Blizzard-owned templates and interaction behavior in game:
 
 - Open, close, and reopen every consuming Settings canvas.
 - Click enabled and disabled regular, small, and square buttons. Confirm all
@@ -34,6 +36,17 @@ well. Validate Blizzard-owned templates and interaction behavior in game:
 - Confirm stacked and inline fields align their labels consistently, give the
   wrapped control the remaining width, and disable the label and control as one
   field without changing the primitive's normal behavior.
+- Compare stacked Fields with built-in dropdown/slider labels, and verify
+  unlabeled controls have no label space. Check the default 4px sibling gap,
+  zero dropdown side insets, larger H1/H2 headings, and explicit overrides.
+- Resize Fields with descriptions through single-line and wrapped layouts;
+  change, clear, and restore descriptions while the canvas is visible and
+  hidden. Confirm only the affected canvas reflows and input text remains visible.
+- Open a Settings subcategory directly from its addon button on a cold login;
+  confirm dropdown selection text and arrows appear without switching pages.
+- Load old and new embeds in both orders. Confirm controls created by 1.7.0
+  or later adopt compatible visual defaults without losing values or focus,
+  while pre-metadata layouts and explicit consumer overrides remain preserved.
 - Hover every part of each enabled and disabled input and verify its tooltip.
 - Restore defaults and confirm visible values update without firing user-change
   callbacks.

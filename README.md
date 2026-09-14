@@ -6,6 +6,8 @@ value synchronization, enabled or disabled tooltip behavior, and optional
 canvas layout and table geometry. The consuming addon continues to own
 SavedVariables, category registration, page composition, and runtime callbacks.
 
+Release `1.7.0` uses the `LibModernSettings-1.0` API family with LibStub MINOR `8`.
+
 ## Embedding
 
 Load LibStub before `embed.xml`, then acquire the library with:
@@ -47,9 +49,9 @@ Every control uses an options table:
 - `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
   selector. Use `label`, `width`, `value`, `choices` or `getChoices`,
   `tooltip`, and `onChanged`. A non-empty `label` enables the labeled layout;
-  omitting it or passing `""` creates an unlabeled selector that fits the native
-  25px input frame. Both layouts default to zero side insets; `leftInset` and
-  `rightInset` override either side independently. A built-in label adds its
+  omitting it or passing `""` creates an unlabeled selector with a 34px footprint
+  around the native 25px button artwork. Both layouts default to zero side
+  insets; `leftInset` and `rightInset` override either side independently. A built-in label adds its
   natural height and a 7px gap above the input, with no extra row space below.
   Use `height` only when intentionally reserving a taller or shorter row.
   Dropdown menus retain their natural height up
@@ -172,8 +174,8 @@ reflows; genuinely newer revisions still upgrade existing controls and pages.
 Canvas size watchers ignore negligible floating-point rounding without turning
 automatic widths into explicit overrides.
 
-This guarantee applies to copies that retain this metadata. Earlier embeds
-discarded option intent and canvas placement definitions, so their already-built
+This guarantee applies to copies from 1.7.0 onward that retain this metadata.
+Earlier embeds discarded option intent and canvas placement definitions, so their already-built
 pages remain preserved rather than guessing which sizes were custom. Those
 addons need a one-time embed update to participate in future visual upgrades.
 A higher MINOR still updates their methods; it cannot recover discarded layout
