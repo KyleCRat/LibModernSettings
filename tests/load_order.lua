@@ -78,7 +78,8 @@ end
 local function registerExampleControl(environment, minor, prefix)
     local lib = environment.LibStub(MAJOR, true)
 
-    if not lib or lib._implementationMinor ~= minor then
+    if not lib or lib._implementationMinor ~= minor
+        or not lib:_BeginModule("Controls/Example", minor) then
         return false
     end
 
@@ -154,7 +155,28 @@ local function testNewFirst()
     assert(control.value == "new:after")
 end
 
+local function testDuplicateCopy()
+    local environment = createEnvironment()
+
+    loadLibraryMinor(environment, CURRENT_MINOR)
+    assert(registerExampleControl(environment, CURRENT_MINOR, "first"))
+    local lib = environment.LibStub(MAJOR)
+    local factory = lib._controlTypes.example.factory
+    local control = lib:CreateControl("example", nil, {})
+
+    loadLibraryMinor(environment, CURRENT_MINOR)
+    assert(not registerExampleControl(environment, CURRENT_MINOR, "duplicate"))
+    assert(lib._controlTypes.example.factory == factory)
+    control:SetValue("after")
+    assert(control.value == "first:after")
+
+    -- A duplicate core must not suppress a module that has not loaded yet.
+    assert(lib:_BeginModule("Controls/LateModule", CURRENT_MINOR))
+    assert(not lib:_BeginModule("Controls/LateModule", CURRENT_MINOR))
+end
+
 testOldFirst()
 testNewFirst()
+testDuplicateCopy()
 
 print("LibModernSettings mixed load-order tests passed")

@@ -1,7 +1,8 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR then
+if not lib or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/Button", MINOR) then
     return
 end
 
@@ -144,6 +145,9 @@ local function layoutButtonContent(button)
         )
 
         button:SetWidth(width)
+        if button._libModernSettingsAppliedSize then
+            button._libModernSettingsAppliedSize.width = width
+        end
     end
 end
 
@@ -275,11 +279,11 @@ local function createButton(parent, options)
     layoutButtonContent(button)
     button._libModernSettingsOnClick = options.onClick
     if style.hover then
-        button:SetScript("OnEnter", function()
-            normalTexture:SetAtlas(style.hover, false)
+        button:SetScript("OnEnter", function(self)
+            normalTexture:SetAtlas(getButtonStyle(self).hover, false)
         end)
-        button:SetScript("OnLeave", function()
-            normalTexture:SetAtlas(style.normal, false)
+        button:SetScript("OnLeave", function(self)
+            normalTexture:SetAtlas(getButtonStyle(self).normal, false)
         end)
     end
     button:SetScript("OnClick", function(self, ...)
@@ -349,11 +353,37 @@ local function initializeButton(button, options)
     )
 end
 
+local function refreshButtonAppearance(button, options)
+    local style = BUTTON_STYLES[options.variant or "regular"]
+    local width = options.width or style.defaultWidth or 100
+    local height = options.height or style.height
+    if style.iconOnly then
+        width = options.width or options.height or style.defaultWidth
+        height = width
+    end
+    lib:_ApplyFixedControlSize(button, width, height)
+    button._libModernSettingsButtonStyle = style
+    button._libModernSettingsMinWidth = options.minWidth
+        or (options.fitToContent and options.width) or style.minWidth
+    button._libModernSettingsPaddingX = options.paddingX or style.paddingX
+    button._libModernSettingsIconGap = options.iconGap or DEFAULT_ICON_GAP
+    lib:_ApplyButtonFonts(button,
+        options.normalFont or style.normalFont,
+        options.highlightFont or style.highlightFont,
+        options.disabledFont or style.disabledFont)
+    if button.icon then
+        button.icon:SetAtlas(options.iconAtlas, true)
+        sizeButtonIcon(button.icon, style, options)
+    end
+    layoutButtonContent(button)
+end
+
 lib:RegisterControlType(
     "button",
     createButton,
     buttonMethods,
-    initializeButton
+    initializeButton,
+    refreshButtonAppearance
 )
 
 function lib:CreateButton(parent, options)

@@ -1,11 +1,15 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR then
+if not lib or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/Dropdown", MINOR) then
     return
 end
 
 local DEFAULT_WIDTH = 270
+-- The native 25px button's border/shadow extends beyond its hitbox. Give it
+-- a regular control footprint without stretching Blizzard's child textures.
+local DEFAULT_INPUT_HEIGHT = 34
 local DEFAULT_INSET = 0
 local LEGACY_INSET = 8
 local DEFAULT_MENU_HEIGHT_RATIO = 0.75
@@ -40,6 +44,9 @@ end
 
 local function layoutDropdown(control)
     local width = control:GetWidth()
+    local nativeHeight = control.dropdown:GetHeight()
+    local inputHeight = math.max(DEFAULT_INPUT_HEIGHT, nativeHeight)
+    local bottomInset = (inputHeight - nativeHeight) / 2
     local leftInset = control._libModernSettingsLeftInset
     local rightInset = control._libModernSettingsRightInset
     control.label:SetWidth(width)
@@ -52,12 +59,12 @@ local function layoutDropdown(control)
         return lib:_LayoutStackedLabel(
             control, control.label, control.dropdown,
             control._libModernSettingsLabelLayout
-        )
+        ) + bottomInset
     end
 
     control.dropdown:ClearAllPoints()
     control.dropdown:SetPoint("LEFT", control, "LEFT", leftInset, 0)
-    return control.dropdown:GetHeight()
+    return inputHeight
 end
 
 local function onDropdownShow(control)
@@ -290,11 +297,22 @@ local function initializeDropdown(dropdown, options)
     configureDropdownVisibility(dropdown)
 end
 
+local function refreshDropdownAppearance(control, options)
+    lib:_ApplyInputWidth(control, options.width or DEFAULT_WIDTH)
+    control._libModernSettingsLeftInset = options.leftInset or DEFAULT_INSET
+    control._libModernSettingsRightInset = options.rightInset or DEFAULT_INSET
+    control._libModernSettingsLabelLayout.inputOffsetX = control._libModernSettingsLeftInset
+    control._libModernSettingsExplicitHeight = options.height
+    lib:_ApplyDefaultFont(control.label, options.fontObject or GameFontHighlight)
+    control:RefreshLayout()
+end
+
 lib:RegisterControlType(
     "dropdown",
     createDropdown,
     dropdownMethods,
-    initializeDropdown
+    initializeDropdown,
+    refreshDropdownAppearance
 )
 
 -- Preserve the reserved space of controls already laid out by an older embed.

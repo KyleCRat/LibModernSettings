@@ -7,6 +7,7 @@ GameFontNormalSmall = {}
 GameFontHighlightSmall = {}
 GameFontDisableSmall = {}
 GameFontNormalLarge = {}
+GameFontNormalHuge = {}
 GameFontHighlightLarge = {}
 GameFontDisableLarge = {}
 HIGHLIGHT_FONT_COLOR = { r = 1, g = 1, b = 1 }
@@ -14,6 +15,10 @@ GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 UIParent = { height = 1000 }
 local mouseButtonDown = false
 local deferredCallbacks = {}
+
+function ApproximatelyEqual(first, second, epsilon)
+    return math.abs(first - second) < epsilon
+end
 
 C_Timer = {
     After = function(delay, callback)
@@ -96,6 +101,9 @@ local function makeRegion()
         self.alpha = alpha
     end
 
+    function region:SetScale(scale) self.scale = scale end
+    function region:SetVertexColor(...) self.vertexColor = { ... } end
+
     function region:SetBlendMode(blendMode)
         self.blendMode = blendMode
     end
@@ -126,16 +134,34 @@ end
 local function makeFontString()
     local fontString = makeRegion()
 
+    function fontString:HasScript()
+        return false
+    end
+
+    function fontString:HookScript(script)
+        error("FontString:HookScript(): unsupported script " .. script)
+    end
+
     function fontString:GetHeight()
-        return self.height or 12
+        return self.height or self:GetStringHeight()
     end
 
     function fontString:GetStringHeight()
-        return self.stringHeight or 12
+        if self.stringHeight then return self.stringHeight end
+        local height = (self.fontObject and self.fontObject.height) or 12
+        if self.wordWrap and self.nonSpaceWrap and self.width and self.width > 0 then
+            -- A simple unbroken-text wrap is sufficient for description layout tests.
+            return height * math.max(1, math.ceil(self:GetStringWidth() / self.width))
+        end
+        return height
     end
 
     function fontString:SetFontObject(fontObject)
         self.fontObject = fontObject
+    end
+
+    function fontString:GetFontObject()
+        return self.fontObject
     end
 
     function fontString:SetJustifyH(justify)
@@ -150,11 +176,16 @@ local function makeFontString()
         self.wordWrap = wordWrap
     end
 
+    function fontString:SetNonSpaceWrap(nonSpaceWrap)
+        self.nonSpaceWrap = nonSpaceWrap
+    end
+
     function fontString:SetMaxLines(maxLines)
         self.maxLines = maxLines
     end
 
     function fontString:SetText(text)
+        assert(not self.requiresFont or self.fontObject, "FontString:SetText(): Font not set")
         self.text = text
     end
 
@@ -228,13 +259,21 @@ local function makeFrame(frameType, parent, template)
         return texture
     end
 
-    function frame:CreateFontString(_, _, _, ...)
+    function frame:CreateFontString(_, _, fontObject, ...)
         assert(select("#", ...) == 0)
-        return makeFontString()
+        local fontString = makeFontString()
+        fontString.requiresFont = true
+        if fontObject then
+            fontString:SetFontObject(fontObject)
+        end
+        return fontString
     end
 
     function frame:SetFontString(fontString)
         self.fontString = fontString
+        if self.normalFontObject then
+            fontString:SetFontObject(self.normalFontObject)
+        end
     end
 
     function frame:GetFontString()
@@ -255,7 +294,14 @@ local function makeFrame(frameType, parent, template)
 
     function frame:SetNormalFontObject(fontObject)
         self.normalFontObject = fontObject
+        if self.fontString then
+            self.fontString:SetFontObject(fontObject)
+        end
     end
+
+    function frame:GetNormalFontObject() return self.normalFontObject end
+    function frame:GetHighlightFontObject() return self.highlightFontObject end
+    function frame:GetDisabledFontObject() return self.disabledFontObject end
 
     function frame:SetHighlightFontObject(fontObject)
         self.highlightFontObject = fontObject
@@ -285,8 +331,18 @@ local function makeFrame(frameType, parent, template)
         self.disabledTexture = texture
     end
 
+    function frame:SetCheckedTexture(texture) self.checkedTexture = texture end
+    function frame:SetDisabledCheckedTexture(texture) self.disabledCheckedTexture = texture end
+    function frame:SetChecked(checked) self.checked = checked end
+    function frame:GetChecked() return self.checked end
+    function frame:SetHitRectInsets(...) self.hitRectInsets = { ... } end
+
     function frame:SetScript(script, callback)
         self.scripts[script] = callback
+    end
+
+    function frame:HasScript()
+        return true
     end
 
     function frame:HookScript(script, callback)
@@ -335,6 +391,10 @@ local function makeFrame(frameType, parent, template)
 
     function frame:SetFontObject(fontObject)
         self.fontObject = fontObject
+    end
+
+    function frame:GetFontObject()
+        return self.fontObject
     end
 
     function frame:SetJustifyH(justify)
@@ -555,6 +615,11 @@ lib:RegisterControlType("field", function(parent)
 end, { SetControlEnabled = function() end })
 
 local oldField = lib:CreateControl("field", nil, {})
+
+-- These fixtures represent releases predating retained appearance options.
+for _, control in ipairs({ oldButton, oldDropdown, oldSlider, oldTextInput, oldField }) do
+    control._libModernSettingsAppearanceOptions = nil
+end
 
 dofile("Utilities/Atlas.lua")
 dofile("Utilities/EditBoxCommit.lua")
@@ -829,7 +894,8 @@ local labeledDropdown = lib:CreateDropdown(nil, {
 })
 
 assert(labeledDropdown.width == 270)
-assert(labeledDropdown.height == 44)
+assert(labeledDropdown.height == 48.5)
+assert(labeledDropdown.dropdown.height == 25, "layout spacing must not stretch dropdown artwork")
 assert(labeledDropdown.label:IsShown() == true)
 assert(labeledDropdown.label.point[1] == "TOPLEFT")
 assert(labeledDropdown.dropdown.width == 270)
@@ -938,7 +1004,8 @@ local inlineDropdown = lib:CreateDropdown(nil, {
 })
 
 assert(inlineDropdown.width == 270)
-assert(inlineDropdown.height == 25)
+assert(inlineDropdown.height == 34)
+assert(inlineDropdown.dropdown.height == 25)
 assert(inlineDropdown.label:IsShown() == false)
 assert(inlineDropdown.dropdown.width == 270)
 assert(inlineDropdown.dropdown.point[1] == "LEFT")
@@ -946,7 +1013,7 @@ assert(inlineDropdown.dropdown.point[2] == inlineDropdown)
 assert(inlineDropdown.dropdown.point[3] == "LEFT")
 assert(inlineDropdown.dropdown.point[4] == 0)
 assert(inlineDropdown.dropdown.point[5] == 0)
-assert(inlineDropdown:GetContentTopInset() == 0)
+assert(inlineDropdown:GetContentTopInset() == 4.5)
 
 inlineDropdown:SetControlWidth(180)
 assert(inlineDropdown.width == 180)
@@ -1064,7 +1131,7 @@ do
         })
 
         assert(dropdown.label:IsShown() == case.visible)
-        assert(dropdown.height == (case.visible and 44 or 25))
+        assert(dropdown.height == (case.visible and 48.5 or 34))
         assert(slider.label:IsShown() == case.visible)
         assert(slider.height == (case.visible and 48 or 39))
         assert(slider.slider.height == 19)
@@ -1402,6 +1469,58 @@ assert(inlineField.tooltipEnabled == false)
 assert(inlineInput.tooltipEnabled == false)
 assert(inlineField.label.textColor[1] == GRAY_FONT_COLOR.r)
 
+-- Descriptions belong to the Field's content height, including when inline.
+do
+    for _, position in ipairs({ "left", "top" }) do
+        local field = lib:CreateField(nil, {
+            label = "Name", labelPosition = position, width = 240,
+            controlType = "textInput", controlOptions = { value = "Saved" },
+        })
+        local input = field:GetControl()
+        local inputHeight = field:GetHeight()
+        input:FocusValue()
+        input:SetText("Draft")
+        assert(field.description == nil and field:GetDescription() == "")
+
+        field:SetDescription(string.rep("a", 40))
+        local description = field.description
+        assert(description.fontObject == GameFontHighlightSmall)
+        assert(description.wordWrap and description.nonSpaceWrap and description.width == 240)
+        assert(field:GetHeight() == inputHeight + 4 + 12)
+        assert(description.point[5] == -inputHeight - 4)
+        if position == "left" then
+            assert(input.point[1] == "TOPLEFT" and input.point[5] == 0)
+            assert(field.label.height == inputHeight)
+        end
+
+        field:SetControlWidth(120)
+        assert(description.width == 120 and field:GetHeight() == inputHeight + 4 + 24)
+        field:SetDescription("Short")
+        assert(field:GetHeight() == inputHeight + 4 + 12)
+        assert(field._libModernSettingsAppearanceOptions.description == "Short")
+        description.stringHeight = 24
+        field.scripts.OnShow(field)
+        assert(field:GetHeight() == inputHeight + 4 + 24, "show must remeasure description text")
+        field:SetDescription(nil)
+        assert(field:GetHeight() == inputHeight and not description:IsShown())
+        assert(field:GetDescription() == "" and field.description == description)
+        assert(field:GetControl() == input and input:HasFocus())
+        assert(input:GetText() == "Draft" and input:GetValue() == "Saved")
+        assert(not pcall(field.SetDescription, field, {}))
+    end
+
+    local field = lib:CreateField(nil, {
+        label = "Name", description = "Hint", descriptionGap = 0,
+        descriptionFontObject = { height = 10 }, controlType = "textInput",
+    })
+    assert(field:GetDescription() == "Hint" and field:GetHeight() == 53 + 10)
+    field:SetControlHeight(100)
+    field:SetDescription(nil)
+    assert(field:GetHeight() == 100, "explicit Field heights remain addon-owned")
+    field:SetControlHeight(nil)
+    assert(field:GetHeight() == 53)
+end
+
 -- Size changes reflow existing content, not its value/focus or callback state.
 do
     labeledDropdown:SetSize(320, 80)
@@ -1410,10 +1529,10 @@ do
     assert(labeledDropdown.dropdown.width == 300)
     assert(labeledDropdown.height == 80)
     labeledDropdown:SetControlHeight(nil)
-    assert(labeledDropdown.height == 44)
+    assert(labeledDropdown.height == 48.5)
     labeledDropdown.label.stringHeight = 24
     labeledDropdown:RefreshLayout()
-    assert(labeledDropdown.height == 56)
+    assert(labeledDropdown.height == 60.5)
 
     stackedDropdownField:SetWidth(360)
     assert(stackedDropdownField.label.width == 360)
@@ -1421,7 +1540,7 @@ do
     stackedDropdown:SetControlHeight(40)
     assert(stackedDropdownField.height == 51.5)
     stackedDropdown:SetControlHeight(nil)
-    assert(stackedDropdownField.height == 44)
+    assert(stackedDropdownField.height == 48.5)
 
     sliderControl.valueBox:SetFocus()
     sliderControl.valueBox:SetText("1.3")
@@ -1461,6 +1580,33 @@ do
     for _, control in ipairs({ labeledDropdown, sliderControl, stackedField }) do
         assert(not pcall(control.SetControlHeight, control, 0))
         assert(not pcall(control.SetControlWidth, control, 0))
+    end
+end
+
+-- Native layout can report settled sizes again, with minor coordinate rounding.
+-- These notifications must not re-anchor a focused input or create overrides.
+do
+    for _, position in ipairs({ "left", "top" }) do
+        local field = lib:CreateField(nil, {
+            label = "Name", labelPosition = position, width = 418,
+            controlType = "textInput", controlOptions = { value = "Saved" },
+        })
+        local input = field:GetControl()
+        input:FocusValue()
+        input:SetText("Draft")
+        local inputPoint = input.point
+        local height = field:GetHeight()
+
+        input.scripts.OnSizeChanged(input, input:GetWidth(), input:GetHeight())
+        input.scripts.OnSizeChanged(input, input:GetWidth() - 0.0001, input:GetHeight() - 0.0001)
+        field.scripts.OnSizeChanged(field, field:GetWidth() - 0.0001, height - 0.0001)
+        assert(input.point == inputPoint, "settled size notifications must not invalidate input geometry")
+        assert(field._libModernSettingsExplicitHeight == nil)
+        assert(field._libModernSettingsAppearanceOptions.height == nil)
+
+        input:SetHeight(40)
+        assert(field:GetHeight() == height + 6, "real child height changes must still reflow the field")
+        assert(input:HasFocus() and input:GetText() == "Draft" and input:GetValue() == "Saved")
     end
 end
 

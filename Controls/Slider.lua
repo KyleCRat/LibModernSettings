@@ -1,7 +1,8 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR then
+if not lib or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/Slider", MINOR) then
     return
 end
 
@@ -344,11 +345,28 @@ local function initializeSlider(slider, options)
     )
 end
 
+local function refreshSliderAppearance(control, options)
+    lib:_ApplyInputWidth(control, options.width or 270)
+    control._libModernSettingsExplicitHeight = options.height
+    control._libModernSettingsInputGap = options.inputGap or 0
+    control.slider:SetHeight(TRACK_HEIGHT)
+    control.valueBox:SetSize(
+        options.inputWidth or DEFAULT_INPUT_WIDTH,
+        options.inputHeight or C_Texture.GetAtlasInfo(INPUT_ATLAS).height
+    )
+    control.valueBox:ClearAllPoints()
+    control.valueBox:SetPoint("LEFT", control.slider, "RIGHT", control._libModernSettingsInputGap, 0)
+    lib:_ApplyDefaultFont(control.label, options.fontObject or GameFontHighlight)
+    lib:_ApplyDefaultFont(control.valueBox, options.inputFontObject or GameFontHighlight)
+    control:RefreshLayout()
+end
+
 lib:RegisterControlType(
     "slider",
     createSlider,
     sliderMethods,
-    initializeSlider
+    initializeSlider,
+    refreshSliderAppearance
 )
 
 -- Compatible upgrades preserve controls but not construction-owned regions.

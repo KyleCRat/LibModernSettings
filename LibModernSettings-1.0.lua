@@ -6,10 +6,21 @@ if not lib then
 end
 
 lib._implementationMinor = MINOR
+lib._loadedModules = lib._loadedModules or {}
 lib._controlTypes = lib._controlTypes or {}
 lib._controlInstances = lib._controlInstances
     or setmetatable({}, { __mode = "k" })
 lib._methodDispatchers = lib._methodDispatchers or {}
+
+-- Module files retain their version guard and run once per accepted revision.
+function lib:_BeginModule(moduleName, minor)
+    if self._loadedModules[moduleName] == minor then
+        return false
+    end
+
+    self._loadedModules[moduleName] = minor
+    return true
+end
 
 local function getMethodDispatcher(methodName)
     local dispatcher = lib._methodDispatchers[methodName]
@@ -42,7 +53,19 @@ local function installControlMethods(control, definition)
     end
 end
 
-function lib:RegisterControlType(controlType, factory, methods, initializer)
+function lib:_RefreshControlAppearance(control)
+    local definition = self._controlTypes[control._libModernSettingsControlType]
+    local options = control._libModernSettingsAppearanceOptions
+    if not options or not definition.refreshAppearance or control._libModernSettingsRefreshingAppearance then
+        return
+    end
+
+    control._libModernSettingsRefreshingAppearance = true
+    definition.refreshAppearance(control, options)
+    control._libModernSettingsRefreshingAppearance = nil
+end
+
+function lib:RegisterControlType(controlType, factory, methods, initializer, refreshAppearance)
     assert(
         type(controlType) == "string" and controlType ~= "",
         "controlType must be a non-empty string"
@@ -52,6 +75,10 @@ function lib:RegisterControlType(controlType, factory, methods, initializer)
     assert(
         initializer == nil or type(initializer) == "function",
         "initializer must be a function or nil"
+    )
+    assert(
+        refreshAppearance == nil or type(refreshAppearance) == "function",
+        "refreshAppearance must be a function or nil"
     )
 
     local definition = self._controlTypes[controlType]
@@ -63,6 +90,7 @@ function lib:RegisterControlType(controlType, factory, methods, initializer)
 
     definition.factory = factory
     definition.initializer = initializer
+    definition.refreshAppearance = refreshAppearance
 
     for methodName in pairs(definition.methods) do
         definition.methods[methodName] = nil
@@ -79,6 +107,11 @@ function lib:RegisterControlType(controlType, factory, methods, initializer)
     for control, instanceType in pairs(self._controlInstances) do
         if instanceType == controlType then
             installControlMethods(control, definition)
+            -- Old releases did not retain option intent. Never guess whether
+            -- their measured dimensions were defaults or addon overrides.
+            if refreshAppearance and control._libModernSettingsAppearanceOptions then
+                self:_RefreshControlAppearance(control)
+            end
         end
     end
 end
@@ -95,6 +128,10 @@ function lib:CreateControl(controlType, parent, options)
     options = options or {}
     assert(type(options) == "table", "options must be a table")
 
+    local appearanceOptions = {}
+    for key, value in pairs(options) do
+        appearanceOptions[key] = value
+    end
     local control = definition.factory(parent, options)
 
     if not control then
@@ -104,8 +141,13 @@ function lib:CreateControl(controlType, parent, options)
     end
 
     control._libModernSettingsControlType = controlType
+    control._libModernSettingsAppearanceOptions = appearanceOptions
     self._controlInstances[control] = controlType
     installControlMethods(control, definition)
+
+    if definition.refreshAppearance then
+        self:_RefreshControlAppearance(control)
+    end
 
     if definition.initializer then
         definition.initializer(control, options)

@@ -1,7 +1,8 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR then
+if not lib or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/Checkbox", MINOR) then
     return
 end
 
@@ -162,11 +163,24 @@ local function initializeCheckbox(checkbox, options)
     )
 end
 
+local function refreshCheckboxAppearance(checkbox, options)
+    lib:_ApplyFixedControlSize(checkbox, CHECKBOX_SIZE, CHECKBOX_SIZE)
+    if checkbox.label then
+        local width = options.width or 220
+        lib:_ApplyDefaultFont(checkbox.label, options.fontObject or GameFontHighlight)
+        checkbox.label:SetWidth(math.max(width - checkbox:GetWidth() - LABEL_GAP, 1))
+        checkbox.label:ClearAllPoints()
+        checkbox.label:SetPoint("LEFT", checkbox, "RIGHT", LABEL_GAP, 0)
+        checkbox:SetHitRectInsets(0, math.min(checkbox:GetWidth() - width, 0), 0, 0)
+    end
+end
+
 lib:RegisterControlType(
     "checkbox",
     createCheckbox,
     checkboxMethods,
-    initializeCheckbox
+    initializeCheckbox,
+    refreshCheckboxAppearance
 )
 
 function lib:CreateCheckbox(parent, options)

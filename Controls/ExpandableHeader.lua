@@ -1,7 +1,8 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR then
+if not lib or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/ExpandableHeader", MINOR) then
     return
 end
 
@@ -313,11 +314,26 @@ local function initializeExpandableHeader(header, options)
     end
 end
 
+local function refreshHeaderAppearance(header, options)
+    lib:_ApplyFixedControlSize(header, options.width or DEFAULT_WIDTH, options.height or DEFAULT_HEIGHT)
+    lib:_ApplyButtonFonts(header,
+        options.normalFont or GameFontNormalLarge,
+        options.highlightFont or GameFontHighlightLarge,
+        options.disabledFont or GameFontDisableLarge)
+    header._libModernSettingsHeaderIconSize = options.iconSize or DEFAULT_ICON_SIZE
+    header.icon:ClearAllPoints()
+    header.icon:SetPoint("LEFT", header, "LEFT", DEFAULT_LEFT_PADDING, 0)
+    header:SetHeaderIcon(header._libModernSettingsHeaderIconAtlas,
+        header._libModernSettingsHeaderIconDesaturated)
+    updateToggleState(header)
+end
+
 lib:RegisterControlType(
     "expandableHeader",
     createExpandableHeader,
     expandableHeaderMethods,
-    initializeExpandableHeader
+    initializeExpandableHeader,
+    refreshHeaderAppearance
 )
 
 function lib:CreateExpandableHeader(parent, options)

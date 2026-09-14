@@ -91,6 +91,13 @@ Every control uses an options table:
   determines its row height, while the Field aligns its label to the track.
   This is a geometry measurement, not label spacing: Field owns the gap and
   callers do not need matching options or extra layout calls.
+  Optional `description` text sits below the complete label/input row in
+  `GameFontHighlightSmall`, wrapping to the Field's full width. The Field grows
+  or shrinks with the measured text; empty or nil descriptions reserve no room.
+  Use `SetDescription(text)` for dynamic messages and `GetDescription()` to read
+  the current text (an empty string when absent). `descriptionGap` defaults to
+  4px and `descriptionFontObject` overrides the smaller font. These options do
+  not affect the label-to-input gap or the parent layout's gap after the Field.
 - `CreateText(parent, options)` creates consistently aligned canvas text.
 - `SetTooltip(frame, options)` attaches a dynamic tooltip to any frame.
   After changing its contents, call `RefreshTooltip(owner, target)` to redraw
@@ -109,7 +116,7 @@ control restores its normal tooltip.
 
 Fields intentionally do not proxy value, focus, or control-specific methods.
 Call those methods on `field:GetControl()` so primitives remain independently
-usable and fields remain responsible only for label layout and complete-field
+usable and fields remain responsible for label/description layout and complete-field
 enabled state.
 
 Use Fields for new separate label/input combinations. Leave `label` out of
@@ -128,20 +135,49 @@ Default controls do not reserve external margins. Gaps reference input frames,
 not visible atlas pixels. Each input type stays consistent between built-in
 labels and Fields without trying to make different input artwork identical.
 
+Dropdowns use a 34px input footprint around Blizzard's unstretched 25px button
+so inline rows leave room for its border and shadow. Stacked Fields and built-in
+labels retain their label gap and include the same lower artwork allowance.
+Canvas flows still default to a 4px `rowGap`, overridable per canvas or through
+individual placement margins; explicit control heights remain supported.
+
 Dropdowns, sliders, and Fields relayout their existing children when their
 outer width or height changes, including native `SetWidth`, `SetHeight`, and
 `SetSize` calls. They also expose `SetControlWidth(width)` and
 `SetControlHeight(height)`; passing `nil` to the latter restores content-sized
 height. Explicit heights survive width changes. `RefreshLayout()` remeasures
-labels after direct text/font edits. A Field also tracks its child's height.
+labels and descriptions after direct font edits. A Field also tracks its child's height.
 Values, pending text, focus, and callbacks are not reset by layout changes.
-The containing layout still owns placement and any required sibling reflow.
+LMS canvas flows handle sibling reflow automatically. A manually positioned
+consumer still owns its surrounding layout.
 
 Font options retain their control-specific meanings: dropdown/slider
 `fontObject` styles the built-in label, slider `inputFontObject` styles its
 numeric value, and text-input `fontObject` styles the entered text. A Field's
 `labelFontObject` styles only its separate label; input fonts stay in
 `controlOptions`.
+
+### Compatible Visual Upgrades
+
+Compatibility preserves APIs and behavior, not an old copy's default appearance.
+Controls retain their constructor options, and canvases retain their placement
+definitions. A newer compatible embed updates library-owned sizing and fonts,
+then reflows existing rows and columns without rebuilding controls. Explicit
+options and tracked native size/font changes remain overrides; values, pending
+edits, focus, enabled state, and callbacks are not reinitialized.
+
+Each runtime module initializes only once per LibStub MINOR. Loading another
+identical embed does not repeat registrations, appearance refreshes, or canvas
+reflows; genuinely newer revisions still upgrade existing controls and pages.
+Canvas size watchers ignore negligible floating-point rounding without turning
+automatic widths into explicit overrides.
+
+This guarantee applies to copies that retain this metadata. Earlier embeds
+discarded option intent and canvas placement definitions, so their already-built
+pages remain preserved rather than guessing which sizes were custom. Those
+addons need a one-time embed update to participate in future visual upgrades.
+A higher MINOR still updates their methods; it cannot recover discarded layout
+information or retroactively rerun their page constructors.
 
 ```lua
 local nameField = ModernSettings:CreateField(parent, {
@@ -228,6 +264,12 @@ Spacing follows CSS-style terminology: `padding*` is internal container space,
 
 Scrollable layouts use `WowScrollBox` with `MinimalScrollBar`. `Finalize()`
 derives the content height from the completed flow and refreshes the ScrollBox.
+Flows retain frames, nested columns, spacers, and explicit placement options.
+Changes to a placed frame's size automatically queue one reflow for a visible
+canvas; hidden canvases wait until shown. `layout:RequestLayout()` requests that
+same coalesced pass after changes such as editing a FontString directly.
+`layout:RefreshLayout()` performs it synchronously. Both reuse existing controls
+and recalculate content height without replaying consumer construction code.
 
 ## Settings Tables
 
@@ -243,7 +285,8 @@ Use `AddHeaderText`, `AddRow`, `row:AddText`, `row:AddControl`, and
 
 Rows can grow beneath their original fixed-height cell band with
 `row:SetHeight(height)`. Added and resized rows reflow following rows and the
-table frame automatically. Register
+table frame automatically. LMS canvas flows track that frame's size and reflow
+automatically. For other surrounding layouts, register
 `tableView:SetOnHeightChanged(function(tableView, newHeight, oldHeight) ... end)`
 (or pass `onHeightChanged` when creating the table) when the surrounding canvas
 or container must recompute its own height. `row:GetHeight()` and
@@ -251,11 +294,11 @@ or container must recompute its own height. `row:GetHeight()` and
 
 ## Extending the Library
 
-Additional control types register a factory, method prototype, and optional
-initializer:
+Additional control types register a factory, method prototype, optional
+initializer, and optional appearance refresh:
 
 ```lua
-ModernSettings:RegisterControlType("example", factory, methods, initializer)
+ModernSettings:RegisterControlType("example", factory, methods, initializer, refreshAppearance)
 local control = ModernSettings:CreateControl("example", parent, options)
 ```
 
@@ -267,8 +310,16 @@ When a compatible update adds or changes non-method frame state, the control
 module must idempotently reconfigure its existing tracked instances. Method
 dispatch alone cannot add textures, child frames, or replace scripts.
 
-The factory constructs the frame before dispatch methods are installed. The
-optional initializer then applies values or state through those methods.
+The factory constructs the frame before dispatch methods are installed.
+`refreshAppearance(control, options)` runs after those methods are installed,
+both for new controls and existing controls with retained options when their
+type is upgraded. Keep it limited to appearance; do not restore initial values,
+replace callbacks, clear focus, or overwrite enabled state. The options are a
+shallow copy of the constructor options, with explicit control sizing updates
+retained. Nested option tables are not deep-copied.
+
+The initializer applies values or state only when a control is first created,
+after its appearance refresh. Appearance upgrades do not rerun it.
 
 Custom controls should keep persistence and addon-specific callbacks in their
 consumer. Register only reusable construction and control behavior with the

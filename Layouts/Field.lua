@@ -1,7 +1,8 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR then
+if not lib or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Layouts/Field", MINOR) then
     return
 end
 
@@ -9,6 +10,7 @@ local DEFAULT_WIDTH = 270
 local DEFAULT_INLINE_LABEL_HEIGHT = 18
 local DEFAULT_INLINE_LABEL_WIDTH = 90
 local DEFAULT_INLINE_GAP = 8
+local DEFAULT_DESCRIPTION_GAP = 4
 
 local VALID_LABEL_POSITIONS = {
     top = true,
@@ -74,9 +76,37 @@ local function validateOptions(options)
         "field gap must be a non-negative number or nil"
     )
     assert(
+        options.description == nil or type(options.description) == "string",
+        "field description must be a string or nil"
+    )
+    assert(
+        options.descriptionGap == nil
+            or (type(options.descriptionGap) == "number" and options.descriptionGap >= 0),
+        "field descriptionGap must be a non-negative number or nil"
+    )
+    assert(
         options.enabled == nil or type(options.enabled) == "boolean",
         "field enabled must be a boolean or nil"
     )
+end
+
+local function createDescription(field)
+    local fontObject = field._libModernSettingsFieldLayout.descriptionFontObject
+        or GameFontHighlightSmall
+    local description = lib:CreateText(field, { fontObject = fontObject })
+    lib:_ApplyDefaultFont(description, fontObject)
+    description:SetWordWrap(true)
+    description:SetNonSpaceWrap(true)
+    field.description = description
+
+    -- Hidden parents can defer font measurement until they are shown.
+    field:HookScript("OnShow", function(self)
+        if self:GetDescription() ~= "" then
+            self:RefreshLayout()
+        end
+    end)
+
+    return description
 end
 
 local function layoutField(field)
@@ -85,6 +115,7 @@ local function layoutField(field)
     local label = field.label
     local control = field.control
     local controlWidth = width
+    local hasDescription = layout.descriptionText ~= nil and layout.descriptionText ~= ""
 
     if layout.labelPosition == "left" then
         controlWidth = math.max(1, width - layout.labelWidth - layout.gap)
@@ -95,33 +126,64 @@ local function layoutField(field)
     else
         control:SetWidth(controlWidth)
     end
+    layout.controlHeight = control:GetHeight()
     label:ClearAllPoints()
     control:ClearAllPoints()
 
+    local height
     if layout.labelPosition == "left" then
-        local height = math.max(
+        label:SetWidth(layout.labelWidth)
+        height = math.max(
             layout.labelHeight or math.max(DEFAULT_INLINE_LABEL_HEIGHT, label:GetStringHeight()),
-            control:GetHeight()
+            layout.controlHeight
         )
 
-        label:SetWidth(layout.labelWidth)
-        label:SetHeight(field._libModernSettingsExplicitHeight or height)
         label:SetJustifyV("MIDDLE")
-        label:SetPoint("LEFT", field, "LEFT", 0, 0)
-        control:SetPoint("LEFT", field, "LEFT", layout.labelWidth + layout.gap, 0)
+        if hasDescription then
+            -- Center the input and label within their row, not the description.
+            label:SetHeight(height)
+            label:SetPoint("TOPLEFT", field, "TOPLEFT", 0, 0)
+            control:SetPoint(
+                "TOPLEFT", field, "TOPLEFT", layout.labelWidth + layout.gap,
+                -(height - layout.controlHeight) / 2
+            )
+        else
+            label:SetHeight(field._libModernSettingsExplicitHeight or height)
+            label:SetPoint("LEFT", field, "LEFT", 0, 0)
+            control:SetPoint("LEFT", field, "LEFT", layout.labelWidth + layout.gap, 0)
+        end
+    else
+        label:SetWidth(width)
+        layout.contentTopInset = type(control.GetContentTopInset) == "function"
+            and control:GetContentTopInset() or 0
+        height = lib:_LayoutStackedLabel(field, label, control, layout)
+    end
+
+    if not hasDescription then
+        if field.description then
+            field.description:Hide()
+        end
         return height
     end
 
-    label:SetWidth(width)
-    layout.contentTopInset = type(control.GetContentTopInset) == "function"
-        and control:GetContentTopInset() or 0
-    return lib:_LayoutStackedLabel(field, label, control, layout)
+    local description = field.description or createDescription(field)
+    local gap = layout.descriptionGap or DEFAULT_DESCRIPTION_GAP
+    description:SetWidth(width)
+    description:SetText(layout.descriptionText)
+    description:ClearAllPoints()
+    description:SetPoint("TOPLEFT", field, "TOPLEFT", 0, -height - gap)
+    description:Show()
+    return height + gap + description:GetStringHeight()
 end
 
 local function watchFieldSize(field)
     lib:_WatchControlSize(field)
-    field.control:HookScript("OnSizeChanged", function()
-        field:RefreshLayout()
+    field.control:HookScript("OnSizeChanged", function(_, _, height)
+        -- The Field owns width; only a changed child height needs parent layout.
+        -- Re-anchoring on its own settled-size notification invalidates edit text.
+        if not lib:_LayoutSizeMatches(height, field._libModernSettingsFieldLayout.controlHeight) then
+            field:RefreshLayout()
+        end
     end)
 end
 
@@ -211,6 +273,9 @@ local function createField(parent, options)
         labelWidth = labelWidth,
         labelHeight = labelHeight,
         gap = gap,
+        descriptionText = options.description or "",
+        descriptionGap = options.descriptionGap,
+        descriptionFontObject = options.descriptionFontObject,
     }
     field._libModernSettingsInitialEnabled = enabled
     field._libModernSettingsInitialDisabledTooltip = disabledTooltip
@@ -241,6 +306,24 @@ function fieldMethods:GetControl()
     return self.control
 end
 
+function fieldMethods:GetDescription()
+    return self._libModernSettingsFieldLayout.descriptionText or ""
+end
+
+function fieldMethods:SetDescription(text)
+    assert(text == nil or type(text) == "string", "field description must be a string or nil")
+    text = text or ""
+    if text == self:GetDescription() then
+        return
+    end
+
+    self._libModernSettingsFieldLayout.descriptionText = text
+    if self._libModernSettingsAppearanceOptions then
+        self._libModernSettingsAppearanceOptions.description = text
+    end
+    self:RefreshLayout()
+end
+
 function fieldMethods:SetControlEnabled(enabled, disabledTooltip)
     self.control:SetControlEnabled(enabled, disabledTooltip)
 
@@ -259,11 +342,28 @@ local function initializeField(field)
     field._libModernSettingsInitialDisabledTooltip = nil
 end
 
+local function refreshFieldAppearance(field, options)
+    lib:_ApplyInputWidth(field, options.width or DEFAULT_WIDTH)
+    field._libModernSettingsExplicitHeight = options.height
+    local layout = field._libModernSettingsFieldLayout
+    layout.labelWidth = options.labelWidth or DEFAULT_INLINE_LABEL_WIDTH
+    layout.labelHeight = options.labelHeight
+    layout.gap = options.gap or (layout.labelPosition == "left" and DEFAULT_INLINE_GAP or nil)
+    layout.descriptionGap = options.descriptionGap
+    layout.descriptionFontObject = options.descriptionFontObject
+    lib:_ApplyDefaultFont(field.label, options.labelFontObject or GameFontHighlight)
+    if field.description then
+        lib:_ApplyDefaultFont(field.description, options.descriptionFontObject or GameFontHighlightSmall)
+    end
+    field:RefreshLayout()
+end
+
 lib:RegisterControlType(
     "field",
     createField,
     fieldMethods,
-    initializeField
+    initializeField,
+    refreshFieldAppearance
 )
 
 -- Keep the layout choices of Fields constructed by an older embedded copy.

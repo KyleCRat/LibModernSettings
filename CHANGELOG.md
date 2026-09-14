@@ -2,8 +2,18 @@
 
 ## Unreleased
 
+- Add optional smaller, word-wrapped Field descriptions with automatic height,
+  a configurable 4px internal gap and font, and live `SetDescription` updates.
+  Support stacked and inline Fields without shifting inputs into descriptions;
+  empty descriptions reserve no space. Canvas flows retain their normal sibling
+  spacing and reflow only the affected page when description height changes.
+  Set the description font before assigning any text to prevent initialization
+  errors in consumers.
 - Advance LibStub MINOR to 8 for cross-addon review of the pending changes,
   taking precedence over older embedded copies without publishing a release.
+- Initialize each runtime module once per MINOR, preventing identical embedded
+  copies from repeating control registrations, appearance refreshes, and canvas
+  reflows. Preserve live upgrades when a genuinely newer revision loads.
 - Refresh dropdown geometry, selected text, and native arrow state after the
   visible layout pass, preventing blank dropdowns when opening a Settings
   canvas directly. Skip the refresh if the control is hidden in the meantime.
@@ -14,10 +24,30 @@
   Fit labeled and unlabeled controls to their content instead of reserving
   fixed-height rows or unused space below dropdowns.
 - Default both dropdown side insets to zero, with explicit insets supported.
+- Give dropdowns a regular 34px input footprint without stretching Blizzard's
+  25px button art, improving spacing between inline Fields and after stacked
+  dropdowns. Preserve the approved label gap, explicit heights, and the
+  configurable 4px canvas row gap.
 - Relayout dropdowns, sliders, and Fields on size changes without rebuilding
   controls or disturbing edits. Support explicit height overrides and restoring
-  automatic height; preserve already-placed outer dimensions during upgrades
-  from older embedded copies.
+  automatic height.
+- Ignore settled size notifications and negligible coordinate rounding when
+  reflowing Fields, inputs, and canvases. Preserve automatic canvas widths when
+  native dimensions differ only by rounding. Reflow a Field only for actual
+  child-height changes, avoiding repeated re-anchoring that can leave edit-box
+  text blank.
+- Retain control option intent and canvas rows, columns, spacers, and heading
+  roles so compatible upgrades can apply new visual defaults and reflow existing
+  pages without recreating controls or resetting values, focus, or callbacks.
+  Preserve explicit sizing, font, and spacing overrides. Coalesce visible-page
+  reflows and defer hidden-page work until shown.
+- Check size-change script support before watching canvas entries. FontStrings
+  are measured during layout instead, preventing settings initialization errors
+  while preserving explicit text widths.
+- Add an optional appearance-refresh callback for registered control types,
+  separate from value initialization. Embeds predating retained layout metadata
+  require a one-time update; their already-built layouts remain preserved because
+  their original defaults and overrides cannot be recovered reliably.
 - Recommend Fields for new separate labels while retaining built-in stacked
   labels. Keep inline labels and custom label geometry exclusive to Fields;
   checkbox captions remain owned by the checkbox. Document input, label-layout,

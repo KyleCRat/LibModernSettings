@@ -1,7 +1,8 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR then
+if not lib or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Layouts/Canvas", MINOR) then
     return
 end
 
@@ -27,10 +28,21 @@ local DEFAULT_STYLE = {
 lib._canvasLayoutPrototype = lib._canvasLayoutPrototype or {}
 lib._canvasFlowPrototype = lib._canvasFlowPrototype or {}
 lib._canvasColumnsPrototype = lib._canvasColumnsPrototype or {}
+lib._canvasLayouts = lib._canvasLayouts or setmetatable({}, { __mode = "k" })
 
 local Layout = lib._canvasLayoutPrototype
 local Flow = lib._canvasFlowPrototype
 local Columns = lib._canvasColumnsPrototype
+
+local function defaultFont(role)
+    if role == "title" or role == "titleWithDescription" then
+        return GameFontNormalHuge
+    elseif role == "section" then
+        return GameFontNormalLarge
+    elseif role == "description" then
+        return GameFontHighlight
+    end
+end
 
 local function shallowCopy(source)
     local copy = {}
@@ -228,6 +240,7 @@ function Layout:_CreateFlow(x, width, cursor)
         x = x,
         width = width,
         cursor = cursor,
+        entries = {},
     }, { __index = Flow })
 end
 
@@ -237,26 +250,24 @@ function Layout:AddHeader(title, description, options)
     local titleOptions = shallowCopy(options.titleOptions)
     local hasDescription = description and description ~= ""
 
-    titleOptions.fontObject = titleOptions.fontObject or GameFontNormalHuge
     titleOptions.text = title
 
-    local titleText = self.rootFlow:AddText(titleOptions, {
-        marginBottom = hasDescription
-            and (options.titleMarginBottom or self.style.titleMarginBottom)
-            or (options.marginBottom or self.style.headerMarginBottom),
-    })
+    local titleMarginBottom = options.marginBottom
+    if hasDescription then
+        titleMarginBottom = options.titleMarginBottom
+    end
+    local titleText = self.rootFlow:_AddText(titleOptions, {
+        marginBottom = titleMarginBottom,
+    }, hasDescription and "titleWithDescription" or "title")
     local descriptionText
 
     if hasDescription then
         local descriptionOptions = shallowCopy(options.descriptionOptions)
 
-        descriptionOptions.fontObject = descriptionOptions.fontObject
-            or GameFontHighlight
         descriptionOptions.text = description
-        descriptionText = self.rootFlow:AddText(descriptionOptions, {
-            marginBottom = options.marginBottom
-                or self.style.headerMarginBottom,
-        })
+        descriptionText = self.rootFlow:_AddText(descriptionOptions, {
+            marginBottom = options.marginBottom,
+        }, "description")
     end
 
     return titleText, descriptionText
@@ -264,6 +275,23 @@ end
 
 function Layout:Finalize(options)
     options = options or {}
+    self.finalizeOptions = shallowCopy(options)
+    self.finalized = true
+    return self:RefreshLayout()
+end
+
+-- Replays geometry only: controls, values, handlers and focus stay intact.
+function Layout:RefreshLayout()
+    if self.refreshing or not self.finalized then
+        return
+    end
+
+    self.refreshing = true
+    self.dirty = nil
+    if self.rootFlow.entries then
+        self.rootFlow:_RefreshLayout(self.style.paddingTop)
+    end
+    local options = self.finalizeOptions
 
     local paddingBottom = options.paddingBottom
         or self.style.paddingBottom
@@ -292,7 +320,26 @@ function Layout:Finalize(options)
         self.content:SetHeight(math.max(self.canvasHeight, bottom))
     end
 
+    self.refreshing = nil
     return bottom
+end
+
+function Layout:RequestLayout()
+    if self.refreshing or not self.rootFlow.entries then
+        return
+    end
+    self.dirty = true
+    if not self.finalized or self.refreshPending or not self.parent:IsVisible() then
+        return
+    end
+
+    self.refreshPending = true
+    C_Timer.After(0, function()
+        self.refreshPending = nil
+        if self.dirty and self.parent:IsVisible() then
+            self:RefreshLayout()
+        end
+    end)
 end
 
 function Flow:GetWidth()
@@ -347,17 +394,28 @@ function Flow:_GetRect(options)
     return x, width
 end
 
-function Flow:AddFrame(frame, options)
+function Flow:_PlaceFrame(frame, options, role)
     assert(frame, "layout frame is required")
 
     options = options or {}
 
     local x, width = self:_GetRect(options)
-    local marginTop = options.marginTop or 0
+    local marginTop = options.marginTop
     local marginBottom = options.marginBottom
 
+    if marginTop == nil then
+        marginTop = role == "section" and self.layout.style.sectionMarginTop or 0
+    end
     if marginBottom == nil then
-        marginBottom = self.layout.style.rowGap
+        if role == "section" then
+            marginBottom = self.layout.style.sectionMarginBottom
+        elseif role == "titleWithDescription" then
+            marginBottom = self.layout.style.titleMarginBottom
+        elseif role == "title" or role == "description" then
+            marginBottom = self.layout.style.headerMarginBottom
+        else
+            marginBottom = self.layout.style.rowGap
+        end
     end
 
     assert(
@@ -391,31 +449,75 @@ function Flow:AddFrame(frame, options)
     return frame
 end
 
-function Flow:AddText(textOptions, placement)
+local function watchEntrySize(entry, layout)
+    local frame = entry.frame
+    if not frame:HasScript("OnSizeChanged") then
+        return -- FontStrings are measured during layout and visible OnShow.
+    end
+    frame:HookScript("OnSizeChanged", function(_, width, height)
+        if entry.autoWidth and not lib:_LayoutSizeMatches(width, entry.allocatedWidth)
+            and not layout.refreshing
+            and not frame._libModernSettingsUpdatingLayout
+            and not frame._libModernSettingsRefreshingAppearance then
+            entry.autoWidth = nil
+        end
+        if not lib:_LayoutSizeMatches(width, entry.width)
+            or not lib:_LayoutSizeMatches(height, entry.height) then
+            entry.width, entry.height = width, height
+            layout:RequestLayout()
+        end
+    end)
+end
+
+function Flow:_AddFrame(frame, options, role)
+    if not self.entries then
+        return self:_PlaceFrame(frame, options, role)
+    end
+    local entry = { frame = frame, placement = shallowCopy(options), role = role }
+    self.entries[#self.entries + 1] = entry
+    self:_PlaceFrame(frame, entry.placement, role)
+    entry.width, entry.height = frame:GetWidth(), frame:GetHeight()
+    entry.allocatedWidth = entry.width
+    watchEntrySize(entry, self.layout)
+    return frame
+end
+
+function Flow:AddFrame(frame, options)
+    return self:_AddFrame(frame, options)
+end
+
+function Flow:_AddText(textOptions, placement, role)
     local _, width = self:_GetRect(placement)
     local options = shallowCopy(textOptions)
 
     options.width = options.width or width
+    options.fontObject = options.fontObject or defaultFont(role)
 
     local text = lib:CreateText(self.parent, options)
 
-    return self:AddFrame(text, placement)
+    self:_AddFrame(text, placement, role)
+    if self.entries then
+        self.entries[#self.entries].autoWidth = not (textOptions and textOptions.width)
+    end
+    if self.entries and role and not (textOptions and textOptions.fontObject) then
+        local entry = self.entries[#self.entries]
+        entry.defaultFont = true
+        lib:_ApplyDefaultFont(text, defaultFont(role))
+    end
+    return text
+end
+
+function Flow:AddText(textOptions, placement)
+    return self:_AddText(textOptions, placement)
 end
 
 function Flow:AddSection(text, options)
     options = shallowCopy(options)
 
-    if options.marginTop == nil then
-        options.marginTop = self.layout.style.sectionMarginTop
-    end
-    if options.marginBottom == nil then
-        options.marginBottom = self.layout.style.sectionMarginBottom
-    end
-
-    return self:AddText({
-        fontObject = options.fontObject or GameFontNormalLarge,
+    return self:_AddText({
+        fontObject = options.fontObject,
         text = text,
-    }, options)
+    }, options, "section")
 end
 
 function Flow:AddControl(controlType, controlOptions, placement)
@@ -426,7 +528,11 @@ function Flow:AddControl(controlType, controlOptions, placement)
 
     local control = lib:CreateControl(controlType, self.parent, options)
 
-    return self:AddFrame(control, placement)
+    self:AddFrame(control, placement)
+    if self.entries then
+        self.entries[#self.entries].autoWidth = not (controlOptions and controlOptions.width)
+    end
+    return control
 end
 
 function Flow:AddCustom(height, options)
@@ -450,6 +556,9 @@ function Flow:AddSpacer(height)
         "spacer height must be non-negative"
     )
 
+    if self.entries then
+        self.entries[#self.entries + 1] = { spacer = height }
+    end
     self.cursor = self.cursor + height
 end
 
@@ -483,7 +592,11 @@ function Flow:BeginColumns(options)
     local columns = setmetatable({
         parentFlow = self,
         flows = {},
+        options = shallowCopy(options),
     }, { __index = Columns })
+    if self.entries then
+        self.entries[#self.entries + 1] = { columns = columns }
+    end
 
     for index = 1, count do
         local columnX = x
@@ -506,6 +619,7 @@ end
 
 function Columns:Finish(options)
     options = options or {}
+    self.finishOptions = shallowCopy(options)
 
     local marginBottom = options.marginBottom or 0
 
@@ -523,6 +637,64 @@ function Columns:Finish(options)
     self.parentFlow.cursor = cursor + marginBottom
 
     return self.parentFlow.cursor
+end
+
+function Columns:_RefreshLayout()
+    local options = self.options
+    local parentFlow = self.parentFlow
+    local x, width = parentFlow:_GetRect(options)
+    local gap = options.columnGap or parentFlow.layout.style.columnGap
+    local columnWidth = (width - (#self.flows - 1) * gap) / #self.flows
+    parentFlow.cursor = parentFlow.cursor + (options.marginTop or 0)
+
+    for index, flow in ipairs(self.flows) do
+        flow.x = x + (index - 1) * (columnWidth + gap)
+        flow.width = columnWidth
+        flow:_RefreshLayout(parentFlow.cursor)
+    end
+    if self.finishOptions then
+        self:Finish(self.finishOptions)
+    end
+end
+
+function Flow:_RefreshLayout(cursor)
+    self.cursor = cursor
+    for _, entry in ipairs(self.entries) do
+        if entry.columns then
+            entry.columns:_RefreshLayout()
+        elseif entry.spacer then
+            self.cursor = self.cursor + entry.spacer
+        else
+            local frame = entry.frame
+            if entry.autoWidth and not frame:HasScript("OnSizeChanged")
+                and not lib:_LayoutSizeMatches(frame:GetWidth(), entry.width) then
+                entry.autoWidth = nil
+            end
+            if entry.defaultFont then
+                lib:_ApplyDefaultFont(frame, defaultFont(entry.role))
+            end
+            if entry.autoWidth then
+                local _, width = self:_GetRect(entry.placement)
+                if frame.SetControlWidth then
+                    frame:SetControlWidth(width)
+                elseif frame._libModernSettingsAppearanceOptions then
+                    local options = frame._libModernSettingsAppearanceOptions
+                    if not lib:_LayoutSizeMatches(width, options.width) then
+                        options.width = width
+                        lib:_RefreshControlAppearance(frame)
+                    end
+                elseif not frame._libModernSettingsControlType then
+                    frame:SetWidth(width)
+                end
+            end
+            if frame._libModernSettingsControlType and frame.RefreshLayout then
+                frame:RefreshLayout()
+            end
+            self:_PlaceFrame(frame, entry.placement, entry.role)
+            entry.width, entry.height = frame:GetWidth(), frame:GetHeight()
+            entry.allocatedWidth = entry.width
+        end
+    end
 end
 
 function lib:CreateCanvasLayout(parent, options)
@@ -627,7 +799,16 @@ function lib:CreateCanvasLayout(parent, options)
         canvasWidth = canvasWidth,
         canvasHeight = canvasHeight,
         contentWidth = contentWidth,
+        styleOverrides = {},
     }, { __index = Layout })
+
+    for key in pairs(DEFAULT_STYLE) do
+        local value = options.style and options.style[key]
+        if value == nil then
+            value = options[key]
+        end
+        layout.styleOverrides[key] = value
+    end
 
     parent:SetSize(canvasWidth, canvasHeight)
     layout.content = createContent(layout, options)
@@ -637,5 +818,35 @@ function lib:CreateCanvasLayout(parent, options)
         style.paddingTop
     )
 
+    lib._canvasLayouts[layout] = true
+    parent:HookScript("OnShow", function()
+        -- Font metrics can settle only after the canvas is visible.
+        layout:RequestLayout()
+    end)
+
     return layout
+end
+
+-- Tracked canvases keep their original option intent and placement records.
+-- Older, untracked canvases cannot be reconstructed safely from screen pixels.
+for layout in pairs(lib._canvasLayouts) do
+    layout.style = createStyle({ style = layout.styleOverrides })
+    layout.contentWidth = layout.canvasWidth - layout.style.paddingLeft
+        - layout.style.scrollbarGap - layout.style.scrollbarWidth
+    layout.content:SetWidth(layout.contentWidth)
+    layout.rootFlow.width = layout.contentWidth
+    if layout.scrollBox then
+        layout.scrollBox:ClearAllPoints()
+        layout.scrollBox:SetPoint("TOPLEFT", layout.parent, "TOPLEFT", layout.style.paddingLeft, -layout.viewportMarginTop)
+        layout.scrollBox:SetPoint("BOTTOMRIGHT", layout.parent, "BOTTOMRIGHT",
+            -(layout.style.scrollbarGap + layout.style.scrollbarWidth), layout.viewportMarginBottom)
+        layout.scrollBar:SetWidth(layout.style.scrollbarWidth)
+        layout.scrollBar:ClearAllPoints()
+        layout.scrollBar:SetPoint("TOPLEFT", layout.scrollBox, "TOPRIGHT", layout.style.scrollbarGap, 0)
+        layout.scrollBar:SetPoint("BOTTOMLEFT", layout.scrollBox, "BOTTOMRIGHT", layout.style.scrollbarGap, 0)
+    else
+        layout.content:ClearAllPoints()
+        layout.content:SetPoint("TOPLEFT", layout.parent, "TOPLEFT", layout.style.paddingLeft, 0)
+    end
+    layout:RequestLayout()
 end

@@ -1,7 +1,8 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR then
+if not lib or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/TextInput", MINOR) then
     return
 end
 
@@ -236,11 +237,20 @@ local function initializeTextInput(editBox, options)
     )
 end
 
+local function refreshTextInputAppearance(editBox, options)
+    lib:_ApplyFixedControlSize(editBox, options.width or DEFAULT_WIDTH, options.height or DEFAULT_HEIGHT)
+    lib:_ApplyDefaultFont(editBox, options.fontObject or GameFontHighlight)
+    local inset = options.textInset or DEFAULT_TEXT_INSET
+    editBox:SetTextInsets(inset, inset, 0, 0)
+    editBox.background:SetAtlas(INPUT_ATLAS, false)
+end
+
 lib:RegisterControlType(
     "textInput",
     createTextInput,
     textInputMethods,
-    initializeTextInput
+    initializeTextInput,
+    refreshTextInputAppearance
 )
 
 -- Compatible upgrades preserve controls but not construction-owned regions.
