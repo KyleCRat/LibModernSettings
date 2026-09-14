@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibModernSettings-1.0", 7
+local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
 if not lib or lib._implementationMinor ~= MINOR then
@@ -6,9 +6,8 @@ if not lib or lib._implementationMinor ~= MINOR then
 end
 
 local DEFAULT_WIDTH = 270
-local LABELED_HEIGHT = 60
-local UNLABELED_HEIGHT = 34
-local DROPDOWN_INSET = 8
+local DEFAULT_INSET = 0
+local LEGACY_INSET = 8
 local DEFAULT_MENU_HEIGHT_RATIO = 0.75
 
 local function getMaxMenuHeight()
@@ -39,28 +38,58 @@ local function centerScrollableMenuOnShow(menuFrame)
     end)
 end
 
-local function setControlWidth(control, width)
-    assert(
-        type(width) == "number" and width > 0,
-        "dropdown width must be a positive number"
-    )
-
+local function layoutDropdown(control)
+    local width = control:GetWidth()
     local leftInset = control._libModernSettingsLeftInset
     local rightInset = control._libModernSettingsRightInset
-
-    if leftInset == nil then
-        leftInset = DROPDOWN_INSET
-    end
-    if rightInset == nil then
-        rightInset = DROPDOWN_INSET
-    end
-
-    control:SetWidth(width)
     control.label:SetWidth(width)
     control.dropdown:SetWidth(math.max(
         1,
         width - leftInset - rightInset
     ))
+
+    if control.label:IsShown() then
+        return lib:_LayoutStackedLabel(
+            control, control.label, control.dropdown,
+            control._libModernSettingsLabelLayout
+        )
+    end
+
+    control.dropdown:ClearAllPoints()
+    control.dropdown:SetPoint("LEFT", control, "LEFT", leftInset, 0)
+    return control.dropdown:GetHeight()
+end
+
+local function onDropdownShow(control)
+    if control._libModernSettingsVisualRefreshPending then
+        return
+    end
+
+    control._libModernSettingsVisualRefreshPending = true
+    C_Timer.After(0, function()
+        control._libModernSettingsVisualRefreshPending = nil
+        if not control:IsVisible() then
+            return
+        end
+
+        -- Canvas OnRefresh can run before its parent is shown and laid out.
+        -- Native OnShow updates selection text, but not the arrow's state.
+        control:RefreshLayout()
+        control.dropdown:OnButtonStateChanged()
+        control.dropdown:Update()
+    end)
+end
+
+local function configureDropdownVisibility(control)
+    if control._libModernSettingsVisibilityHooked then
+        return
+    end
+
+    control._libModernSettingsVisibilityHooked = true
+    control:HookScript("OnShow", onDropdownShow)
+    if control:IsVisible() then
+        onDropdownShow(control)
+    end
 end
 
 local function createDropdown(parent, options)
@@ -78,8 +107,8 @@ local function createDropdown(parent, options)
         "onChanged must be a function or nil"
     )
     assert(
-        options.showLabel == nil or type(options.showLabel) == "boolean",
-        "showLabel must be a boolean or nil"
+        options.height == nil or (type(options.height) == "number" and options.height > 0),
+        "height must be a positive number or nil"
     )
     assert(
         options.leftInset == nil
@@ -96,27 +125,18 @@ local function createDropdown(parent, options)
 
     local control = CreateFrame("Frame", nil, parent)
     local width = options.width or DEFAULT_WIDTH
-    local showLabel = options.showLabel ~= false
-    local leftInset = options.leftInset
-    local rightInset = options.rightInset
+    local hasLabel = type(options.label) == "string" and options.label ~= ""
+    local leftInset = options.leftInset or DEFAULT_INSET
+    local rightInset = options.rightInset or DEFAULT_INSET
 
-    if leftInset == nil then
-        leftInset = DROPDOWN_INSET
-    end
-    if rightInset == nil then
-        rightInset = DROPDOWN_INSET
-    end
-
-    control:SetSize(
-        width,
-        options.height
-            or (showLabel and LABELED_HEIGHT or UNLABELED_HEIGHT)
-    )
+    control:SetWidth(width)
+    control._libModernSettingsExplicitHeight = options.height
     control._libModernSettingsChoices = options.choices or {}
     control._libModernSettingsGetChoices = options.getChoices
     control._libModernSettingsOnChanged = options.onChanged
     control._libModernSettingsLeftInset = leftInset
     control._libModernSettingsRightInset = rightInset
+    control._libModernSettingsLabelLayout = { inputOffsetX = leftInset }
 
     local label = lib:CreateText(control, {
         fontObject = options.fontObject or GameFontHighlight,
@@ -135,27 +155,11 @@ local function createDropdown(parent, options)
     control.dropdown = dropdown
     control.currentValue = options.value
 
-    setControlWidth(control, width)
-
-    if showLabel then
-        label:SetPoint("TOPLEFT", control, "TOPLEFT", 0, 0)
-        dropdown:SetPoint(
-            "TOPLEFT",
-            label,
-            "BOTTOMLEFT",
-            leftInset,
-            -7
-        )
-    else
+    if not hasLabel then
         label:Hide()
-        dropdown:SetPoint(
-            "LEFT",
-            control,
-            "LEFT",
-            leftInset,
-            0
-        )
     end
+    lib:_RefreshControlLayout(control, layoutDropdown)
+    lib:_WatchControlSize(control)
 
     if options.tooltip then
         lib:SetTooltip(control, {
@@ -252,8 +256,19 @@ function dropdownMethods:SetOnChanged(onChanged)
     self._libModernSettingsOnChanged = onChanged
 end
 
-function dropdownMethods:SetControlWidth(width)
-    setControlWidth(self, width)
+dropdownMethods.SetControlWidth = lib._SetControlWidth
+dropdownMethods.SetControlHeight = lib._SetControlHeight
+
+function dropdownMethods:RefreshLayout()
+    lib:_RefreshControlLayout(self, layoutDropdown)
+end
+
+function dropdownMethods:GetContentTopInset()
+    if self.label:IsShown() then
+        return 0
+    end
+
+    return (self:GetHeight() - self.dropdown:GetHeight()) / 2
 end
 
 function dropdownMethods:SetControlEnabled(enabled, disabledTooltip)
@@ -272,6 +287,7 @@ local function initializeDropdown(dropdown, options)
         options.enabled ~= false,
         options.disabledTooltip
     )
+    configureDropdownVisibility(dropdown)
 end
 
 lib:RegisterControlType(
@@ -280,6 +296,23 @@ lib:RegisterControlType(
     dropdownMethods,
     initializeDropdown
 )
+
+-- Preserve the reserved space of controls already laid out by an older embed.
+for control, controlType in pairs(lib._controlInstances) do
+    if controlType == "dropdown" then
+        if not control._libModernSettingsLabelLayout then
+            control._libModernSettingsExplicitHeight = control:GetHeight()
+            control._libModernSettingsLeftInset = control._libModernSettingsLeftInset or LEGACY_INSET
+            control._libModernSettingsRightInset = control._libModernSettingsRightInset or LEGACY_INSET
+            control._libModernSettingsLabelLayout = {
+                inputOffsetX = control._libModernSettingsLeftInset,
+            }
+            control:RefreshLayout()
+            lib:_WatchControlSize(control)
+        end
+        configureDropdownVisibility(control)
+    end
+end
 
 function lib:CreateDropdown(parent, options)
     options = options or {}

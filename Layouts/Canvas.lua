@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibModernSettings-1.0", 7
+local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
 if not lib or lib._implementationMinor ~= MINOR then
@@ -237,7 +237,7 @@ function Layout:AddHeader(title, description, options)
     local titleOptions = shallowCopy(options.titleOptions)
     local hasDescription = description and description ~= ""
 
-    titleOptions.fontObject = titleOptions.fontObject or GameFontNormalLarge
+    titleOptions.fontObject = titleOptions.fontObject or GameFontNormalHuge
     titleOptions.text = title
 
     local titleText = self.rootFlow:AddText(titleOptions, {
@@ -413,7 +413,7 @@ function Flow:AddSection(text, options)
     end
 
     return self:AddText({
-        fontObject = options.fontObject or GameFontNormal,
+        fontObject = options.fontObject or GameFontNormalLarge,
         text = text,
     }, options)
 end

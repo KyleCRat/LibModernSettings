@@ -42,20 +42,28 @@ Every control uses an options table:
   Headers also expose `IsExpanded()`, `SetHeaderText()`, `SetHeaderIcon()`,
   `SetOnExpandedChanged()`, and `SetControlEnabled()`.
 - `CreateCheckbox(parent, options)` creates a 34px tertiary-square checkbox.
-  Use `label`, `width`, `value`, `tooltip`, and `onChanged`.
+  Use `label`, `width`, `value`, `tooltip`, and `onChanged`. Its optional
+  right-side clickable caption is part of the checkbox, not a separate Field.
 - `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
   selector. Use `label`, `width`, `value`, `choices` or `getChoices`,
-  `tooltip`, and `onChanged`. Pass `showLabel = false` for a compact 34px
-  unlabeled selector. Set `leftInset` and `rightInset` independently to
-  non-negative numbers when the consumer needs to replace either default 8px
-  inset; set both to `0` to make the native dropdown fill the control width.
-  Call `SetControlWidth(width)` when a responsive layout changes its width; the
-  method updates the wrapper, semantic label, and native dropdown together
-  while preserving both insets. Dropdown menus retain their natural height up
+  `tooltip`, and `onChanged`. A non-empty `label` enables the labeled layout;
+  omitting it or passing `""` creates an unlabeled selector that fits the native
+  25px input frame. Both layouts default to zero side insets; `leftInset` and
+  `rightInset` override either side independently. A built-in label adds its
+  natural height and a 7px gap above the input, with no extra row space below.
+  Use `height` only when intentionally reserving a taller or shorter row.
+  Dropdown menus retain their natural height up
   to three quarters of `UIParent`; longer lists use Blizzard's native
   scrolling-menu behavior and are vertically centered on the screen.
 - `CreateSlider(parent, options)` creates a stepped slider with an editable
-  compact value field. `minValue` and `maxValue` bound the slider track and
+  compact value field. A non-empty `label` retains the labeled layout;
+  otherwise the control fits the track/value-box row without reserving label
+  space. The native track uses its compact 19px height, with the numeric input
+  centered beside it; a built-in label adds a 7px gap above the track.
+  The complete control fits its content rather than reserving a fixed labeled
+  height. `height` explicitly overrides that automatic height; `inputHeight`
+  changes the numeric input's height.
+  `minValue` and `maxValue` bound the slider track and
   steppers, while typed values and `SetValue` may remain outside that range.
   Out-of-range values still snap to `step`; the thumb stays at the nearest
   track endpoint without replacing the entered value. The editable value field
@@ -68,12 +76,21 @@ Every control uses an options table:
   tertiary glow without changing the consumer API.
 - `CreateField(parent, options)` composes a semantic label with a registered
   control without changing the underlying control primitive. Use `label`,
-  `controlType`, and `controlOptions`, then choose `labelPosition = "top"`
-  for a stacked field or `labelPosition = "left"` for a compact inline field.
+  `controlType`, and `controlOptions`. The default `labelPosition = "top"`
+  creates a stacked field; choose `labelPosition = "left"` for an inline field.
   `width`, `labelWidth`, `labelHeight`, and `gap` control its geometry. Retrieve
   the primitive with `GetControl()` and enable or disable the complete field
   with `SetControlEnabled()`. The field clones `controlOptions` before assigning
-  the resolved control width.
+  the resolved control width. Stacked fields use the label's natural height
+  and a 7px gap to the input, matching labeled dropdowns and sliders; inline
+  fields keep their 8px default gap. Explicit label heights and gaps remain
+  supported.
+  Controls can expose `GetContentTopInset()` to measure their input's top
+  edge within the row. Dropdowns and sliders supply this automatically;
+  other controls default to no top inset. A slider's taller numeric input
+  determines its row height, while the Field aligns its label to the track.
+  This is a geometry measurement, not label spacing: Field owns the gap and
+  callers do not need matching options or extra layout calls.
 - `CreateText(parent, options)` creates consistently aligned canvas text.
 - `SetTooltip(frame, options)` attaches a dynamic tooltip to any frame.
   After changing its contents, call `RefreshTooltip(owner, target)` to redraw
@@ -94,6 +111,37 @@ Fields intentionally do not proxy value, focus, or control-specific methods.
 Call those methods on `field:GetControl()` so primitives remain independently
 usable and fields remain responsible only for label layout and complete-field
 enabled state.
+
+Use Fields for new separate label/input combinations. Leave `label` out of
+the dropdown or slider's `controlOptions` so only the Field owns the label.
+Built-in dropdown and slider labels remain supported stacked conveniences and
+match an equivalent default stacked Field. Only Fields support inline labels
+and custom label widths, heights, or gaps. Label visibility depends solely on
+non-empty label text; the former `showLabel` option is ignored. To name an
+unlabeled input's tooltip, use `tooltipTitle`, not a hidden label.
+Checkbox captions are an intentional exception: their right-side placement
+and clickable area remain owned by the checkbox itself.
+
+Inputs own their content bounds and internal artwork; label layouts own the
+label-to-input gap; the containing flow or addon owns spacing between controls.
+Default controls do not reserve external margins. Gaps reference input frames,
+not visible atlas pixels. Each input type stays consistent between built-in
+labels and Fields without trying to make different input artwork identical.
+
+Dropdowns, sliders, and Fields relayout their existing children when their
+outer width or height changes, including native `SetWidth`, `SetHeight`, and
+`SetSize` calls. They also expose `SetControlWidth(width)` and
+`SetControlHeight(height)`; passing `nil` to the latter restores content-sized
+height. Explicit heights survive width changes. `RefreshLayout()` remeasures
+labels after direct text/font edits. A Field also tracks its child's height.
+Values, pending text, focus, and callbacks are not reset by layout changes.
+The containing layout still owns placement and any required sibling reflow.
+
+Font options retain their control-specific meanings: dropdown/slider
+`fontObject` styles the built-in label, slider `inputFontObject` styles its
+numeric value, and text-input `fontObject` styles the entered text. A Field's
+`labelFontObject` styles only its separate label; input fonts stay in
+`controlOptions`.
 
 ```lua
 local nameField = ModernSettings:CreateField(parent, {
@@ -160,6 +208,11 @@ columns:Finish()
 
 layout:Finalize()
 ```
+
+`AddHeader` uses `GameFontNormalHuge` for H1 page titles; `AddSection` uses
+`GameFontNormalLarge` for yellow H2 headings. Ordinary control labels retain
+their normal size. Override these with `titleOptions.fontObject` on the header
+or `fontObject` on the section when a consumer needs different typography.
 
 Flows provide `AddControl`, `AddText`, `AddSection`, `AddCustom`, `AddFrame`,
 `AddSpacer`, and nested `BeginColumns`. An expandable header can be placed with

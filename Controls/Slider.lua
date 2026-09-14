@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibModernSettings-1.0", 7
+local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
 if not lib or lib._implementationMinor ~= MINOR then
@@ -7,6 +7,35 @@ end
 
 local INPUT_ATLAS = "common-button-tertiary-depressed-normal"
 local DEFAULT_INPUT_WIDTH = 60
+local INPUT_RIGHT_INSET = 2
+-- MinimalSliderTemplate's track/thumb height, without the stepper wrapper's padding.
+local TRACK_HEIGHT = 19
+
+local function layoutSlider(control)
+    local width = control:GetWidth()
+    local slider = control.slider
+    local inputRow = control.inputRow
+    local valueBox = control.valueBox
+    local inputGap = control._libModernSettingsInputGap
+    local rowHeight = math.max(slider:GetHeight(), valueBox:GetHeight())
+
+    control.label:SetWidth(width)
+    inputRow:SetSize(width, rowHeight)
+    slider:SetWidth(math.max(1, width - valueBox:GetWidth() - inputGap - INPUT_RIGHT_INSET))
+    slider:ClearAllPoints()
+    slider:SetPoint("LEFT", inputRow, "LEFT", 0, 0)
+
+    if control.label:IsShown() then
+        local layout = control._libModernSettingsLabelLayout
+
+        layout.contentTopInset = (rowHeight - slider:GetHeight()) / 2
+        return lib:_LayoutStackedLabel(control, control.label, inputRow, layout)
+    end
+
+    inputRow:ClearAllPoints()
+    inputRow:SetPoint("LEFT", control, "LEFT", 0, 0)
+    return rowHeight
+end
 
 local function finalizeSliderInput(valueBox)
     valueBox._libModernSettingsSlider:_FinalizeInput()
@@ -61,6 +90,10 @@ local function validateOptions(options)
         options.onChanged == nil or type(options.onChanged) == "function",
         "onChanged must be a function or nil"
     )
+    assert(
+        options.height == nil or (type(options.height) == "number" and options.height > 0),
+        "height must be a positive number or nil"
+    )
 end
 
 local function createSlider(parent, options)
@@ -72,10 +105,15 @@ local function createSlider(parent, options)
     local inputWidth = options.inputWidth or DEFAULT_INPUT_WIDTH
     local inputHeight = options.inputHeight or inputAtlasInfo.height
     local inputGap = options.inputGap or 0
-    local sliderWidth = width - inputWidth - inputGap - 2
+    local sliderWidth = math.max(1, width - inputWidth - inputGap - INPUT_RIGHT_INSET)
     local stepCount = (options.maxValue - options.minValue) / options.step
+    local hasLabel = type(options.label) == "string" and options.label ~= ""
 
-    control:SetSize(width, options.height or 60)
+    control:SetWidth(width)
+    control._libModernSettingsExplicitHeight = options.height
+    control._libModernSettingsInputGap = inputGap
+    control._libModernSettingsLabelLayout = {}
+
     control._libModernSettingsSliderOptions = {
         minValue = options.minValue,
         maxValue = options.maxValue,
@@ -91,16 +129,18 @@ local function createSlider(parent, options)
         text = options.label,
         width = width,
     })
-    label:SetPoint("TOPLEFT", control, "TOPLEFT", 0, 0)
-
+    local inputRow = CreateFrame("Frame", nil, control)
     local slider = CreateFrame(
         "Frame",
         nil,
-        control,
+        inputRow,
         "MinimalSliderWithSteppersTemplate"
     )
-    slider:SetWidth(sliderWidth)
-    slider:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, 2)
+    slider:SetSize(sliderWidth, TRACK_HEIGHT)
+    if not hasLabel then
+        label:Hide()
+    end
+
     slider:Init(
         options.value or options.minValue,
         options.minValue,
@@ -112,7 +152,7 @@ local function createSlider(parent, options)
     local valueBox = CreateFrame(
         "EditBox",
         nil,
-        control,
+        inputRow,
         "InputBoxScriptTemplate"
     )
     valueBox:SetSize(inputWidth, inputHeight)
@@ -130,8 +170,11 @@ local function createSlider(parent, options)
     valueBoxBackground:SetAtlas(INPUT_ATLAS, false)
 
     control.label = label
+    control.inputRow = inputRow
     control.slider = slider
     control.valueBox = valueBox
+    lib:_RefreshControlLayout(control, layoutSlider)
+    lib:_WatchControlSize(control)
     configureSliderInput(control)
     control.currentValue = options.value or options.minValue
     control.callbackHandles = EventUtil.CreateCallbackHandleContainer()
@@ -159,6 +202,13 @@ local function createSlider(parent, options)
 end
 
 local sliderMethods = {}
+
+sliderMethods.SetControlWidth = lib._SetControlWidth
+sliderMethods.SetControlHeight = lib._SetControlHeight
+
+function sliderMethods:RefreshLayout()
+    lib:_RefreshControlLayout(self, layoutSlider)
+end
 
 function sliderMethods:_SnapValue(value)
     local options = self._libModernSettingsSliderOptions
@@ -260,6 +310,15 @@ function sliderMethods:SetOnChanged(onChanged)
     self._libModernSettingsOnChanged = onChanged
 end
 
+function sliderMethods:GetContentTopInset()
+    if self.label:IsShown() then
+        return 0
+    end
+
+    -- The taller numeric input sets the row height; the track is centered in it.
+    return (self:GetHeight() - self.slider:GetHeight()) / 2
+end
+
 function sliderMethods:SetControlEnabled(enabled, disabledTooltip)
     self.slider:SetEnabled(enabled == true)
     self.valueBox:SetEnabled(enabled == true)
@@ -295,6 +354,19 @@ lib:RegisterControlType(
 -- Compatible upgrades preserve controls but not construction-owned regions.
 for control, controlType in pairs(lib._controlInstances) do
     if controlType == "slider" then
+        if not control.inputRow then
+            control._libModernSettingsExplicitHeight = control:GetHeight()
+            local _, _, _, inputGap = control.valueBox:GetPoint(1)
+
+            control._libModernSettingsInputGap = inputGap
+            control._libModernSettingsLabelLayout = {}
+            control.inputRow = CreateFrame("Frame", nil, control)
+            control.slider:SetParent(control.inputRow)
+            control.slider:SetHeight(TRACK_HEIGHT)
+            control.valueBox:SetParent(control.inputRow)
+            control:RefreshLayout()
+            lib:_WatchControlSize(control)
+        end
         configureSliderInput(control)
     end
 end

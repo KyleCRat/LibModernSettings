@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibModernSettings-1.0", 7
+local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
 if not lib or lib._implementationMinor ~= MINOR then

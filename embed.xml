@@ -5,6 +5,7 @@
     <Script file="Utilities\Tooltip.lua"/>
     <Script file="Utilities\EditBoxCommit.lua"/>
     <Script file="Elements\Text.lua"/>
+    <Script file="Layouts\Control.lua"/>
     <Script file="Controls\Button.lua"/>
     <Script file="Controls\ExpandableHeader.lua"/>
     <Script file="Controls\Checkbox.lua"/>

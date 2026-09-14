@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibModernSettings-1.0", 7
+local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub(MAJOR, true)
 
 if not lib or lib._implementationMinor ~= MINOR then
@@ -6,9 +6,9 @@ if not lib or lib._implementationMinor ~= MINOR then
 end
 
 local DEFAULT_WIDTH = 270
-local DEFAULT_LABEL_HEIGHT = 18
+local DEFAULT_INLINE_LABEL_HEIGHT = 18
 local DEFAULT_INLINE_LABEL_WIDTH = 90
-local DEFAULT_GAP = 8
+local DEFAULT_INLINE_GAP = 8
 
 local VALID_LABEL_POSITIONS = {
     top = true,
@@ -79,23 +79,66 @@ local function validateOptions(options)
     )
 end
 
+local function layoutField(field)
+    local layout = field._libModernSettingsFieldLayout
+    local width = field:GetWidth()
+    local label = field.label
+    local control = field.control
+    local controlWidth = width
+
+    if layout.labelPosition == "left" then
+        controlWidth = math.max(1, width - layout.labelWidth - layout.gap)
+    end
+
+    if type(control.SetControlWidth) == "function" then
+        control:SetControlWidth(controlWidth)
+    else
+        control:SetWidth(controlWidth)
+    end
+    label:ClearAllPoints()
+    control:ClearAllPoints()
+
+    if layout.labelPosition == "left" then
+        local height = math.max(
+            layout.labelHeight or math.max(DEFAULT_INLINE_LABEL_HEIGHT, label:GetStringHeight()),
+            control:GetHeight()
+        )
+
+        label:SetWidth(layout.labelWidth)
+        label:SetHeight(field._libModernSettingsExplicitHeight or height)
+        label:SetJustifyV("MIDDLE")
+        label:SetPoint("LEFT", field, "LEFT", 0, 0)
+        control:SetPoint("LEFT", field, "LEFT", layout.labelWidth + layout.gap, 0)
+        return height
+    end
+
+    label:SetWidth(width)
+    layout.contentTopInset = type(control.GetContentTopInset) == "function"
+        and control:GetContentTopInset() or 0
+    return lib:_LayoutStackedLabel(field, label, control, layout)
+end
+
+local function watchFieldSize(field)
+    lib:_WatchControlSize(field)
+    field.control:HookScript("OnSizeChanged", function()
+        field:RefreshLayout()
+    end)
+end
+
 local function createField(parent, options)
     validateOptions(options)
 
     local width = options.width or DEFAULT_WIDTH
     local labelPosition = options.labelPosition or "top"
-    local labelHeight = options.labelHeight or DEFAULT_LABEL_HEIGHT
+    local labelHeight = options.labelHeight
     local labelWidth = options.labelWidth
         or DEFAULT_INLINE_LABEL_WIDTH
     local gap = options.gap
 
-    if gap == nil then
-        gap = DEFAULT_GAP
-    end
-
     local controlWidth = width
 
     if labelPosition == "left" then
+        gap = gap or DEFAULT_INLINE_GAP
         controlWidth = width - labelWidth - gap
         assert(
             controlWidth > 0,
@@ -152,41 +195,28 @@ local function createField(parent, options)
         "field controls must support SetControlEnabled"
     )
 
-    local fieldHeight = labelPosition == "left"
-        and math.max(labelHeight, controlHeight)
-        or labelHeight + gap + controlHeight
-
-    field:SetSize(width, fieldHeight)
-
     local label = lib:CreateText(field, {
         fontObject = options.labelFontObject or GameFontHighlight,
         text = options.label,
         width = labelPosition == "left" and labelWidth or width,
-        height = labelPosition == "left" and fieldHeight or labelHeight,
+        height = labelHeight,
         justifyH = options.labelJustifyH or "LEFT",
         justifyV = labelPosition == "left" and "MIDDLE" or "TOP",
     })
 
-    control:ClearAllPoints()
-
-    if labelPosition == "left" then
-        label:SetPoint("LEFT", field, "LEFT", 0, 0)
-        control:SetPoint("LEFT", field, "LEFT", labelWidth + gap, 0)
-    else
-        label:SetPoint("TOPLEFT", field, "TOPLEFT", 0, 0)
-        control:SetPoint(
-            "TOPLEFT",
-            field,
-            "TOPLEFT",
-            0,
-            -(labelHeight + gap)
-        )
-    end
-
     field.label = label
     field.control = control
+    field._libModernSettingsFieldLayout = {
+        labelPosition = labelPosition,
+        labelWidth = labelWidth,
+        labelHeight = labelHeight,
+        gap = gap,
+    }
     field._libModernSettingsInitialEnabled = enabled
     field._libModernSettingsInitialDisabledTooltip = disabledTooltip
+    field:SetWidth(width)
+    lib:_RefreshControlLayout(field, layoutField)
+    watchFieldSize(field)
 
     if tooltip ~= nil then
         lib:SetTooltip(field, {
@@ -199,6 +229,13 @@ local function createField(parent, options)
 end
 
 local fieldMethods = {}
+
+fieldMethods.SetControlWidth = lib._SetControlWidth
+fieldMethods.SetControlHeight = lib._SetControlHeight
+
+function fieldMethods:RefreshLayout()
+    lib:_RefreshControlLayout(self, layoutField)
+end
 
 function fieldMethods:GetControl()
     return self.control
@@ -228,6 +265,33 @@ lib:RegisterControlType(
     fieldMethods,
     initializeField
 )
+
+-- Keep the layout choices of Fields constructed by an older embedded copy.
+for field, controlType in pairs(lib._controlInstances) do
+    if controlType == "field" and not field._libModernSettingsFieldLayout then
+        local control = field.control
+        local point, relativeTo, _, x, y = control:GetPoint(1)
+        local inline = point == "LEFT"
+        local labelWidth = field.label:GetWidth()
+        local topInset = type(control.GetContentTopInset) == "function"
+            and control:GetContentTopInset() or 0
+        local gap = inline and x - labelWidth or topInset - y
+
+        if not inline and relativeTo == field then
+            gap = -y - field.label:GetHeight()
+        end
+
+        field._libModernSettingsFieldLayout = {
+            labelPosition = inline and "left" or "top",
+            labelWidth = labelWidth,
+            labelHeight = field.label:GetHeight(),
+            gap = gap,
+        }
+        field._libModernSettingsExplicitHeight = field:GetHeight()
+        field:RefreshLayout()
+        watchFieldSize(field)
+    end
+end
 
 function lib:CreateField(parent, options)
     options = options or {}

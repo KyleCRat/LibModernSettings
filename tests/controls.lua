@@ -13,6 +13,22 @@ HIGHLIGHT_FONT_COLOR = { r = 1, g = 1, b = 1 }
 GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 UIParent = { height = 1000 }
 local mouseButtonDown = false
+local deferredCallbacks = {}
+
+C_Timer = {
+    After = function(delay, callback)
+        assert(delay == 0)
+        deferredCallbacks[#deferredCallbacks + 1] = callback
+    end,
+}
+
+local function runDeferredCallbacks()
+    local callbacks = deferredCallbacks
+    deferredCallbacks = {}
+    for _, callback in ipairs(callbacks) do
+        callback()
+    end
+end
 
 function UIParent:GetHeight()
     return self.height
@@ -110,6 +126,14 @@ end
 local function makeFontString()
     local fontString = makeRegion()
 
+    function fontString:GetHeight()
+        return self.height or 12
+    end
+
+    function fontString:GetStringHeight()
+        return self.stringHeight or 12
+    end
+
     function fontString:SetFontObject(fontObject)
         self.fontObject = fontObject
     end
@@ -151,16 +175,20 @@ local function makeFrame(frameType, parent, template)
     }
 
     function frame:SetSize(width, height)
+        local changed = width ~= self.width or height ~= self.height
         self.width = width
         self.height = height
+        if changed and self.scripts.OnSizeChanged then
+            self.scripts.OnSizeChanged(self, width, height)
+        end
     end
 
     function frame:SetWidth(width)
-        self.width = width
+        self:SetSize(width, self.height)
     end
 
     function frame:SetHeight(height)
-        self.height = height
+        self:SetSize(self.width, height)
     end
 
     function frame:GetWidth()
@@ -177,6 +205,19 @@ local function makeFrame(frameType, parent, template)
 
     function frame:SetPoint(...)
         self.point = { ... }
+    end
+
+    function frame:GetPoint()
+        return unpack(self.point or {})
+    end
+
+    function frame:SetParent(parentFrame)
+        self.parent = parentFrame
+    end
+
+    function frame:IsVisible()
+        return self.visible ~= false
+            and (not self.parent or not self.parent.IsVisible or self.parent:IsVisible())
     end
 
     function frame:CreateTexture(_, drawLayer)
@@ -248,6 +289,14 @@ local function makeFrame(frameType, parent, template)
         self.scripts[script] = callback
     end
 
+    function frame:HookScript(script, callback)
+        local previous = self.scripts[script]
+        self.scripts[script] = function(...)
+            if previous then previous(...) end
+            callback(...)
+        end
+    end
+
     function frame:RegisterEvent(event)
         self.registeredEvents = self.registeredEvents or {}
         self.registeredEvents[event] = true
@@ -269,6 +318,15 @@ local function makeFrame(frameType, parent, template)
 
     function frame:GenerateMenu()
         self.generateMenuCount = (self.generateMenuCount or 0) + 1
+    end
+
+    function frame:Update()
+        self.renderedValue = self.parent:GetValue()
+    end
+
+    function frame:OnButtonStateChanged()
+        self.visualRefreshCount = (self.visualRefreshCount or 0) + 1
+        self.renderedEnabled = self.enabled
     end
 
     function frame:SetAutoFocus(autoFocus)
@@ -337,7 +395,10 @@ end
 function CreateFrame(frameType, _, parent, template)
     local frame = makeFrame(frameType, parent, template)
 
-    if template == "MinimalSliderWithSteppersTemplate" then
+    if template == "WowStyle1DropdownTemplate" then
+        frame:SetSize(120, 25)
+    elseif template == "MinimalSliderWithSteppersTemplate" then
+        frame:SetSize(250, 40)
         frame.Slider = makeFrame("Slider", frame)
         frame.Back = makeFrame("Button", frame)
         frame.Forward = makeFrame("Button", frame)
@@ -422,7 +483,7 @@ lib:RegisterControlType("dropdown", function(parent)
     control.label = makeFontString()
     control.label:SetWidth(270)
     control.dropdown = makeFrame("DropdownButton", control)
-    control.dropdown:SetWidth(254)
+    control.dropdown:SetSize(254, 25)
     return control
 end, {
     SetControlEnabled = function() end,
@@ -446,6 +507,8 @@ lib:RegisterControlType("slider", function(parent)
         control,
         "InputBoxScriptTemplate"
     )
+    control.valueBox:SetSize(60, 39)
+    control.valueBox:SetPoint("LEFT", control.slider, "RIGHT", 0, 0)
     control.valueBox:SetText("60")
     control.currentValue = 60
     control._libModernSettingsSliderOptions = {
@@ -479,15 +542,32 @@ end, {
 
 local oldTextInput = lib:CreateControl("textInput", nil, {})
 
+lib:RegisterControlType("field", function(parent)
+    local field = makeFrame("Frame", parent)
+    field:SetSize(270, 59)
+    field.label = makeFontString()
+    field.label:SetSize(270, 18)
+    field.label:SetPoint("TOPLEFT", field, "TOPLEFT", 0, 0)
+    field.control = makeFrame("EditBox", field)
+    field.control:SetSize(270, 34)
+    field.control:SetPoint("TOPLEFT", field, "TOPLEFT", 0, -25)
+    return field
+end, { SetControlEnabled = function() end })
+
+local oldField = lib:CreateControl("field", nil, {})
+
 dofile("Utilities/Atlas.lua")
 dofile("Utilities/EditBoxCommit.lua")
+dofile("Elements/Text.lua")
+dofile("Layouts/Control.lua")
 dofile("Controls/Button.lua")
 dofile("Controls/ExpandableHeader.lua")
 dofile("Controls/Slider.lua")
 dofile("Controls/TextInput.lua")
-dofile("Elements/Text.lua")
 dofile("Controls/Dropdown.lua")
 dofile("Layouts/Field.lua")
+runDeferredCallbacks()
+assert(oldDropdown.dropdown.visualRefreshCount == 1)
 
 oldButton:SetButtonText("Updated")
 assert(oldButton.label.point[1] == "CENTER")
@@ -498,6 +578,11 @@ oldDropdown:SetControlWidth(180)
 assert(oldDropdown.width == 180)
 assert(oldDropdown.label.width == 180)
 assert(oldDropdown.dropdown.width == 164)
+assert(oldDropdown.height == 60)
+oldField:SetWidth(320)
+assert(oldField.control.width == 320 and oldField.label.width == 320)
+assert(oldField.height == 59)
+assert(oldField.control.point[5] == -7)
 
 assert(oldSlider.valueBox._libModernSettingsSlider == oldSlider)
 assert(oldSlider.valueBox.focusTexture.atlas ==
@@ -744,11 +829,26 @@ local labeledDropdown = lib:CreateDropdown(nil, {
 })
 
 assert(labeledDropdown.width == 270)
-assert(labeledDropdown.height == 60)
+assert(labeledDropdown.height == 44)
 assert(labeledDropdown.label:IsShown() == true)
 assert(labeledDropdown.label.point[1] == "TOPLEFT")
-assert(labeledDropdown.dropdown.width == 254)
+assert(labeledDropdown.dropdown.width == 270)
 assert(labeledDropdown.dropdown.point[1] == "TOPLEFT")
+assert(labeledDropdown.dropdown.point[4] == 0)
+assert(labeledDropdown:GetContentTopInset() == 0)
+labeledDropdown:SetControlWidth(180)
+assert(labeledDropdown.dropdown.width == 180)
+
+local insetLabeledDropdown = lib:CreateDropdown(nil, {
+    label = "Profile",
+    leftInset = 3,
+    rightInset = 7,
+})
+
+assert(insetLabeledDropdown.dropdown.width == 260)
+assert(insetLabeledDropdown.dropdown.point[4] == 3)
+insetLabeledDropdown:SetControlWidth(180)
+assert(insetLabeledDropdown.dropdown.width == 170)
 
 local function buildDropdownMenu(control)
     local rootDescription = {
@@ -834,29 +934,59 @@ assert(shortMenuFrame.clearedPoints == nil)
 assert(shortMenuFrame.point == nil)
 
 local inlineDropdown = lib:CreateDropdown(nil, {
-    label = "Field",
-    showLabel = false,
     choices = {},
 })
 
 assert(inlineDropdown.width == 270)
-assert(inlineDropdown.height == 34)
+assert(inlineDropdown.height == 25)
 assert(inlineDropdown.label:IsShown() == false)
-assert(inlineDropdown.dropdown.width == 254)
+assert(inlineDropdown.dropdown.width == 270)
 assert(inlineDropdown.dropdown.point[1] == "LEFT")
 assert(inlineDropdown.dropdown.point[2] == inlineDropdown)
 assert(inlineDropdown.dropdown.point[3] == "LEFT")
-assert(inlineDropdown.dropdown.point[4] == 8)
+assert(inlineDropdown.dropdown.point[4] == 0)
 assert(inlineDropdown.dropdown.point[5] == 0)
+assert(inlineDropdown:GetContentTopInset() == 0)
 
 inlineDropdown:SetControlWidth(180)
 assert(inlineDropdown.width == 180)
 assert(inlineDropdown.label.width == 180)
-assert(inlineDropdown.dropdown.width == 164)
+assert(inlineDropdown.dropdown.width == 180)
+
+-- Direct category opening may refresh values before the canvas becomes visible.
+do
+    runDeferredCallbacks()
+    local canvas = makeFrame("Frame")
+    canvas.visible = false
+    local dropdown = lib:CreateDropdown(canvas, {
+        value = "old",
+        onChanged = function() error("visual refresh must not submit a selection") end,
+    })
+    assert(#deferredCallbacks == 0)
+    dropdown.scripts.OnShow(dropdown)
+    dropdown:SetValue("latest")
+    dropdown:SetControlEnabled(false)
+    canvas.visible = true
+    dropdown.scripts.OnShow(dropdown)
+    assert(#deferredCallbacks == 1)
+    assert(dropdown.dropdown.visualRefreshCount == nil)
+    runDeferredCallbacks()
+    assert(dropdown.dropdown.visualRefreshCount == 1)
+    assert(dropdown.dropdown.renderedValue == "latest")
+    assert(dropdown.dropdown.renderedEnabled == false)
+
+    dropdown.scripts.OnShow(dropdown)
+    canvas.visible = false
+    runDeferredCallbacks()
+    assert(dropdown.dropdown.visualRefreshCount == 1)
+    canvas.visible = true
+    dropdown.scripts.OnShow(dropdown)
+    runDeferredCallbacks()
+    assert(dropdown.dropdown.visualRefreshCount == 2)
+    assert(#deferredCallbacks == 0)
+end
 
 local flushDropdown = lib:CreateDropdown(nil, {
-    label = "Operator",
-    showLabel = false,
     leftInset = 0,
     rightInset = 0,
     width = 180,
@@ -873,8 +1003,6 @@ assert(flushDropdown.label.width == 220)
 assert(flushDropdown.dropdown.width == 220)
 
 local asymmetricDropdown = lib:CreateDropdown(nil, {
-    label = "Value",
-    showLabel = false,
     leftInset = 3,
     rightInset = 7,
     width = 180,
@@ -910,6 +1038,69 @@ local invalidDropdownWidthSucceeded = pcall(function()
 end)
 
 assert(invalidDropdownWidthSucceeded == false)
+
+do
+    local labelCases = {
+        { visible = false },
+        { label = "", visible = false },
+        { label = "Setting", visible = true },
+        -- Retired visibility flags must not override the actual label text.
+        { label = "Setting", showLabel = false, visible = true },
+        { showLabel = true, visible = false },
+    }
+
+    for _, case in ipairs(labelCases) do
+        local dropdown = lib:CreateDropdown(nil, {
+            label = case.label,
+            showLabel = case.showLabel,
+        })
+        local slider = lib:CreateSlider(nil, {
+            label = case.label,
+            showLabel = case.showLabel,
+            minValue = 0,
+            maxValue = 100,
+            step = 5,
+            value = 50,
+        })
+
+        assert(dropdown.label:IsShown() == case.visible)
+        assert(dropdown.height == (case.visible and 44 or 25))
+        assert(slider.label:IsShown() == case.visible)
+        assert(slider.height == (case.visible and 48 or 39))
+        assert(slider.slider.height == 19)
+        assert(slider.slider.point[1] == "LEFT")
+        assert(slider.slider.point[2] == slider.inputRow)
+        assert(slider.inputRow.point[1] == (case.visible and "TOPLEFT" or "LEFT"))
+        assert(slider.inputRow.point[2] == (case.visible and slider.label or slider))
+        slider:SetValue(66)
+        assert(slider:GetValue() == 65)
+        slider:SetControlEnabled(false)
+        assert(slider.slider.enabled == false and slider.valueBox.enabled == false)
+        slider:SetControlEnabled(true)
+        assert(slider.slider.enabled == true and slider.valueBox.enabled == true)
+    end
+
+    local tallInputSlider = lib:CreateSlider(nil, {
+        minValue = 0,
+        maxValue = 100,
+        step = 1,
+        inputHeight = 48,
+    })
+
+    assert(tallInputSlider.height == 48)
+    assert(tallInputSlider:GetContentTopInset() == 14.5)
+
+    local paddedSlider = lib:CreateSlider(nil, {
+        minValue = 0,
+        maxValue = 100,
+        step = 1,
+        height = 64,
+    })
+
+    assert(paddedSlider.height == 64)
+    assert(paddedSlider:GetContentTopInset() == 22.5)
+
+end
 
 local commitCount = 0
 local reportedError
@@ -1090,20 +1281,88 @@ local stackedField = lib:CreateField(nil, {
 local stackedInput = stackedField:GetControl()
 
 assert(stackedField.width == 270)
-assert(stackedField.height == 60)
+assert(stackedField.height == 53)
 assert(stackedField.label.width == 270)
-assert(stackedField.label.height == 18)
+assert(stackedField.label:GetHeight() == 12)
 assert(stackedField.label.point[1] == "TOPLEFT")
 assert(stackedField.label.point[2] == stackedField)
 assert(stackedField.label.point[3] == "TOPLEFT")
 assert(stackedInput.width == 270)
 assert(stackedInput.point[1] == "TOPLEFT")
-assert(stackedInput.point[2] == stackedField)
-assert(stackedInput.point[3] == "TOPLEFT")
+assert(stackedInput.point[2] == stackedField.label)
+assert(stackedInput.point[3] == "BOTTOMLEFT")
 assert(stackedInput.point[4] == 0)
-assert(stackedInput.point[5] == -26)
+assert(stackedInput.point[5] == -7)
 assert(stackedInput:GetValue() == "Stacked")
 assert(stackedControlOptions.width == 120)
+
+local stackedDropdownField = lib:CreateField(nil, {
+    label = "Profile",
+    controlType = "dropdown",
+})
+local stackedDropdown = stackedDropdownField:GetControl()
+
+assert(stackedDropdownField.label:GetHeight() == labeledDropdown.label:GetHeight())
+assert(stackedDropdownField.height == labeledDropdown.height)
+assert(stackedDropdown.dropdown.width == stackedDropdownField.width)
+assert(stackedDropdown.point[2] == stackedDropdownField.label)
+assert(stackedDropdown.point[3] == "BOTTOMLEFT")
+assert(stackedDropdown.point[5] - stackedDropdown:GetContentTopInset()
+    == labeledDropdown.dropdown.point[5])
+
+local customStackedField = lib:CreateField(nil, {
+    label = "Profile",
+    labelHeight = 24,
+    gap = 11,
+    controlType = "dropdown",
+    controlOptions = { height = 40 },
+})
+local customStackedDropdown = customStackedField:GetControl()
+
+assert(customStackedField.label:GetHeight() == 24)
+assert(customStackedField.height == 67.5)
+assert(customStackedDropdown.point[5]
+    - customStackedDropdown:GetContentTopInset() == -11)
+
+do
+    local sliderOptions = { minValue = 0, maxValue = 100, step = 1, value = 50 }
+
+    for _, labelPosition in ipairs({ "left", "top" }) do
+        local field = lib:CreateField(nil, {
+            label = "Slider",
+            labelPosition = labelPosition,
+            controlType = "slider",
+            controlOptions = sliderOptions,
+        })
+        local slider = field:GetControl()
+
+        assert(slider.label:IsShown() == false)
+        assert(slider.height == slider.valueBox:GetHeight())
+        assert(field.height == (labelPosition == "left" and 39 or 48))
+        if labelPosition == "top" then
+            assert(field.height == sliderControl.height)
+            assert(slider.point[5] - slider:GetContentTopInset()
+                == sliderControl.inputRow.point[5]
+                    - (sliderControl.inputRow.height - sliderControl.slider.height) / 2)
+        end
+        assert(slider:GetValue() == 50)
+        slider:SetValue(75)
+        assert(slider:GetValue() == 75)
+    end
+
+    assert(sliderOptions.label == nil and sliderOptions.width == nil)
+
+    local customField = lib:CreateField(nil, {
+        label = "Slider",
+        gap = 11,
+        controlType = "slider",
+        controlOptions = { minValue = 0, maxValue = 100, step = 1, height = 64 },
+    })
+    local slider = customField:GetControl()
+
+    assert(slider.height == 64)
+    assert(slider.point[5] - slider:GetContentTopInset() == -11)
+end
 
 local inlineField = lib:CreateField(nil, {
     label = "Name",
@@ -1142,6 +1401,68 @@ assert(inlineInput.enabled == false)
 assert(inlineField.tooltipEnabled == false)
 assert(inlineInput.tooltipEnabled == false)
 assert(inlineField.label.textColor[1] == GRAY_FONT_COLOR.r)
+
+-- Size changes reflow existing content, not its value/focus or callback state.
+do
+    labeledDropdown:SetSize(320, 80)
+    labeledDropdown:SetWidth(300)
+    assert(labeledDropdown.label.width == 300)
+    assert(labeledDropdown.dropdown.width == 300)
+    assert(labeledDropdown.height == 80)
+    labeledDropdown:SetControlHeight(nil)
+    assert(labeledDropdown.height == 44)
+    labeledDropdown.label.stringHeight = 24
+    labeledDropdown:RefreshLayout()
+    assert(labeledDropdown.height == 56)
+
+    stackedDropdownField:SetWidth(360)
+    assert(stackedDropdownField.label.width == 360)
+    assert(stackedDropdown.width == 360 and stackedDropdown.dropdown.width == 360)
+    stackedDropdown:SetControlHeight(40)
+    assert(stackedDropdownField.height == 51.5)
+    stackedDropdown:SetControlHeight(nil)
+    assert(stackedDropdownField.height == 44)
+
+    sliderControl.valueBox:SetFocus()
+    sliderControl.valueBox:SetText("1.3")
+    sliderControl:SetWidth(400)
+    assert(sliderControl.slider.width == 338)
+    assert(sliderControl.valueBox.width == 60)
+    assert(sliderControl.valueBox:HasFocus())
+    assert(sliderControl.valueBox:GetText() == "1.3")
+    assert(sliderControl:GetValue() == 1)
+    sliderControl.label.stringHeight = 24
+    sliderControl:RefreshLayout()
+    assert(sliderControl.height == 60)
+
+    inlineField:SetWidth(350)
+    assert(inlineField:GetControl() == inlineInput and inlineInput.width == 294)
+    assert(inlineInput:GetValue() == "Inline")
+    inlineInput:SetHeight(42)
+    assert(inlineField.height == 42 and inlineField.label.height == 42)
+
+    stackedInput:FocusValue()
+    stackedInput:SetText("In progress")
+    stackedField:SetWidth(320)
+    assert(stackedField:GetControl() == stackedInput)
+    assert(stackedInput.width == 320 and stackedField.label.width == 320)
+    assert(stackedInput:HasFocus() and stackedInput:GetText() == "In progress")
+    stackedField.label.stringHeight = 24
+    stackedField:RefreshLayout()
+    assert(stackedField.height == 65)
+    stackedInput:SetHeight(40)
+    assert(stackedField.height == 71)
+    stackedField:SetControlHeight(90)
+    stackedField:SetControlWidth(340)
+    assert(stackedField.height == 90 and stackedInput.width == 340)
+    stackedField:SetControlHeight(nil)
+    assert(stackedField.height == 71)
+
+    for _, control in ipairs({ labeledDropdown, sliderControl, stackedField }) do
+        assert(not pcall(control.SetControlHeight, control, 0))
+        assert(not pcall(control.SetControlWidth, control, 0))
+    end
+end
 
 local invalidFieldPositionSucceeded = pcall(function()
     lib:CreateField(nil, {
