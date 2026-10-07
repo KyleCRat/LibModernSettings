@@ -12,9 +12,7 @@ function lib:CreateText(parent, options)
 
     local fontString = parent:CreateFontString(nil, "ARTWORK")
 
-    if options.fontObject then
-        fontString:SetFontObject(options.fontObject)
-    end
+    fontString:SetFontObject(options.fontObject or GameFontHighlight)
 
     fontString:SetJustifyH(options.justifyH or "LEFT")
     fontString:SetJustifyV(options.justifyV or "TOP")

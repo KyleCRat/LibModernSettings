@@ -100,7 +100,10 @@ Every control uses an options table:
   the current text (an empty string when absent). `descriptionGap` defaults to
   4px and `descriptionFontObject` overrides the smaller font. These options do
   not affect the label-to-input gap or the parent layout's gap after the Field.
-- `CreateText(parent, options)` creates consistently aligned canvas text.
+- `CreateText(parent, options)` creates consistently aligned canvas text using
+  `GameFontHighlight` by default. Set `fontObject` to override it. The font is
+  initialized before assigning text, including empty labels and plain `AddText`
+  calls on canvas flows.
 - `SetTooltip(frame, options)` attaches a dynamic tooltip to any frame.
   After changing its contents, call `RefreshTooltip(owner, target)` to redraw
   it only when `target` currently owns the visible tooltip; `target` defaults

@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Give `CreateText` and plain canvas `AddText` calls a default font before
+  assigning text, preventing `Font not set` errors when `fontObject` is omitted.
+  Explicit font overrides remain supported.
+
 ## [1.7.0] - 2026-09-14
 
 ### Added

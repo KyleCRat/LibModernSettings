@@ -1641,4 +1641,19 @@ end)
 
 assert(nestedFieldSucceeded == false)
 
+-- Ordinary text must set its font before SetText, including empty labels.
+do
+    local parent = makeFrame("Frame")
+    local text = lib:CreateText(parent, { text = "Body text" })
+    assert(text:GetFontObject() == GameFontHighlight)
+    assert(text.text == "Body text")
+
+    local empty = lib:CreateText(parent)
+    assert(empty:GetFontObject() == GameFontHighlight and empty.text == "")
+
+    local customFont = { height = 18 }
+    local custom = lib:CreateText(parent, { text = "Custom text", fontObject = customFont })
+    assert(custom:GetFontObject() == customFont and custom.text == "Custom text")
+end
+
 print("LibModernSettings control tests passed")

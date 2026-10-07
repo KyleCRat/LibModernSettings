@@ -304,4 +304,22 @@ do
     assert(field.point[5] - field:GetHeight() - following.point[5] == 4)
 end
 
+-- Plain canvas text has no heading role and still needs a usable font.
+do
+    local layout = freshLib:CreateCanvasLayout(freshEnvironment.CreateFrame("Frame"), {
+        width = 500, height = 200,
+    })
+    local root = layout:GetRootFlow()
+    local text = root:AddText({ text = "Body text" })
+    local empty = root:AddText({ text = "" })
+    local customFont = { height = 18 }
+    local custom = root:AddText({ text = "Custom text", fontObject = customFont })
+    layout:Finalize()
+    freshEnvironment.Flush()
+
+    assert(text:GetFontObject() == GameFontHighlight and text.text == "Body text")
+    assert(empty:GetFontObject() == GameFontHighlight and empty.text == "")
+    assert(custom:GetFontObject() == customFont and custom.text == "Custom text")
+end
+
 print("LibModernSettings canvas upgrade tests passed")
