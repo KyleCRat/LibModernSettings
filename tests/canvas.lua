@@ -322,4 +322,101 @@ do
     assert(custom:GetFontObject() == customFont and custom.text == "Custom text")
 end
 
-print("LibModernSettings canvas upgrade tests passed")
+-- Responsive columns reuse controls and remove hidden cells from geometry.
+do
+    local parent = freshEnvironment.CreateFrame("Frame")
+    local layout = freshLib:CreateCanvasLayout(parent, { width = 800, height = 200, scrollable = true })
+    local root = layout:GetRootFlow()
+    local row = root:BeginColumns({ minColumnWidth = 260 })
+    local changes = 0
+    local input = row.left:AddControl("field", {
+        label = "Anchor from",
+        controlType = "textInput",
+        controlOptions = {
+            value = "Saved",
+            onCommit = function(text)
+                changes = changes + 1
+                return text
+            end,
+        },
+    })
+    local checkbox = row.right:AddControl("checkbox", { label = "Advanced", value = true })
+    row:Finish()
+    local following = root:AddControl("textInput", {})
+    layout:Finalize()
+    freshEnvironment.Flush()
+    local frames = freshEnvironment.framesCreated
+    local wideY = following.point[5]
+    assert(input.point[5] == checkbox.point[5] and checkbox.point[4] > input.point[4])
+
+    local edit = input:GetControl()
+    edit:SetFocus()
+    edit:SetText("Pending edit")
+    local updates = layout.scrollBox.updateCount
+    layout:SetSize(520, 220)
+    layout:SetSize(500, 220)
+    assert(freshEnvironment.QueueSize() == 1)
+    freshEnvironment.Flush()
+    assert(layout.scrollBox.updateCount == updates + 1)
+    assert(layout:GetCanvasWidth() == 500 and layout:GetCanvasHeight() == 220)
+    assert(parent:GetWidth() == 500 and parent:GetHeight() == 220)
+    assert(input:GetWidth() == layout:GetContentWidth())
+    assert(checkbox.point[4] == input.point[4] and checkbox.point[5] < input.point[5])
+    assert(following.point[5] < wideY, "stacking must move following rows down")
+    assert(checkbox:GetWidth() == 34, "checkbox artwork must remain square")
+    assert(checkbox.label:GetWidth() == layout:GetContentWidth() - 36)
+
+    row.right:SetShown(false)
+    freshEnvironment.Flush()
+    assert(not checkbox:IsShown() and input:IsShown())
+    assert(following.point[5] == wideY, "hidden cells must reserve no height")
+    row.left:SetShown(false)
+    freshEnvironment.Flush()
+    assert(following.point[5] == -layout:GetStyleValue("paddingTop"), "empty rows must leave no gap")
+    row.right:SetShown(true)
+    freshEnvironment.Flush()
+    assert(checkbox.point[4] == 0, "remaining cells must move to the first column")
+
+    row.left:SetShown(true)
+    layout:SetSize(800, 600)
+    freshEnvironment.Flush()
+    assert(following.point[5] == wideY and layout:GetContent():GetHeight() >= 600)
+    assert(edit:GetText() == "Pending edit" and edit:HasFocus())
+    assert(checkbox:GetValue() and changes == 0)
+    assert(freshEnvironment.framesCreated == frames, "reflow must not recreate controls")
+    layout:SetSize(800.0001, 600.0001)
+    row.left:SetShown(true)
+    assert(freshEnvironment.QueueSize() == 0, "unchanged geometry must not queue work")
+
+    parent.visible = false
+    layout:SetSize(500, 200)
+    assert(freshEnvironment.QueueSize() == 0)
+    parent.visible = true
+    parent.scripts.OnShow(parent)
+    freshEnvironment.Flush()
+    assert(checkbox.point[5] < input.point[5], "hidden resizes must apply on show")
+
+    for _, size in ipairs({ { 0, 200 }, { 20, 200 }, { 500, 0 }, { math.huge, 200 }, { 0 / 0, 200 } }) do
+        assert(not pcall(layout.SetSize, layout, size[1], size[2]))
+        assert(layout:GetCanvasWidth() == 500 and layout:GetCanvasHeight() == 200)
+    end
+    assert(not pcall(root.BeginColumns, root, { minColumnWidth = 0 }))
+    assert(not pcall(row.left.SetShown, row.left, "false"))
+
+    root:SetShown(false)
+    row.left:SetShown(false)
+    row.left:SetShown(true)
+    assert(not input:IsShown())
+    local added = row.left:AddText({ text = "Added while hidden" })
+    assert(not added:IsShown())
+    root:SetShown(true)
+    assert(input:IsShown() and added:IsShown())
+    freshEnvironment.Flush()
+
+    local inset = freshLib:CreateCanvasLayout(freshEnvironment.CreateFrame("Frame"), {
+        width = 300, height = 200, scrollable = true, viewportMarginTop = 10, viewportMarginBottom = 10,
+    })
+    assert(not pcall(inset.SetSize, inset, 300, 20))
+end
+
+print("LibModernSettings canvas upgrade and responsive layout tests passed")

@@ -128,6 +128,14 @@ local function makeRegion()
         return self.shown ~= false
     end
 
+    function region:SetShown(shown)
+        if shown then
+            self:Show()
+        else
+            self:Hide()
+        end
+    end
+
     return region
 end
 
@@ -249,6 +257,22 @@ local function makeFrame(frameType, parent, template)
     function frame:IsVisible()
         return self.visible ~= false
             and (not self.parent or not self.parent.IsVisible or self.parent:IsVisible())
+    end
+
+    function frame:IsShown()
+        return self.visible ~= false
+    end
+
+    function frame:SetShown(shown)
+        self.visible = shown
+    end
+
+    function frame:Show()
+        self:SetShown(true)
+    end
+
+    function frame:Hide()
+        self:SetShown(false)
     end
 
     function frame:CreateTexture(_, drawLayer)

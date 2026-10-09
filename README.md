@@ -276,6 +276,24 @@ same coalesced pass after changes such as editing a FontString directly.
 `layout:RefreshLayout()` performs it synchronously. Both reuse existing controls
 and recalculate content height without replaying consumer construction code.
 
+Use `layout:SetSize(width, height)` when a containing viewport changes size.
+It updates the canvas parent, content width and viewport height, and requests
+the same coalesced reflow. Dimensions must be finite, positive and leave room
+after the configured content insets and viewport margins. This can be called
+from the parent's `OnSizeChanged`; unchanged dimensions do no work.
+
+`BeginColumns({ minColumnWidth = 260 })` stacks its flows in declaration order
+when their equal-width columns would be narrower than that minimum. Omit the
+option to retain fixed columns. Use a separate column region for each logical
+row when narrow layouts should read left-to-right, then top-to-bottom.
+
+`flow:SetShown(false)` hides that flow's frames and removes its space, including
+column gaps. Remaining columns fill the available width; an entirely hidden
+column region occupies no space. `SetShown(true)` restores its controls without
+recreating them or setting their values. Nested flows retain their own hidden
+state. This API owns the visibility of all frames added to the flow; use it on
+tracked canvases and commit pending edits before hiding their controls.
+
 ## Settings Tables
 
 `CreateSettingsTable(parent, options)` creates a fixed table scaffold with 8px

@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added
+
+- Add canvas `SetSize(width, height)` for resizing existing pages, optional
+  `BeginColumns({ minColumnWidth = ... })` stacking, and flow `SetShown(boolean)`
+  to remove conditional columns from layout. Reuse controls and coalesce visible
+  reflows; defer hidden canvas work until shown.
+
 ### Fixed
 
 - Give `CreateText` and plain canvas `AddText` calls a default font before

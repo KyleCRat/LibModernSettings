@@ -7,6 +7,9 @@ instance upgrades, including focus-state upgrades for live text inputs and
 sliders. Old-first and new-first mixed LibStub MINOR load orders are covered as
 well, alongside content-sized controls, Field descriptions, canvas reflows,
 retained appearance overrides, and duplicate-module initialization.
+Responsive canvas tests cover resizing, stacked and conditional columns,
+unchanged-size coalescing, hidden-page updates, nested visibility and retained
+control identity, values and pending text edits.
 Validate Blizzard-owned templates and interaction behavior in game:
 
 - Open, close, and reopen every consuming Settings canvas.
@@ -42,6 +45,10 @@ Validate Blizzard-owned templates and interaction behavior in game:
 - Resize Fields with descriptions through single-line and wrapped layouts;
   change, clear, and restore descriptions while the canvas is visible and
   hidden. Confirm only the affected canvas reflows and input text remains visible.
+- Resize canvas viewports through the minimum column width while scrolled to
+  the bottom. Hide/show individual flows and entire rows, including nested
+  columns; check remaining controls fill the width and scroll ranges shrink.
+  Repeat with pending edits, checked controls, long labels and hidden canvases.
 - Open a Settings subcategory directly from its addon button on a cold login;
   confirm dropdown selection text and arrows appear without switching pages.
 - Load old and new embeds in both orders. Confirm controls created by 1.7.0

@@ -233,6 +233,31 @@ function Layout:GetScrollBar()
     return self.scrollBar
 end
 
+function Layout:SetSize(width, height)
+    assert(type(width) == "number" and width > 0 and width < math.huge,
+        "canvas width must be a positive finite number")
+    assert(type(height) == "number" and height > 0 and height < math.huge,
+        "canvas height must be a positive finite number")
+
+    local contentWidth = width - self.style.paddingLeft
+        - self.style.scrollbarGap - self.style.scrollbarWidth
+    assert(contentWidth > 0, "canvas insets must leave positive content width")
+    assert(not self.scrollBox or height > self.viewportMarginTop + self.viewportMarginBottom,
+        "scroll viewport margins must leave a positive height")
+
+    if lib:_LayoutSizeMatches(width, self.canvasWidth)
+        and lib:_LayoutSizeMatches(height, self.canvasHeight) then
+        return
+    end
+
+    self.canvasWidth, self.canvasHeight = width, height
+    self.contentWidth = contentWidth
+    self.rootFlow.width = contentWidth
+    self.parent:SetSize(width, height)
+    self.content:SetWidth(contentWidth)
+    self:RequestLayout()
+end
+
 function Layout:_CreateFlow(x, width, cursor)
     return setmetatable({
         layout = self,
@@ -348,6 +373,37 @@ end
 
 function Flow:GetCursor()
     return self.cursor
+end
+
+local function isFlowShown(flow)
+    return flow.shown ~= false and (not flow.parentFlow or isFlowShown(flow.parentFlow))
+end
+
+local function setFlowFramesShown(flow, shown)
+    shown = shown and flow.shown ~= false
+
+    for _, entry in ipairs(flow.entries) do
+        if entry.columns then
+            for _, child in ipairs(entry.columns.flows) do
+                setFlowFramesShown(child, shown)
+            end
+        elseif entry.frame then
+            entry.frame:SetShown(shown)
+        end
+    end
+end
+
+function Flow:SetShown(shown)
+    assert(type(shown) == "boolean", "flow visibility must be boolean")
+    assert(self.entries, "flow visibility requires a tracked canvas")
+
+    if (self.shown ~= false) == shown then
+        return
+    end
+
+    self.shown = shown
+    setFlowFramesShown(self, isFlowShown(self))
+    self.layout:RequestLayout()
 end
 
 function Flow:_GetRect(options)
@@ -479,6 +535,11 @@ function Flow:_AddFrame(frame, options, role)
     entry.width, entry.height = frame:GetWidth(), frame:GetHeight()
     entry.allocatedWidth = entry.width
     watchEntrySize(entry, self.layout)
+
+    if not isFlowShown(self) then
+        frame:Hide()
+    end
+
     return frame
 end
 
@@ -582,6 +643,10 @@ function Flow:BeginColumns(options)
         type(marginTop) == "number" and marginTop >= 0,
         "column region top margin must be non-negative"
     )
+    assert(options.minColumnWidth == nil
+        or (type(options.minColumnWidth) == "number"
+            and options.minColumnWidth > 0 and options.minColumnWidth < math.huge),
+        "minimum column width must be a positive finite number or nil")
 
     self.cursor = self.cursor + marginTop
 
@@ -606,6 +671,7 @@ function Flow:BeginColumns(options)
             columnWidth,
             self.cursor
         )
+        flow.parentFlow = self
 
         columns.flows[index] = flow
         columns[index] = flow
@@ -631,7 +697,9 @@ function Columns:Finish(options)
     local cursor = self.parentFlow.cursor
 
     for index = 1, #self.flows do
-        cursor = math.max(cursor, self.flows[index].cursor)
+        if self.flows[index].shown ~= false then
+            cursor = math.max(cursor, self.flows[index].cursor)
+        end
     end
 
     self.parentFlow.cursor = cursor + marginBottom
@@ -644,13 +712,37 @@ function Columns:_RefreshLayout()
     local parentFlow = self.parentFlow
     local x, width = parentFlow:_GetRect(options)
     local gap = options.columnGap or parentFlow.layout.style.columnGap
-    local columnWidth = (width - (#self.flows - 1) * gap) / #self.flows
-    parentFlow.cursor = parentFlow.cursor + (options.marginTop or 0)
+    local count = 0
 
-    for index, flow in ipairs(self.flows) do
-        flow.x = x + (index - 1) * (columnWidth + gap)
-        flow.width = columnWidth
-        flow:_RefreshLayout(parentFlow.cursor)
+    for _, flow in ipairs(self.flows) do
+        flow.parentFlow = parentFlow
+
+        if flow.shown ~= false then
+            count = count + 1
+        end
+    end
+
+    if count == 0 then
+        return
+    end
+
+    local columnWidth = (width - (count - 1) * gap) / count
+    local stacked = options.minColumnWidth and columnWidth < options.minColumnWidth
+    parentFlow.cursor = parentFlow.cursor + (options.marginTop or 0)
+    local cursor = parentFlow.cursor
+    local visibleIndex = 0
+
+    for _, flow in ipairs(self.flows) do
+        if flow.shown ~= false then
+            flow.x = stacked and x or x + visibleIndex * (columnWidth + gap)
+            flow.width = stacked and width or columnWidth
+            flow:_RefreshLayout(cursor)
+            visibleIndex = visibleIndex + 1
+
+            if stacked then
+                cursor = flow.cursor
+            end
+        end
     end
     if self.finishOptions then
         self:Finish(self.finishOptions)
@@ -659,6 +751,11 @@ end
 
 function Flow:_RefreshLayout(cursor)
     self.cursor = cursor
+
+    if not isFlowShown(self) then
+        return
+    end
+
     for _, entry in ipairs(self.entries) do
         if entry.columns then
             entry.columns:_RefreshLayout()
