@@ -105,10 +105,21 @@ return function(lib, makeFrame, inputState, openMenu, key)
     tab(text)
     assert(input:HasFocus(), "eligibility changes during commit must take effect immediately")
     tab(input)
-    text:SetOnCommit(function() return nil, "Rejected" end)
-    text:SetText("Rejected")
-    tab(text)
-    assert(text:GetText() == "Pending" and not input:HasFocus() and not text:HasFocus())
+    text:SetOnCommit(function(value)
+        if value == "Rejected" then
+            return nil, "Rejected"
+        end
+        return value
+    end)
+    for _, reverse in ipairs({ false, true }) do
+        text:SetText("Rejected")
+        tab(text, reverse)
+        assert(text:GetText() == "Pending" and not input:HasFocus() and text:HasFocus(),
+            "rejected Tab and Shift+Tab commits must retain focus on the restored value")
+        tab(text, reverse)
+        assert(input:HasFocus(), "Tab navigation must resume after a rejected commit")
+        tab(input)
+    end
     text:SetOnCommit(function(value)
         unrelated:FocusValue()
         return value

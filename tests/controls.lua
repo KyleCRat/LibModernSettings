@@ -135,6 +135,10 @@ local atlasSizes = {
 local function makeRegion()
     local region = {}
 
+    function region:GetParent()
+        return self.parent
+    end
+
     function region:SetAllPoints(owner)
         self.allPoints = owner or true
     end
@@ -190,6 +194,10 @@ local function makeRegion()
 
     function region:SetScale(scale) self.scale = scale end
     function region:SetVertexColor(...) self.vertexColor = { ... } end
+    function region:SetColorTexture(...) self.color = { ... } end
+    function region:SetTexture(texture) self.texture = texture end
+    function region:SetTexCoord(...) self.texCoord = { ... } end
+    function region:SetGradient(...) self.gradient = { ... } end
 
     function region:SetBlendMode(blendMode)
         self.blendMode = blendMode
@@ -408,6 +416,7 @@ local function makeFrame(frameType, parent, template)
     function frame:CreateTexture(_, drawLayer)
         local texture = makeRegion()
 
+        texture.parent = self
         texture.drawLayer = drawLayer
 
         return texture
@@ -523,6 +532,17 @@ local function makeFrame(frameType, parent, template)
     function frame:SetAllPoints(target) self.allPoints = target end
     function frame:SetFrameLevel(level) self.frameLevel = level end
     function frame:GetFrameLevel() return self.frameLevel or 1 end
+    function frame:SetFrameStrata(strata) self.strata = strata end
+    function frame:SetScale(scale) self.scale = scale end
+    function frame:SetToplevel(value) self.topLevel = value end
+    function frame:SetClampedToScreen(value) self.clamped = value end
+    function frame:SetMovable(value) self.movable = value end
+    function frame:EnableMouse(value) self.mouseEnabled = value end
+    function frame:RegisterForClicks(...) self.clicks = { ... } end
+    function frame:RegisterForDrag(...) self.dragButtons = { ... } end
+    function frame:StartMoving() self.moving = true end
+    function frame:StopMovingOrSizing() self.moving = false end
+    function frame:SetTitle(title) self.title = title end
     function frame:EnableKeyboard(enabled)
         assert(not inputState.inCombat, "EnableKeyboard must not run in combat")
         self.keyboardEnabled = enabled
@@ -744,6 +764,12 @@ function CreateFrame(frameType, _, parent, template)
 
     if template == "WowStyle1DropdownTemplate" then
         frame:SetSize(120, 25)
+    elseif template == "ButtonFrameTemplate" then
+        frame.TitleContainer = makeFrame("Frame", frame)
+        frame.CloseButton = makeFrame("Button", frame)
+        frame.Inset = makeFrame("Frame", frame)
+        frame.Bg = makeRegion()
+        frame.TopTileStreaks = makeRegion()
     elseif template == "MinimalSliderWithSteppersTemplate" then
         frame:SetSize(250, 40)
         frame.Slider = makeFrame("Slider", frame)
@@ -1598,6 +1624,22 @@ assert(transferredValue == "Transferred")
 assert(focusTransferTarget:HasFocus() == true)
 focusTransferTarget:CancelAndClearFocus()
 
+focusTransferSource:SetOnCommit(function()
+    return nil, "INVALID"
+end)
+focusTransferSource:FocusValue()
+focusTransferSource:SetText("Rejected")
+mouseButtonDown = true
+focusTransferSource:ClearFocus()
+focusTransferTarget:FocusValue()
+mouseButtonDown = false
+commitFrame.scripts.OnEvent(commitFrame, "GLOBAL_MOUSE_UP", "LeftButton")
+commitFrame.scripts.OnUpdate(commitFrame, 0)
+assert(focusTransferSource:GetText() == "Transferred")
+assert(not focusTransferSource:HasFocus() and focusTransferTarget:HasFocus(),
+    "a rejected mouse commit must not steal focus from the clicked input")
+focusTransferTarget:CancelAndClearFocus()
+
 textInput:FocusValue()
 textInput:SetText("invalid")
 textInput.scripts.OnEnterPressed(textInput)
@@ -1605,13 +1647,15 @@ assert(textInput:GetValue() == "GLOBAL MOUSE UP")
 assert(textInput:GetText() == "GLOBAL MOUSE UP")
 assert(reportedError == "INVALID")
 assert(commitCount == 5)
+assert(textInput:HasFocus() and textInput.focusTexture:IsShown() and textInput.highlighted,
+    "a rejected Enter commit must keep the restored value focused and selected")
 
-textInput:FocusValue()
 textInput:SetText("discarded")
 textInput.scripts.OnEscapePressed(textInput)
 assert(textInput:GetValue() == "GLOBAL MOUSE UP")
 assert(textInput:GetText() == "GLOBAL MOUSE UP")
 assert(commitCount == 5)
+assert(not textInput:HasFocus(), "Escape must still release focus after a validation error")
 
 textInput:SetControlEnabled(false, "Disabled")
 assert(textInput.enabled == false)
@@ -1953,3 +1997,5 @@ do
 end
 
 print("LibModernSettings control tests passed")
+
+dofile("tests/colors.lua")(lib, makeFrame, inputState)

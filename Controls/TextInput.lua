@@ -166,6 +166,13 @@ function textInputMethods:CommitAndClearFocus()
 
     local committed, value = self:Commit()
 
+    if not committed then
+        if self:HasFocus() then
+            self:HighlightText()
+        end
+        return false, value
+    end
+
     self._libModernSettingsSuppressCommit = true
     self:ClearFocus()
     self._libModernSettingsSuppressCommit = nil

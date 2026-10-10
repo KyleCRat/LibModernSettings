@@ -4,6 +4,25 @@
 
 ### Added
 
+- Add `CreateColor` / canvas `color` inputs with tertiary-square swatches and
+  optional persistent class/accent selection modes that retain the separate
+  Custom color. A compact hue/SV picker places RGB or RGBA, six-digit RGB hex,
+  separate opacity controls, and new/previous samples beside the hue strip, with
+  compact Favorites, Recent, Class and Quality rows below. Inline labels sit
+  close to aligned swatches, with matching horizontal and vertical gaps,
+  consistent outer padding and no divider.
+  Pasted RRGGBBAA imports opacity and normalizes to the six-digit RGB display;
+  hex accepts exactly six or eight digits with an optional # prefix.
+  Apply/Cancel sit below the inputs beside the hue strip, with no helper footer.
+  Validation messages appear only when needed; failed Apply returns focus to the
+  invalid field. Favorites reserve their first row even
+  when empty and grow only when another row is needed. Edits are staged until Apply/Cancel.
+  Color choices join Tab/Enter/Space navigation; closing returns
+  focus to the input.
+  `CreateColorPalette` supports consumer-owned persistence without a database
+  dependency. Changing the input value, hiding it, or disabling it cancels its
+  pending picker edit. Swatches center within the button border and show opacity
+  without a checkerboard texture.
 - Navigate text inputs, slider values, dropdowns, checkboxes and expandable
   headers, plus regular, small and square buttons, with Tab and Shift+Tab in
   current visual order. Focused buttons, checkboxes and headers show their hover
@@ -29,6 +48,8 @@
 
 ### Fixed
 
+- Keep text inputs focused after rejected Enter or Tab commits so keyboard
+  navigation can continue, while preserving focus when clicking another input.
 - Keep scrolling dropdown rows ordered and preserve the viewport when callbacks
   update values or choices in an open menu.
 - Prevent an error when opening dropdowns by matching Blizzard's menu-open

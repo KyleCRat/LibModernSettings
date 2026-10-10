@@ -1,7 +1,8 @@
 # In-Game Validation
 
 Automated tests cover the library's Lua-only registry, live prototype dispatch,
-text-input commit/cancel behavior, mouse-safe focus-loss commits, field
+text-input commit/cancel behavior, focus retention after rejected Enter/Tab edits,
+mouse-safe focus-loss commits, field
 composition, button content geometry, and compatible button and dropdown
 instance upgrades, including focus-state upgrades for live text inputs and
 sliders. Old-first and new-first mixed LibStub MINOR load orders are covered as
@@ -25,8 +26,38 @@ Navigation contract tests register independent composite and native-edit control
 types. They cover existing/new instances, shared action context, descriptor and
 prototype updates, rejected releases, invalid registrations and single hook
 installation without changing the traversal or keyboard handlers.
+Color tests cover conversion, alpha-aware history, palette ownership and limits,
+class/accent/custom modes, saved Custom colors across callback refreshes and new
+instances, RGB hex with independent opacity and RGBA import, staged commits, invalid edits, cancellation,
+owner replacement, focus restoration after failed mouse Apply, continued Tab
+navigation, RGB/RGBA visibility and compatible upgrades.
+Preset tests exclude non-playable class tokens, verify item-quality colors and
+opacity preservation, and check favorites resizing only at row boundaries.
 Validate Blizzard-owned templates and interaction behavior in game:
 
+- Open RGB and RGBA color inputs. Drag the hue strip and saturation/brightness
+  square, enter hex and channel values, and adjust opacity. Check new/previous
+  swatches, Apply versus Cancel/X/Escape, class/item-quality colors, right-click favorites,
+  recent ordering and persistence through the consumer's storage adapter.
+  Class/accent shortcuts must stay selected until another mode is chosen without
+  changing the Custom swatch. Custom must restore its previous color, including
+  opacity, after switching modes or reloading; canceling edits keeps that color
+  selected. Hex must remain six RGB digits when opacity changes. Six-digit edits
+  preserve opacity; eight-digit RRGGBBAA imports it and returns to six digits on
+  commit. Test both with/without #, zero alpha, rejected seven-digit input, and
+  RGB-only inputs discarding imported alpha. Swatches must have no checkerboard. Check the compact
+  Favorites, Recent, Class and Quality rows: labels sit close to aligned swatches,
+  row gaps match swatch gaps, and there is no divider. Check action buttons beneath
+  the right-hand inputs. Invalid fields
+  must still show validation messages; valid input leaves no helper footer.
+  Reject hex/channel edits with Enter, Tab, Shift+Tab and mouse Apply: the invalid
+  field must stay focused or regain focus, and subsequent Tab navigation must work.
+  Clicking another input must preserve the newly selected input's focus.
+  Check favorites empty, with one color, with a full first row and with one extra:
+  only the extra color should add height. Tab through
+  all quick choices and the picker; close it and continue forward/backward in the
+  original form. Hide, disable, rebind or replace the owning input while editing.
+  Test small screens and UI scales with filled palette rows.
 - Open, close, and reopen every consuming Settings canvas.
 - Tab and Shift+Tab through text inputs, slider values, dropdowns, checkboxes and
   expandable headers, plus regular, small and square buttons. Verify wrapping,

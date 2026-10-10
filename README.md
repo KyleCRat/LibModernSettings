@@ -46,6 +46,10 @@ Every control uses an options table:
 - `CreateCheckbox(parent, options)` creates a 34px tertiary-square checkbox.
   Use `label`, `width`, `value`, `tooltip`, and `onChanged`. Its optional
   right-side clickable caption is part of the checkbox, not a separate Field.
+- `CreateColor(parent, options)` creates tertiary-square color choices with a
+  right-side `label`. It supports optional class/accent modes and a shared picker
+  with hex/RGB(A) entry, recent colors, favorites, and class/item-quality swatches. See
+  [Color inputs](#color-inputs) for value, persistence and cancellation contracts.
 - `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
   selector. Use `label`, `width`, `value`, `choices` or `getChoices`,
   `tooltip`, and `onChanged`. A non-empty `label` enables the labeled layout;
@@ -212,7 +216,9 @@ local nameInput = nameField:GetControl()
 
 Text inputs commit on Enter or focus loss and cancel on Escape. `onCommit`
 receives the edited text and returns the accepted string, or `nil`/`false` plus
-an optional error value to restore the previous value. `CommitAndClearFocus`,
+an optional error value to restore the previous value. Rejected Enter or Tab
+commits keep that value focused and selected unless the callback moves focus.
+`CommitAndClearFocus`,
 `CancelAndClearFocus`, and `FocusValue` are available for consumer-owned
 selection workflows. A mouse-caused focus loss defers its commit until the
 click reaches its target; this prevents a commit-driven canvas rebuild from
@@ -226,7 +232,7 @@ Canvas text inputs, slider value boxes, dropdowns, checkboxes, expandable header
 and buttons support Tab and Shift+Tab in visual row order, wrapping within the page.
 Hidden and disabled inputs are skipped, responsive columns follow their current
 positions, and focusing an offscreen field scrolls it into view. Moving focus
-commits pending text first; a rejected text commit stops navigation. Dropdowns
+commits pending text first; a rejected text commit keeps focus on that input. Dropdowns
 highlight without opening on focus. Enter or Space opens the menu; confirming
 selection closes it while retaining focus. Tab closes an open menu and moves on.
 Checkboxes, headers and all button variants retain their hover highlight while
@@ -242,6 +248,78 @@ any canvas pages inside it; hidden pages are excluded. This can join a toolbar
 input and the active editor page. Nested explicit navigation roots keep
 their own cycles. Outside a canvas or explicit root, edit boxes retain Blizzard's
 `nextEditBox`/`previousEditBox` behavior.
+
+## Color Inputs
+
+```lua
+local palette = ModernSettings:CreateColorPalette({
+    get = function()
+        return uiDB:Get("colorPalette") -- defaults: { recent = {}, favorites = {} }
+    end,
+    set = function(value)
+        uiDB:Set("colorPalette", value)
+    end,
+})
+
+local input = ModernSettings:CreateColor(parent, {
+    label = "Border color",
+    value = { r = 1, g = 1, b = 1, a = 1, mode = "custom" },
+    hasOpacity = true,
+    classColor = true,
+    accentColor = function()
+        return theme.accent
+    end,
+    palette = palette,
+    onChanged = function(value)
+        settings:Set("borderColor", value)
+    end,
+})
+```
+
+Canvas `AddControl("color", options)` accepts the same options. Channels are
+numbers from 0 to 1; omitted alpha defaults to 1. The default RGB picker hides
+alpha controls and returns opaque colors. `hasOpacity = true` enables RGBA,
+an opacity slider and an A percentage field. Hex displays six `RRGGBB` digits;
+committing six digits preserves opacity, while `RRGGBBAA` imports alpha and
+normalizes the field back to RGB. Both formats accept an optional `#` prefix;
+other digit counts are rejected. RGB-only inputs discard imported alpha.
+Swatches render their color and opacity
+over the button background without a checkerboard.
+
+Optional `classColor` and `accentColor` accept an RGB(A) table or a function
+returning one. `classColor = true` uses Blizzard's current player-class color.
+Enabled shortcuts precede Custom in class/accent/custom order. `value.mode`
+is `"custom"` by default, or `"class"` / `"accent"` when that shortcut is enabled.
+Mode is explicit: choosing the same RGB manually still selects Custom. Quick
+choices apply immediately through `onChanged(value)` without replacing the saved
+Custom color or its swatch. Opening Custom restores that color and selects its
+mode. Picker edits stay pending until Apply.
+Cancel/X restores the opening color while keeping Custom selected. Only Apply
+adds a recent color; explicit favorite changes survive cancellation.
+The built-in class palette uses playable classes only. Class and item-quality
+swatches change RGB while preserving the draft's opacity; saved palettes retain RGBA.
+
+`GetValue()` returns a fresh RGBA table including mode. Class/accent values also
+include `custom`, an RGBA table holding the remembered Custom color; persist the
+whole value to retain it across input refreshes and reloads. `SetValue(value)`
+cancels any open edit and sets the value without a callback. For class/accent
+values, `custom` seeds the Custom swatch, falling back to the supplied RGBA when
+omitted. `SetOnChanged(callback)`,
+`SetControlEnabled(enabled, tooltip)`, `OpenPicker()`, and `ClosePicker()` are also
+available. Hide, disable, rebind, or close an input when its data owner changes;
+closing discards its draft. Apply/Cancel returns keyboard focus to Custom.
+`RefreshColors()` refreshes dynamic class/accent swatches without a callback;
+`GetValue()` resolves their current colors. Consumers own runtime theming and
+should persist the mode and resolve its source when rendering outside the UI.
+
+Share a palette object across related inputs. Its `get` and `set` callbacks
+must be supplied together; LMS copies palette data and never mutates a table
+returned by `get`. Without an adapter the object retains colors for the session;
+omitting `palette` shares the library's session palette. `maxRecent` defaults to
+13 and `maxFavorites` to 26. Recent colors deduplicate at RGBA byte precision;
+favorites never silently evict a saved color when full. Palette objects expose
+`GetColors("recent" | "favorites")`, `Record(color)` and `ToggleFavorite(color)`.
+The latter returns the new favorite state, or `nil, message` when full.
 
 ## Canvas Layouts
 

@@ -7,6 +7,7 @@
     <Script file="Utilities\KeyboardNavigation.lua"/>
     <Script file="Utilities\ControlNavigation.lua"/>
     <Script file="Utilities\TabNavigation.lua"/>
+    <Script file="Utilities\Color.lua"/>
     <Script file="Elements\Text.lua"/>
     <Script file="Layouts\Control.lua"/>
     <Script file="Controls\Button.lua"/>
@@ -15,6 +16,8 @@
     <Script file="Controls\Dropdown.lua"/>
     <Script file="Controls\Slider.lua"/>
     <Script file="Controls\TextInput.lua"/>
+    <Script file="Controls\Color.lua"/>
+    <Script file="Utilities\ColorPicker.lua"/>
     <Script file="Layouts\Field.lua"/>
     <Script file="Layouts\Canvas.lua"/>
     <Script file="Layouts\Table.lua"/>
