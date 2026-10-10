@@ -12,6 +12,51 @@ local INPUT_RIGHT_INSET = 2
 -- MinimalSliderTemplate's track/thumb height, without the stepper wrapper's padding.
 local TRACK_HEIGHT = 19
 
+local STEP_MODIFIERS = {
+    wheel = {
+        { modifier = "control", steps = 50 },
+        { modifier = "shift", steps = 10 },
+    },
+}
+
+local function createInputContext(source, direction)
+    return {
+        source = source,
+        direction = direction,
+        modifiers = {
+            shift = IsShiftKeyDown(),
+            control = IsControlKeyDown(),
+            alt = IsAltKeyDown(),
+            meta = IsMetaKeyDown(),
+        },
+    }
+end
+
+local function getInputSteps(context)
+    local rules = STEP_MODIFIERS[context.source]
+    if rules then
+        for _, rule in ipairs(rules) do
+            if context.modifiers[rule.modifier] then
+                return context.direction * rule.steps
+            end
+        end
+    end
+    return context.direction
+end
+
+local function isFiniteNumber(value)
+    return type(value) == "number" and value == value and math.abs(value) < math.huge
+end
+
+local function updateSliderWheel(control)
+    local enabled = control.valueBox:IsEnabled() and control.valueBox:HasFocus()
+    control:EnableMouseWheel(enabled)
+    control.valueBox:EnableMouseWheel(enabled)
+    control.slider.Slider:EnableMouseWheel(enabled)
+    control.slider.Back:EnableMouseWheel(enabled)
+    control.slider.Forward:EnableMouseWheel(enabled)
+end
+
 local function layoutSlider(control)
     local width = control:GetWidth()
     local slider = control.slider
@@ -46,6 +91,7 @@ local function configureSliderInput(control)
     local valueBox = control.valueBox
 
     valueBox._libModernSettingsSlider = control
+    valueBox:SetAltArrowKeyMode(false)
     valueBox.focusTexture = valueBox.focusTexture
         or lib:_CreateEditBoxFocusTexture(valueBox)
 
@@ -57,12 +103,42 @@ local function configureSliderInput(control)
         lib:_CancelPendingEditBoxCommit(self)
         self.focusTexture:Show()
         EditBox_HighlightText(self)
+        updateSliderWheel(control)
     end)
     valueBox:SetScript("OnEditFocusLost", function(self)
         self.focusTexture:Hide()
         EditBox_ClearHighlight(self)
+        updateSliderWheel(control)
         lib:_FinalizeEditBoxOnFocusLost(self, finalizeSliderInput)
     end)
+    valueBox:SetScript("OnArrowPressed", function(_, key)
+        if key == "UP" or key == "DOWN" then
+            control:_StepValue(createInputContext("keyboard", key == "UP" and 1 or -1))
+        end
+    end)
+
+    local function onMouseWheel(_, delta)
+        if delta ~= 0 then
+            control:_StepValue(createInputContext("wheel", delta > 0 and 1 or -1))
+        end
+    end
+
+    control:SetScript("OnMouseWheel", onMouseWheel)
+    valueBox:SetScript("OnMouseWheel", onMouseWheel)
+    for _, target in ipairs({ control.slider.Slider, control.slider.Back, control.slider.Forward }) do
+        target:SetScript("OnMouseWheel", onMouseWheel)
+        if not target._libModernSettingsFocusHooked then
+            target._libModernSettingsFocusHooked = true
+            -- Blizzard clears edit focus on global mouse-down outside the
+            -- edit box. Focus after release when selecting the track/steppers.
+            target:HookScript("OnMouseUp", function(_, button)
+                if button == "LeftButton" and control.valueBox:IsEnabled() then
+                    control.valueBox:SetFocus()
+                end
+            end)
+        end
+    end
+    updateSliderWheel(control)
 
     if valueBox:HasFocus() then
         valueBox.focusTexture:Show()
@@ -72,9 +148,10 @@ local function configureSliderInput(control)
 end
 
 local function validateOptions(options)
-    assert(type(options.minValue) == "number", "minValue must be a number")
-    assert(type(options.maxValue) == "number", "maxValue must be a number")
-    assert(type(options.step) == "number", "step must be a number")
+    assert(isFiniteNumber(options.minValue), "minValue must be a finite number")
+    assert(isFiniteNumber(options.maxValue), "maxValue must be a finite number")
+    assert(isFiniteNumber(options.step), "step must be a finite number")
+    assert(options.value == nil or isFiniteNumber(options.value), "value must be a finite number or nil")
     assert(options.maxValue > options.minValue, "maxValue must exceed minValue")
     assert(options.step > 0, "step must be greater than zero")
     assert(
@@ -269,6 +346,10 @@ end
 
 function sliderMethods:_SetCurrentValue(value, notify)
     local normalized = self:_SnapValue(value)
+    if not isFiniteNumber(normalized) then
+        self:_SyncValueBox(self.currentValue)
+        return
+    end
     local changed = self.currentValue ~= normalized
 
     self.currentValue = normalized
@@ -285,7 +366,7 @@ end
 function sliderMethods:_FinalizeInput()
     local value = self:_ParseInput()
 
-    if type(value) ~= "number" then
+    if not isFiniteNumber(value) then
         self:_SyncValueBox(self.currentValue)
         return
     end
@@ -293,8 +374,22 @@ function sliderMethods:_FinalizeInput()
     self:_SetCurrentValue(value, true)
 end
 
+function sliderMethods:_StepValue(context)
+    if not self:IsVisible() or not self.valueBox:IsEnabled() or not self.valueBox:HasFocus() then
+        return
+    end
+
+    local value = self:_ParseInput()
+    if not isFiniteNumber(value) then
+        value = self.currentValue
+    end
+
+    local steps = getInputSteps(context)
+    self:_SetCurrentValue(value + steps * self._libModernSettingsSliderOptions.step, true)
+end
+
 function sliderMethods:SetValue(value)
-    assert(type(value) == "number", "slider value must be a number")
+    assert(isFiniteNumber(value), "slider value must be a finite number")
 
     self:_SetCurrentValue(value, false)
 end
@@ -323,6 +418,7 @@ end
 function sliderMethods:SetControlEnabled(enabled, disabledTooltip)
     self.slider:SetEnabled(enabled == true)
     self.valueBox:SetEnabled(enabled == true)
+    updateSliderWheel(self)
 
     if enabled and self.valueBox:HasFocus() then
         self.valueBox.focusTexture:Show()

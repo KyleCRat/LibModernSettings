@@ -4,6 +4,13 @@
 
 ### Added
 
+- Step focused slider values with the mouse wheel and Up/Down arrows. While
+  scrolling, Shift moves ten steps and Ctrl moves fifty, with Ctrl taking priority.
+  Open dropdowns use Up/Down to select adjacent choices without wrapping or closing,
+  keep the selected row in view, and retain normal mouse-wheel scrolling.
+  Enter confirms the current selection and closes the menu without opening chat.
+  Sliders retain editable values outside their track range; unfocused controls
+  preserve normal page scrolling.
 - Add canvas `SetSize(width, height)` for resizing existing pages, optional
   `BeginColumns({ minColumnWidth = ... })` stacking, and flow `SetShown(boolean)`
   to remove conditional columns from layout. Reuse controls and coalesce visible
@@ -11,6 +18,11 @@
 
 ### Fixed
 
+- Keep scrolling dropdown rows ordered and preserve the viewport when callbacks
+  update values or choices in an open menu.
+- Prevent an error when opening dropdowns by matching Blizzard's menu-open
+  callback arguments.
+- Reject non-finite slider values and restore valid input after invalid edits.
 - Give `CreateText` and plain canvas `AddText` calls a default font before
   assigning text, preventing `Font not set` errors when `fontObject` is omitted.
   Explicit font overrides remain supported.

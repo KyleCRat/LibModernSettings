@@ -15,6 +15,68 @@ GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 UIParent = { height = 1000 }
 local mouseButtonDown = false
 local deferredCallbacks = {}
+local inputState = {
+    inCombat = false,
+    modifiers = {
+        shift = false,
+        control = false,
+        alt = false,
+        meta = false,
+    },
+}
+
+function InCombatLockdown()
+    return inputState.inCombat
+end
+
+function GetCurrentKeyBoardFocus()
+    return inputState.keyboardFocus
+end
+
+function IsShiftKeyDown()
+    return inputState.modifiers.shift
+end
+
+function IsControlKeyDown()
+    return inputState.modifiers.control
+end
+
+function IsAltKeyDown()
+    return inputState.modifiers.alt
+end
+
+function IsMetaKeyDown()
+    return inputState.modifiers.meta
+end
+
+DropdownButtonMixin = { Event = { OnMenuOpen = "OnMenuOpen", OnMenuClose = "OnMenuClose" } }
+MenuInputContext = { None = 1, MouseButton = 2, MouseWheel = 3 }
+MenuResponse = { Refresh = 2, CloseAll = 4 }
+ScrollBoxConstants = { AlignNearest = "nearest", NoScrollInterpolation = 0 }
+
+local function createMenuDescription(dropdown)
+    local root = { menuAcquiredCallbacks = {}, radioButtons = {} }
+    function root:SetScrollMode(height)
+        self.maxScrollExtent = height
+    end
+    function root:AddMenuAcquiredCallback(callback)
+        self.menuAcquiredCallbacks[#self.menuAcquiredCallbacks + 1] = callback
+    end
+    function root:CreateRadio(label, selected, responder, value)
+        local description = { label, selected, responder, value }
+        function description:GetData() return self[4] end
+        function description:IsRadio() return true end
+        function description:CanSelect() return not self.disabled end
+        function description:IsSelected() return self[2](self[4]) end
+        self.radioButtons[#self.radioButtons + 1] = description
+        return description
+    end
+    function root:EnumerateElementDescriptions()
+        return ipairs(self.radioButtons)
+    end
+    dropdown.menuCallback(dropdown, root)
+    return root
+end
 
 function ApproximatelyEqual(first, second, epsilon)
     return math.abs(first - second) < epsilon
@@ -365,6 +427,25 @@ local function makeFrame(frameType, parent, template)
         self.scripts[script] = callback
     end
 
+    function frame:GetScript(script)
+        return self.scripts[script]
+    end
+
+    function frame:EnableMouseWheel(enabled) self.mouseWheelEnabled = enabled == true end
+    function frame:IsMouseWheelEnabled() return self.mouseWheelEnabled == true end
+    function frame:SetAltArrowKeyMode(enabled) self.altArrowKeyMode = enabled end
+    function frame:SetAllPoints(target) self.allPoints = target end
+    function frame:SetFrameLevel(level) self.frameLevel = level end
+    function frame:GetFrameLevel() return self.frameLevel or 1 end
+    function frame:EnableKeyboard(enabled)
+        assert(not inputState.inCombat, "EnableKeyboard must not run in combat")
+        self.keyboardEnabled = enabled
+    end
+    function frame:SetPropagateKeyboardInput(propagate)
+        assert(not inputState.inCombat, "SetPropagateKeyboardInput must not run in combat")
+        self.propagateKeyboardInput = propagate
+    end
+
     function frame:HasScript()
         return true
     end
@@ -392,12 +473,72 @@ local function makeFrame(frameType, parent, template)
         self.enabled = enabled
     end
 
+    function frame:IsEnabled()
+        return self.enabled ~= false
+    end
+
+    function frame:RegisterCallback(event, callback, owner)
+        self.callbacks = self.callbacks or {}
+        self.callbacks[event] = self.callbacks[event] or {}
+        table.insert(self.callbacks[event], { callback, owner })
+    end
+
+    function frame:TriggerEvent(event, ...)
+        for _, registration in ipairs(self.callbacks and self.callbacks[event] or {}) do
+            registration[1](registration[2], ...)
+        end
+    end
+
     function frame:SetupMenu(callback)
         self.menuCallback = callback
     end
 
     function frame:GenerateMenu()
         self.generateMenuCount = (self.generateMenuCount or 0) + 1
+        if self.menuCallback then
+            self.menuDescription = createMenuDescription(self)
+            if self.menu then
+                self.menu:SetMenuDescription(self.menuDescription)
+            end
+        end
+    end
+
+    function frame:GetMenuDescription() return self.menuDescription end
+    function frame:IsMenuOpen() return self.menu ~= nil end
+    function frame:CloseMenu()
+        local menu = self.menu
+        self.menu = nil
+        if menu then
+            menu.ScrollBox:RemoveDataProvider()
+            self:TriggerEvent(DropdownButtonMixin.Event.OnMenuClose, self, menu)
+            menu:Hide()
+        end
+    end
+    function frame:CollectSelectionData()
+        local previous, following, selected = nil, nil, {}
+        for _, description in self.menuDescription:EnumerateElementDescriptions() do
+            if description:IsSelected() then
+                selected[#selected + 1] = description
+            elseif description:CanSelect() then
+                if #selected == 0 then
+                    previous = description
+                elseif not following then
+                    following = description
+                end
+            end
+        end
+        return previous, following, selected
+    end
+    function frame:Pick(description, context)
+        assert(description:CanSelect())
+        local response = description[3](description:GetData(), { context = context })
+        self:Update()
+        if response == MenuResponse.Refresh and self.menu then
+            self.menu:ReinitializeAll()
+        else
+            self:CloseMenu()
+        end
+        return true
     end
 
     function frame:Update()
@@ -449,6 +590,7 @@ local function makeFrame(frameType, parent, template)
         local hadFocus = self.hasFocus
 
         self.hasFocus = true
+        inputState.keyboardFocus = self
 
         if not hadFocus and self.scripts.OnEditFocusGained then
             self.scripts.OnEditFocusGained(self)
@@ -459,6 +601,9 @@ local function makeFrame(frameType, parent, template)
         local hadFocus = self.hasFocus
 
         self.hasFocus = false
+        if inputState.keyboardFocus == self then
+            inputState.keyboardFocus = nil
+        end
 
         if hadFocus and self.scripts.OnEditFocusLost then
             self.scripts.OnEditFocusLost(self)
@@ -941,25 +1086,7 @@ insetLabeledDropdown:SetControlWidth(180)
 assert(insetLabeledDropdown.dropdown.width == 170)
 
 local function buildDropdownMenu(control)
-    local rootDescription = {
-        menuAcquiredCallbacks = {},
-        radioButtons = {},
-    }
-
-    function rootDescription:SetScrollMode(maxScrollExtent)
-        self.maxScrollExtent = maxScrollExtent
-    end
-
-    function rootDescription:AddMenuAcquiredCallback(callback)
-        self.menuAcquiredCallbacks[#self.menuAcquiredCallbacks + 1] = callback
-    end
-
-    function rootDescription:CreateRadio(...)
-        self.radioButtons[#self.radioButtons + 1] = { ... }
-    end
-
-    control.dropdown.menuCallback(control.dropdown, rootDescription)
-    return rootDescription
+    return createMenuDescription(control.dropdown)
 end
 
 local labeledMenu = buildDropdownMenu(labeledDropdown)
@@ -1678,6 +1805,19 @@ do
     local customFont = { height = 18 }
     local custom = lib:CreateText(parent, { text = "Custom text", fontObject = customFont })
     assert(custom:GetFontObject() == customFont and custom.text == "Custom text")
+end
+
+dofile("tests/navigation.lua")(lib, makeFrame, inputState)
+
+-- Controls constructed by an older embed adopt navigation without new instances.
+do
+    local previous = oldSlider:GetValue()
+    oldSlider.valueBox:SetFocus()
+    oldSlider.valueBox.scripts.OnArrowPressed(oldSlider.valueBox, "UP")
+    assert(oldSlider:GetValue() == previous + 1)
+    oldSlider.valueBox:ClearFocus()
+    assert(#oldDropdown.dropdown.callbacks.OnMenuOpen == 1)
+    assert(#oldDropdown.dropdown.callbacks.OnMenuClose == 1)
 end
 
 print("LibModernSettings control tests passed")

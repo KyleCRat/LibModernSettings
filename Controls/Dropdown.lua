@@ -14,6 +14,75 @@ local DEFAULT_INSET = 0
 local LEGACY_INSET = 8
 local DEFAULT_MENU_HEIGHT_RATIO = 0.75
 
+local function refreshDropdownKeyboard(frame)
+    local control = frame.control
+    if InCombatLockdown() or not control or not control:IsVisible()
+        or not control.dropdown:IsEnabled() or not control.dropdown:IsMenuOpen() then
+        frame:Hide()
+        return
+    end
+
+    frame:EnableKeyboard(true)
+    frame:SetPropagateKeyboardInput(true)
+    frame:Show()
+end
+
+local function getDropdownKeyboard()
+    local frame = lib._dropdownKeyboardFrame
+    if not frame then
+        frame = CreateFrame("Frame", nil, UIParent)
+        frame:Hide()
+        frame:RegisterEvent("PLAYER_REGEN_DISABLED")
+        frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+        lib._dropdownKeyboardFrame = frame
+    end
+
+    frame:SetScript("OnEvent", refreshDropdownKeyboard)
+    frame:SetScript("OnKeyDown", function(self, key)
+        if InCombatLockdown() then
+            self:Hide()
+            return
+        end
+
+        local control = self.control
+        local closeMenu = key == "ESCAPE" or key == "ENTER"
+        local handled = control and control:IsVisible() and control.dropdown:IsEnabled()
+            and control.dropdown:IsMenuOpen() and not GetCurrentKeyBoardFocus()
+            and (key == "UP" or key == "DOWN" or closeMenu)
+        self:SetPropagateKeyboardInput(not handled)
+        if handled then
+            if closeMenu then
+                -- Arrow navigation already applied the current selection.
+                control.dropdown:CloseMenu()
+            else
+                control:_StepSelection(key == "DOWN" and 1 or -1)
+            end
+        end
+    end)
+    return frame
+end
+
+local function configureDropdownNavigation(control)
+    local dropdown = control.dropdown
+    if control._libModernSettingsNavigationHooked then
+        return
+    end
+    control._libModernSettingsNavigationHooked = true
+    dropdown:RegisterCallback(DropdownButtonMixin.Event.OnMenuOpen, function(_, openedDropdown)
+        control:_OnMenuOpened(openedDropdown.menu)
+    end, control)
+    dropdown:RegisterCallback(DropdownButtonMixin.Event.OnMenuClose, function()
+        control:_OnMenuClosed()
+    end, control)
+    control:HookScript("OnHide", function()
+        dropdown:CloseMenu()
+    end)
+    if dropdown:IsMenuOpen() then
+        control:_GenerateMenu()
+        control:_OnMenuOpened(dropdown.menu)
+    end
+end
+
 local function getMaxMenuHeight()
     return math.max(
         1,
@@ -182,6 +251,72 @@ end
 
 local dropdownMethods = {}
 
+function dropdownMethods:_OnMenuOpened(menu)
+    self._libModernSettingsOpenMenu = menu
+    local keyboard = getDropdownKeyboard()
+    keyboard.control = self
+    keyboard:SetParent(menu)
+    keyboard:ClearAllPoints()
+    keyboard:SetAllPoints(menu)
+    keyboard:SetFrameLevel(menu:GetFrameLevel() + 1)
+    refreshDropdownKeyboard(keyboard)
+    self:_ScrollSelectionIntoView()
+end
+
+function dropdownMethods:_OnMenuClosed()
+    self._libModernSettingsOpenMenu = nil
+
+    local keyboard = lib._dropdownKeyboardFrame
+    if keyboard and keyboard.control == self then
+        keyboard:Hide()
+        keyboard.control = nil
+        keyboard:SetParent(UIParent)
+        keyboard:ClearAllPoints()
+    end
+end
+
+function dropdownMethods:_ScrollSelectionIntoView()
+    local menu = self._libModernSettingsOpenMenu
+    if not menu or not menu.ScrollBox:IsShown() or not menu.ScrollBox:HasDataProvider() then
+        return
+    end
+
+    local value = self:GetValue()
+    menu.ScrollBox:ScrollToElementDataByPredicate(function(frame)
+        -- An onChanged callback can regenerate the menu, replacing descriptions.
+        return frame:GetElementDescription():GetData() == value
+    end, ScrollBoxConstants.AlignNearest, 0, ScrollBoxConstants.NoScrollInterpolation)
+end
+
+function dropdownMethods:_StepSelection(direction)
+    local dropdown = self.dropdown
+    if not self:IsVisible() or not dropdown:IsEnabled() or not dropdown:IsMenuOpen() then
+        return
+    end
+
+    local previous, following, selections = dropdown:CollectSelectionData()
+    local description
+    if #selections == 0 then
+        for _, candidate in dropdown:GetMenuDescription():EnumerateElementDescriptions() do
+            if candidate:IsRadio() and candidate:CanSelect() then
+                description = candidate
+                if direction > 0 then
+                    break
+                end
+            end
+        end
+    elseif direction > 0 then
+        description = following
+    else
+        description = previous
+    end
+
+    if description then
+        dropdown:Pick(description, MenuInputContext.None)
+    end
+    self:_ScrollSelectionIntoView()
+end
+
 function dropdownMethods:_InitializeMenu()
     local control = self
 
@@ -215,8 +350,11 @@ function dropdownMethods:_BuildMenu(rootDescription)
         return control:GetValue() == value
     end
 
-    local function setSelected(value)
+    local function setSelected(value, inputData)
         control:_SelectValue(value)
+        if inputData.context ~= MenuInputContext.MouseButton then
+            return MenuResponse.Refresh
+        end
     end
 
     for i = 1, #choices do
@@ -239,9 +377,26 @@ function dropdownMethods:_SelectValue(value)
     end
 end
 
+function dropdownMethods:_GenerateMenu()
+    local menu = self.dropdown.menu
+    local scrollPercentage
+    if menu then
+        -- Blizzard reanchors/recycles menu rows during generation but retains
+        -- the ScrollBox provider. Release its old row references first.
+        scrollPercentage = menu.ScrollBox:GetScrollPercentage()
+        menu.ScrollBox:RemoveDataProvider()
+    end
+
+    self.dropdown:GenerateMenu()
+
+    if menu and menu.ScrollBox:HasDataProvider() then
+        menu.ScrollBox:SetScrollPercentage(scrollPercentage, ScrollBoxConstants.NoScrollInterpolation)
+    end
+end
+
 function dropdownMethods:SetValue(value)
     self.currentValue = value
-    self.dropdown:GenerateMenu()
+    self:_GenerateMenu()
 end
 
 function dropdownMethods:GetValue()
@@ -252,7 +407,7 @@ function dropdownMethods:SetChoices(choices)
     assert(type(choices) == "table", "choices must be a table")
     self._libModernSettingsChoices = choices
     self._libModernSettingsGetChoices = nil
-    self.dropdown:GenerateMenu()
+    self:_GenerateMenu()
 end
 
 function dropdownMethods:SetOnChanged(onChanged)
@@ -280,6 +435,9 @@ end
 
 function dropdownMethods:SetControlEnabled(enabled, disabledTooltip)
     self.dropdown:SetEnabled(enabled == true)
+    if not enabled then
+        self.dropdown:CloseMenu()
+    end
 
     local color = enabled and HIGHLIGHT_FONT_COLOR or GRAY_FONT_COLOR
 
@@ -289,6 +447,7 @@ end
 
 local function initializeDropdown(dropdown, options)
     dropdown:_InitializeMenu()
+    configureDropdownNavigation(dropdown)
     dropdown:SetValue(options.value)
     dropdown:SetControlEnabled(
         options.enabled ~= false,
@@ -329,6 +488,7 @@ for control, controlType in pairs(lib._controlInstances) do
             lib:_WatchControlSize(control)
         end
         configureDropdownVisibility(control)
+        configureDropdownNavigation(control)
     end
 end
 

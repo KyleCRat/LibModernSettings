@@ -57,6 +57,11 @@ Every control uses an options table:
   Dropdown menus retain their natural height up
   to three quarters of `UIParent`; longer lists use Blizzard's native
   scrolling-menu behavior and are vertically centered on the screen.
+  While a menu is open, Up/Down arrows select the previous/next available choice
+  without wrapping or closing the menu. The selected row is scrolled into view;
+  the mouse wheel scrolls the list without changing selection. Enter confirms
+  the current selection and closes the menu without opening chat. Escape also
+  closes the menu; clicking a choice behaves normally.
 - `CreateSlider(parent, options)` creates a stepped slider with an editable
   compact value field. A non-empty `label` retains the labeled layout;
   otherwise the control fits the track/value-box row without reserving label
@@ -70,6 +75,12 @@ Every control uses an options table:
   Out-of-range values still snap to `step`; the thumb stays at the nearest
   track endpoint without replacing the entered value. The editable value field
   shows Blizzard's neutral depressed tertiary glow while focused.
+  Selecting the track, a stepper or the value field focuses numeric editing.
+  While focused, the wheel over the control and Up/Down arrows change that
+  editable value by one `step`, including outside the track range. While scrolling,
+  hold Shift for ten steps or Ctrl for fifty steps per wheel event; Ctrl takes
+  priority when both are held. Unfocused controls leave the wheel available for
+  page scrolling.
 - `CreateTextInput(parent, options)` creates a full-width single-line text
   input with the same single-piece sliced tertiary background used by slider
   value inputs. It defaults to 34px high. Use `value`, `width`, `height`,
@@ -350,7 +361,9 @@ library.
 
 ## Slider Options
 
-Sliders require `minValue`, `maxValue`, and `step`. Common optional fields are
+Sliders require finite `minValue`, `maxValue`, and a positive `step`, with
+`maxValue` greater than `minValue`. Typed and programmatic values must also be
+finite; consumers enforce any domain limits in `onChanged`. Common optional fields are
 `value`, `width`, `inputWidth`, `inputFormatter`, `inputParser`, `suffix`,
 `tooltip`, and `onChanged`. Format suffixes into the displayed value, such as
 `20s` or `100%`. Supply `inputParser` when displayed values use a different
