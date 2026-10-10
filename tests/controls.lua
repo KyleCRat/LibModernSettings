@@ -12,8 +12,10 @@ GameFontHighlightLarge = {}
 GameFontDisableLarge = {}
 HIGHLIGHT_FONT_COLOR = { r = 1, g = 1, b = 1 }
 GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
-UIParent = { height = 1000 }
+UIParent = { width = 1600, height = 1000 }
 function UIParent:GetParent() return nil end
+function UIParent:GetWidth() return self.width end
+function UIParent:GetEffectiveScale() return self.scale or 1 end
 local mouseButtonDown = false
 local deferredCallbacks = {}
 local inputState = {
@@ -375,6 +377,8 @@ local function makeFrame(frameType, parent, template)
         return (relative and relative.GetLeft and relative:GetLeft() or 0)
             + (point and point[4] or 0)
     end
+    function frame:GetBottom() return self:GetTop() - self:GetHeight() end
+    function frame:GetCenter() return self:GetLeft() + self:GetWidth() / 2, self:GetTop() - self:GetHeight() / 2 end
 
     function frame:SetParent(parentFrame)
         if self.parent then
@@ -533,11 +537,21 @@ local function makeFrame(frameType, parent, template)
     function frame:SetFrameLevel(level) self.frameLevel = level end
     function frame:GetFrameLevel() return self.frameLevel or 1 end
     function frame:SetFrameStrata(strata) self.strata = strata end
+    function frame:GetFrameStrata() return self.strata or "MEDIUM" end
+    function frame:SetAlpha(alpha) self.alpha = alpha end
     function frame:SetScale(scale) self.scale = scale end
     function frame:SetToplevel(value) self.topLevel = value end
     function frame:SetClampedToScreen(value) self.clamped = value end
     function frame:SetMovable(value) self.movable = value end
     function frame:EnableMouse(value) self.mouseEnabled = value end
+    function frame:EnableMouseMotion(value) self.mouseMotionEnabled = value end
+    function frame:IsMouseMotionFocus()
+        if not self:IsVisible() then return false end
+        for _, focus in ipairs(inputState.mouseFoci or {}) do
+            if focus == self then return true end
+        end
+        return false
+    end
     function frame:RegisterForClicks(...) self.clicks = { ... } end
     function frame:RegisterForDrag(...) self.dragButtons = { ... } end
     function frame:StartMoving() self.moving = true end
@@ -764,6 +778,15 @@ function CreateFrame(frameType, _, parent, template)
 
     if template == "WowStyle1DropdownTemplate" then
         frame:SetSize(120, 25)
+    elseif template == "DialogBorderOpaqueTemplate" then
+        frame:SetAllPoints(parent)
+        frame.Bg = makeRegion()
+        frame.LeftEdge = makeRegion()
+        frame.RightEdge = makeRegion()
+        for _, corner in ipairs({ "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomRightCorner" }) do
+            frame[corner] = makeRegion()
+            frame[corner]:SetSize(24, 24)
+        end
     elseif template == "ButtonFrameTemplate" then
         frame.TitleContainer = makeFrame("Frame", frame)
         frame.CloseButton = makeFrame("Button", frame)
@@ -1998,4 +2021,5 @@ end
 
 print("LibModernSettings control tests passed")
 
+dofile("tests/flash_messages.lua")(lib, makeFrame, inputState)
 dofile("tests/colors.lua")(lib, makeFrame, inputState)

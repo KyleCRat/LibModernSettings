@@ -33,8 +33,32 @@ owner replacement, focus restoration after failed mouse Apply, continued Tab
 navigation, RGB/RGBA visibility and compatible upgrades.
 Preset tests exclude non-playable class tokens, verify item-quality colors and
 opacity preservation, and check favorites resizing only at row boundaries.
+Flash-message tests cover states, ordering, duplicate renewal, expiration,
+hover pause/resume during the hold and fade, close-button hover,
+manual dismissal, frame reuse, owner isolation, screen-edge fallback, scaled
+placement and lifecycle cleanup without affecting picker size or input focus.
+Picker feedback keeps its lifetime through Tab, valid submissions, color
+changes and palette refreshes.
 Validate Blizzard-owned templates and interaction behavior in game:
 
+- Attach flash stacks to a window and a group inside a scroll frame. Show success,
+  info and error messages, including wrapped text. Verify the neutral Blizzard
+  metal border, dark green/blue/red backgrounds and lighter matching text. Corners
+  must join cleanly in compact rows, and text and X must sit centered inside the
+  border with equal left/right margins. Check short messages after wrapped ones:
+  the middle side edges must return only when there is room between the corners.
+  Verify newest-last ordering, six-second hold followed by fading, and immediate X
+  dismissal without losing edit-box focus. Hover the message body and its X:
+  that message's hold or fade must pause while other timers continue. Leave it
+  to resume its remaining time; dismiss it or hide its owner while paused.
+  Repeat a message and exceed the stack
+  limit; duplicates must renew, and oldest messages must be replaced. Move,
+  resize and scale the owner near screen edges: the stack belongs below it when
+  it fits and directly above the owner otherwise, without scroll clipping.
+  Above-frame stacks must keep their newest message closest to the frame as
+  messages are added or dismissed; moving the owner must move the stack with it.
+  Hide the owner or its parent while messages are visible, then reopen it: old
+  messages must not return. Check simultaneous stacks on separate windows.
 - Open RGB and RGBA color inputs. Drag the hue strip and saturation/brightness
   square, enter hex and channel values, and adjust opacity. Check new/previous
   swatches, Apply versus Cancel/X/Escape, class/item-quality colors, right-click favorites,
@@ -48,8 +72,10 @@ Validate Blizzard-owned templates and interaction behavior in game:
   RGB-only inputs discarding imported alpha. Swatches must have no checkerboard. Check the compact
   Favorites, Recent, Class and Quality rows: labels sit close to aligned swatches,
   row gaps match swatch gaps, and there is no divider. Check action buttons beneath
-  the right-hand inputs. Invalid fields
-  must still show validation messages; valid input leaves no helper footer.
+  the right-hand inputs. Invalid fields must show external flash messages without
+  changing the picker's size or scale. Change fields, submit valid values, adjust
+  opacity and choose swatches: existing messages must keep their original timer
+  until fading or manual dismissal. Closing the picker clears them.
   Reject hex/channel edits with Enter, Tab, Shift+Tab and mouse Apply: the invalid
   field must stay focused or regain focus, and subsequent Tab navigation must work.
   Clicking another input must preserve the newly selected input's focus.

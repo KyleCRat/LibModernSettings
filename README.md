@@ -249,6 +249,48 @@ input and the active editor page. Nested explicit navigation roots keep
 their own cycles. Outside a canvas or explicit root, edit boxes retain Blizzard's
 `nextEditBox`/`previousEditBox` behavior.
 
+## Flash Messages
+
+Create one stack for an ordinary window or input-group frame and reuse it:
+
+```lua
+local messages = ModernSettings:CreateFlashMessages(frame)
+
+local input = ModernSettings:CreateTextInput(frame, {
+    onCommit = validateValue,
+    onError = function(message)
+        messages:Show(message or "Enter a valid value.", "error")
+    end,
+})
+
+local notice = messages:Show("Changes saved.", "success")
+messages:Dismiss(notice) -- Optional early dismissal; each message also has an X.
+```
+
+`Show(message, state)` accepts `success`, `info` (the default), or `error` and
+returns a message ID, or `nil` when the owner is hidden. `Dismiss(id)` returns
+whether that message was active; `Clear()` dismisses the entire stack. These
+operations do not change input values, validation state, focus or owner size.
+Consumers should keep validation state separate from transient feedback.
+
+Messages use Blizzard's metal dialog border with dark status-colored backgrounds
+and lighter matching text.
+
+Messages stack downward below the owner, newest last. If the stack will not fit
+below it, it sits directly above the owner, with the newest message closest to
+the frame. It stays horizontally aligned and clamped inside the screen edges.
+The overlay follows movement and effective
+scale and escapes scroll clipping. Hiding the owner clears its messages; call
+`Clear()` when switching the data being edited without hiding the owner.
+
+Options are `width` (360 owner UI units), `duration` (6 seconds before fading),
+`fadeDuration` (0.35 seconds), and `maxMessages` (4). Repeated message/state pairs
+restart their lifetime at the bottom of the stack; excess messages replace the
+oldest. Hovering a message or its close button pauses its timer, including a fade
+already in progress; leaving resumes the remaining time. Other messages keep
+their own timers. Frames are reused, and empty stacks stop updating. Use ordinary addon
+frames as owners, not protected or secret-bearing Blizzard widgets.
+
 ## Color Inputs
 
 ```lua

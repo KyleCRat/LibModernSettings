@@ -9,6 +9,7 @@
     <Script file="Utilities\TabNavigation.lua"/>
     <Script file="Utilities\Color.lua"/>
     <Script file="Elements\Text.lua"/>
+    <Script file="Utilities\FlashMessages.lua"/>
     <Script file="Layouts\Control.lua"/>
     <Script file="Controls\Button.lua"/>
     <Script file="Controls\ExpandableHeader.lua"/>

@@ -4,6 +4,15 @@
 
 ### Added
 
+- Add reusable `CreateFlashMessages(owner, options)` stacks for success, info and
+  error feedback outside windows or input groups, with Blizzard's metal dialog
+  border, dark status-colored backgrounds and lighter matching text. Compact
+  rows keep equal left/right insets and grow for wrapped text. Messages stack newest last,
+  sit directly above the owner when space below is insufficient, follow owner
+  movement and scale, fade after a configurable duration, and dismiss with X.
+  Hovering a message or its close button pauses its remaining lifetime and fade.
+  Repeated messages renew instead of duplicating; stacks reuse frames, bound
+  visible messages, clear when the owner hides and stop updating when empty.
 - Add `CreateColor` / canvas `color` inputs with tertiary-square swatches and
   optional persistent class/accent selection modes that retain the separate
   Custom color. A compact hue/SV picker places RGB or RGBA, six-digit RGB hex,
@@ -14,9 +23,11 @@
   Pasted RRGGBBAA imports opacity and normalizes to the six-digit RGB display;
   hex accepts exactly six or eight digits with an optional # prefix.
   Apply/Cancel sit below the inputs beside the hue strip, with no helper footer.
-  Validation messages appear only when needed; failed Apply returns focus to the
-  invalid field. Favorites reserve their first row even
-  when empty and grow only when another row is needed. Edits are staged until Apply/Cancel.
+  Validation uses flash messages without resizing the picker or taking input
+  focus; valid edits and field changes preserve their timed lifetime. Failed
+  Apply returns focus to the invalid field. Favorites reserve their
+  first row even when empty and grow only when another row is needed. Edits are
+  staged until Apply/Cancel.
   Color choices join Tab/Enter/Space navigation; closing returns
   focus to the input.
   `CreateColorPalette` supports consumer-owned persistence without a database

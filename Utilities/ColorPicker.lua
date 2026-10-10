@@ -21,7 +21,6 @@ local SWATCH_GAP = 2
 local SWATCH_STEP = SWATCH_SIZE + SWATCH_GAP
 local PALETTE_LABEL_WIDTH = 60
 local PALETTE_LABEL_GAP = 4
-local ERROR_GAP = 6
 local ACTION_BUTTON_GAP = 8
 local ACTION_BUTTON_WIDTH = (DETAIL_WIDTH - ACTION_BUTTON_GAP) / 2
 local CHANNELS = {
@@ -92,21 +91,15 @@ function Picker:ResizeToContent()
         return
     end
     local height = self.paletteBottom + PAD
-    if self.errorText:IsShown() then
-        height = height + ERROR_GAP + self.errorText:GetStringHeight()
-    end
     self.frame:SetHeight(height)
     self.frame:SetScale(math.min(1, (UIParent:GetHeight() - 32) / height))
 end
 
 function Picker:SetError(message, input)
-    local wasShown = self.errorText:IsShown()
     self.inputError = message ~= nil
     self.errorInput = message and input or nil
-    self.errorText:SetText(message or "")
-    self.errorText:SetShown(message ~= nil)
-    if message or wasShown then
-        self:ResizeToContent()
+    if message then
+        self.messages:Show(message, "error")
     end
 end
 
@@ -246,7 +239,6 @@ function Picker:RefreshPalettes()
     y = self:Populate(self.classes, self.classColors, y)
     y = self:Populate(self.qualities, self.qualityColors, y)
     self.paletteBottom = y - SWATCH_GAP
-    position(self.errorText, PAD, self.paletteBottom + ERROR_GAP)
     self:ResizeToContent()
 end
 
@@ -298,6 +290,7 @@ local function createPicker()
         inputs = {},
         classColors = {},
         qualityColors = {},
+        messages = lib:CreateFlashMessages(frame),
         hue = 0,
     }, Picker)
     lib:EnableTabNavigation(frame)
@@ -457,10 +450,6 @@ local function createPicker()
             preserveOpacity = true,
         }
     end
-    picker.errorText = text(frame, "", PAD, 0, WIDTH - PAD * 2)
-    picker.errorText:SetFontObject(GameFontHighlightSmall)
-    picker.errorText:SetTextColor(1, 0.3, 0.3)
-    picker.errorText:Hide()
     picker.cancel = lib:CreateButton(frame, {
         text = "Cancel",
         variant = "small",
@@ -524,6 +513,7 @@ function lib:_CloseColorPicker(owner, apply, returnFocus)
     stopDrag(picker.square)
     stopDrag(picker.hueStrip)
     picker:DiscardInputs()
+    picker.messages:Clear()
     picker.frame:Hide()
     if apply and owner.enabled and owner:IsVisible() then
         owner.palette:Record(color)

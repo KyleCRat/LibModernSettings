@@ -187,7 +187,7 @@ return function(lib, makeFrame, inputState)
     assert(picker.session.owner == control)
     assert(picker.opacity:IsShown() and picker.inputs.a:IsShown())
     assert(picker.hex:HasFocus())
-    assert(not picker.errorText:IsShown())
+    assert(#picker.messages.messages == 0)
     assert(#picker.classColors == 2, "Class must contain playable classes only")
     assert(#picker.qualityColors == 9, "Quality must contain all item qualities")
     assert(picker.classColors[1].label == "Mage" and picker.classColors[2].label == "Warrior")
@@ -254,13 +254,55 @@ return function(lib, makeFrame, inputState)
     control:SetValue(red)
 
     control:OpenPicker()
+    local pickerHeight = picker.frame:GetHeight()
     picker.hex:SetText("1234567")
     picker:Apply()
-    assert(picker.session and picker.errorText:IsShown() and picker.errorText.text:find("RRGGBB"))
+    assert(picker.session and #picker.messages.messages == 1)
+    assert(picker.messages.messages[1].message:find("RRGGBB"))
+    assert(picker.frame:GetHeight() == pickerHeight, "validation errors must not resize the picker")
     assert(picker.hex:HasFocus(), "invalid hex must retain focus")
+    local errorInput = picker.errorInput
+    picker.messages.messages[1].close:Click()
+    assert(picker.session and picker.hex:HasFocus() and #picker.messages.messages == 0)
+    assert(picker.errorInput == errorInput, "dismissing feedback must not change validation state")
     picker.hex:SetText("00FF00")
     picker:Apply()
     assert(control:GetValue().g == 1 and control:GetValue().a == 0.4)
+
+    do
+        control:OpenPicker()
+        picker.hex:SetText("1234567")
+        picker.hex.scripts.OnEnterPressed(picker.hex)
+        assert(picker.inputError and picker.hex:HasFocus())
+        local messages = picker.messages
+        local notice = assert(messages.messages[1])
+        local update = assert(messages.frame:GetScript("OnUpdate"))
+        update(messages.frame, 1)
+
+        picker.hex.scripts.OnTabPressed(picker.hex)
+        assert(inputState.keyboardFocus ~= picker.hex)
+        assert(messages.messages[1] == notice,
+            "committing on Tab must not dismiss an existing flash message")
+        picker:CommitInputs()
+        picker.inputs.r:FocusValue()
+        picker.inputs.r:SetText("128")
+        picker.inputs.r.scripts.OnEnterPressed(picker.inputs.r)
+        assert(not picker.inputError and not picker.errorInput)
+        assert(messages.messages[1] == notice,
+            "valid submission must clear validation state without dismissing feedback")
+
+        picker.opacity:_HandleSliderValueChanged(60)
+        picker:SetHSV(0.2, 0.4, 0.8)
+        picker.classes.buttons[1]:Click()
+        picker:RefreshPalettes()
+        assert(#messages.messages == 1 and messages.messages[1] == notice and notice.age == 1,
+            "color changes and palette refreshes must preserve the message and its lifetime")
+        update(messages.frame, messages.duration - 1 + messages.fadeDuration / 2)
+        assert(messages.messages[1] == notice and notice.frame.alpha > 0 and notice.frame.alpha < 1)
+        update(messages.frame, messages.fadeDuration)
+        assert(#messages.messages == 0 and not messages.frame:GetScript("OnUpdate"))
+        picker:Cancel()
+    end
 
     control:OpenPicker()
     picker.hex:ClearFocus()
@@ -289,7 +331,7 @@ return function(lib, makeFrame, inputState)
         IsMouseButtonDown = isMouseButtonDown
         assert(lib._pendingEditBoxCommits[case.input], "mouse-down must defer validation")
         picker.apply:Click()
-        assert(picker.session and picker.errorText:IsShown(), "invalid mouse Apply must stay open")
+        assert(picker.session and #picker.messages.messages == 1, "invalid mouse Apply must stay open")
         assert(case.input:HasFocus() and inputState.keyboardFocus == case.input,
             "failed Apply must restore focus to the field that reported the error")
         assert(not lib._pendingEditBoxCommits[case.input])
@@ -297,6 +339,8 @@ return function(lib, makeFrame, inputState)
         assert(inputState.keyboardFocus and inputState.keyboardFocus ~= case.input,
             "Tab must work after failed mouse Apply")
         picker.cancel:Click()
+        assert(#picker.messages.messages == 0 and not picker.messages.frame:GetScript("OnUpdate"),
+            "closing the picker must clear its notifications")
         assert(not picker.session and lib._navigationKeyboardFrame.control == control.buttons.custom,
             "Cancel must restore the owning input's focus after a validation error")
     end
