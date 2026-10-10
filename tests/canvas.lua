@@ -2,6 +2,7 @@
 local MAJOR = "LibModernSettings-1.0"
 local scripts = {
     "LibModernSettings-1.0.lua", "Utilities/Atlas.lua", "Utilities/EditBoxCommit.lua",
+    "Utilities/KeyboardNavigation.lua", "Utilities/ControlNavigation.lua", "Utilities/TabNavigation.lua",
     "Elements/Text.lua", "Layouts/Control.lua", "Controls/Button.lua", "Controls/Checkbox.lua",
     "Controls/ExpandableHeader.lua", "Controls/Dropdown.lua",
     "Controls/Slider.lua", "Controls/TextInput.lua", "Layouts/Field.lua", "Layouts/Canvas.lua",
@@ -41,13 +42,21 @@ local function newEnvironment()
     environment.GameFontNormal = { height = 12 }
     environment.GameFontNormalLarge = { height = 16 }
     environment.GameFontNormalHuge = { height = 20 }
-    environment.ScrollBoxConstants = { UpdateImmediately = 1 }
+    environment.ScrollBoxConstants = { UpdateImmediately = 1, NoScrollInterpolation = 0 }
     function environment.CreateScrollBoxLinearView()
         return { SetPanExtent = function() end }
     end
     environment.ScrollUtil = { InitScrollBoxWithScrollBar = function(scrollBox)
         function scrollBox:FullUpdate()
             self.updateCount = (self.updateCount or 0) + 1
+        end
+        function scrollBox:GetDerivedScrollOffset() return self.scrollOffset or 0 end
+        function scrollBox:GetVisibleExtent() return self:GetParent():GetHeight() end
+        function scrollBox:ScrollToOffset(offset, interpolation)
+            assert(interpolation == environment.ScrollBoxConstants.NoScrollInterpolation)
+            local content = self:GetChildren()
+            self.scrollOffset = math.max(0, math.min(offset, content:GetHeight() - self:GetVisibleExtent()))
+            content:SetPoint("TOPLEFT", self, "TOPLEFT", 0, self.scrollOffset)
         end
     end }
     return environment
@@ -417,6 +426,127 @@ do
         width = 300, height = 200, scrollable = true, viewportMarginTop = 10, viewportMarginBottom = 10,
     })
     assert(not pcall(inset.SetSize, inset, 300, 20))
+end
+
+-- Tab order follows the current visual rows, including offscreen and stacked fields.
+do
+    local tabEnvironment = newEnvironment()
+    loadVersion(tabEnvironment, true)
+    local tabLib = tabEnvironment.LibStub(MAJOR)
+    local window = tabEnvironment.CreateFrame("Frame")
+    local toolbar = tabEnvironment.CreateFrame("Frame", nil, window)
+    toolbar:SetPoint("TOPLEFT", window, "TOPLEFT", 0, 0)
+    local name = tabLib:CreateTextInput(toolbar, {})
+    local parent = tabEnvironment.CreateFrame("Frame", nil, window)
+    parent:SetPoint("TOPLEFT", window, "TOPLEFT", 0, -60)
+    local layout = tabLib:CreateCanvasLayout(parent, { width = 800, height = 100, scrollable = true })
+    local root = layout:GetRootFlow()
+    local columns = root:BeginColumns({ minColumnWidth = 260 })
+    local first = columns.left:AddControl("textInput", {})
+    local third = columns.left:AddControl("textInput", {})
+    local second = columns.right:AddControl("textInput", {})
+    local fourth = columns.right:AddControl("textInput", {})
+    columns:Finish()
+    root:AddSpacer(200)
+    local lastField = root:AddControl("field", {
+        label = "Offscreen value", controlType = "textInput", controlOptions = {},
+    })
+    local last = lastField:GetControl()
+    layout:Finalize()
+    tabEnvironment.Flush()
+
+    local function tab(source, expected, reverse)
+        tabEnvironment.IsShiftKeyDown = function() return reverse == true end
+        source.scripts.OnTabPressed(source)
+        assert(expected:HasFocus(), "Tab must follow the current visible layout")
+        assert(source == expected or not source:HasFocus())
+        tabEnvironment.Flush()
+    end
+
+    first:FocusValue()
+    tab(first, second)
+    tab(second, third)
+    tab(third, fourth)
+    tab(fourth, last)
+    local lastTop = -select(5, lastField:GetPointByName("TOPLEFT"))
+    assert(layout.scrollBox:GetDerivedScrollOffset() == lastTop + lastField:GetHeight() - 100,
+        "offscreen focus must reveal the entire labeled field with the nearest scroll")
+    tab(last, fourth, true)
+    assert(layout.scrollBox:GetDerivedScrollOffset() == -fourth.point[5])
+    tab(fourth, third, true)
+    tab(third, second, true)
+    assert(layout.scrollBox:GetDerivedScrollOffset() == -second.point[5])
+    tab(second, first, true)
+    tab(first, last, true)
+    tab(last, first)
+    assert(not name:HasFocus(), "automatic canvas navigation must stay within its page")
+
+    layout:SetSize(500, 100)
+    -- Do not flush first: navigation must settle queued responsive layout work.
+    tab(first, third)
+    tab(third, second)
+    tab(second, fourth)
+    tab(fourth, last)
+    columns.right:SetShown(false)
+    tab(last, third, true)
+    tab(third, first, true)
+    third:SetControlEnabled(false)
+    tab(first, last)
+    tab(last, first)
+    third:SetControlEnabled(true)
+
+    tabLib:EnableTabNavigation(window)
+    tab(first, name, true)
+    tab(name, first)
+    tab(first, third)
+    tab(third, last)
+    tab(last, name)
+    assert(layout.scrollBox:GetDerivedScrollOffset() > 0)
+    tab(name, first)
+    assert(layout.scrollBox:GetDerivedScrollOffset() == -first.point[5],
+        "a scrolled page must stay after the header in the focus order")
+
+    -- Hidden pages must not enter an explicit root that spans several canvases.
+    local otherPage = tabEnvironment.CreateFrame("Frame", nil, window)
+    local otherLayout = tabLib:CreateCanvasLayout(otherPage, { width = 500, height = 100 })
+    local other = otherLayout:GetRootFlow():AddControl("textInput", {})
+    otherLayout:Finalize()
+    otherPage:Hide()
+    tabEnvironment.Flush()
+    tab(first, name, true)
+    tab(name, first)
+    assert(not other:HasFocus())
+
+    first:SetText("Pending upgrade")
+    loadVersion(tabEnvironment, false)
+    tabEnvironment.Flush()
+    assert(first:HasFocus() and first:GetText() == "Pending upgrade")
+    tab(first, name, true)
+    assert(first:GetValue() == "Pending upgrade", "compatible upgrades must preserve roots and commit once")
+    name:CancelAndClearFocus()
+
+    -- A large section is a layout container, not the region that must be revealed.
+    local section = root:AddCustom(500)
+    local sectionHeader = tabLib:CreateExpandableHeader(section, { text = "Large section" })
+    sectionHeader:SetPoint("TOPLEFT", section, "TOPLEFT", 0, 0)
+    local bottomCheckbox = tabLib:CreateCheckbox(section, { label = "Offscreen checkbox" })
+    bottomCheckbox:SetPoint("TOPLEFT", section, "TOPLEFT", 0, -420)
+    layout:RefreshLayout()
+    tabEnvironment.Flush()
+    last:FocusValue()
+    tabEnvironment.IsShiftKeyDown = function() return false end
+    last.scripts.OnTabPressed(last)
+    local keyboard = tabLib._navigationKeyboardFrame
+    assert(keyboard.control == sectionHeader and sectionHeader.highlightLocked)
+    keyboard.scripts.OnKeyDown(keyboard, "TAB")
+    assert(keyboard.control == bottomCheckbox and bottomCheckbox.highlightLocked)
+    local sectionTop = -select(5, section:GetPointByName("TOPLEFT"))
+    assert(layout.scrollBox:GetDerivedScrollOffset() == sectionTop + 420 + bottomCheckbox:GetHeight() - 100,
+        "focus must reveal a checkbox inside a section taller than the viewport")
+    tabEnvironment.IsShiftKeyDown = function() return true end
+    keyboard.scripts.OnKeyDown(keyboard, "TAB")
+    assert(keyboard.control == sectionHeader and layout.scrollBox:GetDerivedScrollOffset() == sectionTop)
+    tabLib:_ClearNavigationFocus()
 end
 
 print("LibModernSettings canvas upgrade and responsive layout tests passed")

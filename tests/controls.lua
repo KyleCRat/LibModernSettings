@@ -13,6 +13,7 @@ GameFontDisableLarge = {}
 HIGHLIGHT_FONT_COLOR = { r = 1, g = 1, b = 1 }
 GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 UIParent = { height = 1000 }
+function UIParent:GetParent() return nil end
 local mouseButtonDown = false
 local deferredCallbacks = {}
 local inputState = {
@@ -31,6 +32,30 @@ end
 
 function GetCurrentKeyBoardFocus()
     return inputState.keyboardFocus
+end
+
+function GetMouseFoci()
+    return inputState.mouseFoci or {}
+end
+
+function DoesAncestryInclude(ancestor, frame)
+    while ancestor and frame do
+        if frame == ancestor then return true end
+        frame = frame:GetParent()
+    end
+    return false
+end
+
+function DoesAncestryIncludeAny(ancestor, frames)
+    for _, frame in ipairs(frames) do
+        if DoesAncestryInclude(ancestor, frame) then return true end
+    end
+    return false
+end
+
+SOUNDKIT = { IG_MAINMENU_OPTION_CHECKBOX_ON = 1, IG_MAINMENU_OPTION_CHECKBOX_OFF = 2 }
+function PlaySound(sound)
+    inputState.lastSound = sound
 end
 
 function IsShiftKeyDown()
@@ -272,8 +297,16 @@ local function makeFrame(frameType, parent, template)
         parent = parent,
         template = template,
         scripts = {},
+        baseScripts = {},
+        scriptHooks = {},
         hasFocus = false,
+        children = {},
     }
+
+    if parent then
+        parent.children = parent.children or {}
+        parent.children[#parent.children + 1] = frame
+    end
 
     function frame:SetSize(width, height)
         local changed = width ~= self.width or height ~= self.height
@@ -302,18 +335,53 @@ local function makeFrame(frameType, parent, template)
 
     function frame:ClearAllPoints()
         self.point = nil
+        self.pointsByName = {}
     end
 
     function frame:SetPoint(...)
         self.point = { ... }
+        self.pointsByName = self.pointsByName or {}
+        self.pointsByName[self.point[1]] = self.point
     end
 
     function frame:GetPoint()
         return unpack(self.point or {})
     end
 
+    function frame:GetPointByName(name)
+        return unpack(self.pointsByName and self.pointsByName[name] or {})
+    end
+
+    function frame:GetParent() return self.parent end
+    function frame:GetChildren() return unpack(self.children) end
+    function frame:GetEffectiveScale() return 1 end
+    function frame:GetTop()
+        local point = self.pointsByName and self.pointsByName.TOPLEFT or self.point
+        local relative = point and type(point[2]) == "table" and point[2] or self.parent
+        return (relative and relative.GetTop and relative:GetTop() or 1000)
+            + (point and point[5] or 0)
+    end
+    function frame:GetLeft()
+        local point = self.pointsByName and self.pointsByName.TOPLEFT or self.point
+        local relative = point and type(point[2]) == "table" and point[2] or self.parent
+        return (relative and relative.GetLeft and relative:GetLeft() or 0)
+            + (point and point[4] or 0)
+    end
+
     function frame:SetParent(parentFrame)
+        if self.parent then
+            for index, child in ipairs(self.parent.children or {}) do
+                if child == self then
+                    table.remove(self.parent.children, index)
+                    break
+                end
+            end
+        end
         self.parent = parentFrame
+        if parentFrame then
+            parentFrame.children = parentFrame.children or {}
+            parentFrame.children[#parentFrame.children + 1] = self
+        end
     end
 
     function frame:IsVisible()
@@ -421,10 +489,28 @@ local function makeFrame(frameType, parent, template)
     function frame:SetDisabledCheckedTexture(texture) self.disabledCheckedTexture = texture end
     function frame:SetChecked(checked) self.checked = checked end
     function frame:GetChecked() return self.checked end
+    function frame:LockHighlight() self.highlightLocked = true end
+    function frame:UnlockHighlight() self.highlightLocked = false end
+    function frame:Click(button)
+        if not self:IsEnabled() then return end
+        if self.frameType == "CheckButton" then self.checked = not self.checked end
+        if self.scripts.OnClick then self.scripts.OnClick(self, button or "LeftButton") end
+    end
     function frame:SetHitRectInsets(...) self.hitRectInsets = { ... } end
 
     function frame:SetScript(script, callback)
-        self.scripts[script] = callback
+        self.baseScripts[script] = callback
+        if not self.scriptHooks[script] then
+            self.scripts[script] = callback
+            return
+        end
+        self.scripts[script] = function(...)
+            local handler = self.baseScripts[script]
+            if handler then handler(...) end
+            for _, hook in ipairs(self.scriptHooks[script]) do
+                hook(...)
+            end
+        end
     end
 
     function frame:GetScript(script)
@@ -451,11 +537,9 @@ local function makeFrame(frameType, parent, template)
     end
 
     function frame:HookScript(script, callback)
-        local previous = self.scripts[script]
-        self.scripts[script] = function(...)
-            if previous then previous(...) end
-            callback(...)
-        end
+        self.scriptHooks[script] = self.scriptHooks[script] or {}
+        table.insert(self.scriptHooks[script], callback)
+        self:SetScript(script, self.baseScripts[script])
     end
 
     function frame:RegisterEvent(event)
@@ -470,7 +554,12 @@ local function makeFrame(frameType, parent, template)
     end
 
     function frame:SetEnabled(enabled)
+        local wasEnabled = self:IsEnabled()
         self.enabled = enabled
+        local script = enabled and "OnEnable" or "OnDisable"
+        if wasEnabled ~= enabled and self.scripts[script] then
+            self.scripts[script](self)
+        end
     end
 
     function frame:IsEnabled()
@@ -512,6 +601,11 @@ local function makeFrame(frameType, parent, template)
             menu.ScrollBox:RemoveDataProvider()
             self:TriggerEvent(DropdownButtonMixin.Event.OnMenuClose, self, menu)
             menu:Hide()
+            for _, child in ipairs({ menu:GetChildren() }) do
+                if child.scripts.OnHide then
+                    child.scripts.OnHide(child)
+                end
+            end
         end
     end
     function frame:CollectSelectionData()
@@ -548,6 +642,25 @@ local function makeFrame(frameType, parent, template)
     function frame:OnButtonStateChanged()
         self.visualRefreshCount = (self.visualRefreshCount or 0) + 1
         self.renderedEnabled = self.enabled
+        self.renderedHover = self.over
+    end
+
+    function frame:OnEnter()
+        if self:IsEnabled() then
+            self.over = true
+            self:OnButtonStateChanged()
+        end
+    end
+
+    function frame:IsOver()
+        return self.over
+    end
+
+    function frame:OnLeave()
+        if self:IsEnabled() then
+            self.over = nil
+            self:OnButtonStateChanged()
+        end
     end
 
     function frame:SetAutoFocus(autoFocus)
@@ -618,6 +731,11 @@ local function makeFrame(frameType, parent, template)
         self.textColor = { r, g, b }
     end
 
+    if frameType == "DropdownButton" then
+        frame:SetScript("OnEnter", frame.OnEnter)
+        frame:SetScript("OnLeave", frame.OnLeave)
+    end
+
     return frame
 end
 
@@ -650,6 +768,14 @@ end
 
 function EditBox_ClearHighlight(editBox)
     editBox.highlighted = false
+end
+
+function EditBox_OnTabPressed(editBox)
+    local target = IsShiftKeyDown() and editBox.previousEditBox or editBox.nextEditBox
+    if target then
+        editBox:ClearFocus()
+        target:SetFocus()
+    end
 end
 
 function IsMouseButtonDown()
@@ -792,16 +918,21 @@ end
 
 dofile("Utilities/Atlas.lua")
 dofile("Utilities/EditBoxCommit.lua")
+dofile("Utilities/KeyboardNavigation.lua")
+dofile("Utilities/ControlNavigation.lua")
+dofile("Utilities/TabNavigation.lua")
 dofile("Elements/Text.lua")
 dofile("Layouts/Control.lua")
 dofile("Controls/Button.lua")
 dofile("Controls/ExpandableHeader.lua")
+dofile("Controls/Checkbox.lua")
 dofile("Controls/Slider.lua")
 dofile("Controls/TextInput.lua")
 dofile("Controls/Dropdown.lua")
 dofile("Layouts/Field.lua")
+local beforeDeferredRefresh = oldDropdown.dropdown.visualRefreshCount or 0
 runDeferredCallbacks()
-assert(oldDropdown.dropdown.visualRefreshCount == 1)
+assert(oldDropdown.dropdown.visualRefreshCount == beforeDeferredRefresh + 1)
 
 oldButton:SetButtonText("Updated")
 assert(oldButton.label.point[1] == "CENTER")
@@ -923,8 +1054,9 @@ assert(squareButton.disabledTexture.atlas ==
 assert(squareButton.highlightTexture.atlas ==
     "common-button-tertiary-square-normal")
 assert(squareButton.highlightTexture.blendMode == "ADD")
-assert(squareButton.scripts.OnEnter == nil)
-assert(squareButton.scripts.OnLeave == nil)
+squareButton.scripts.OnEnter(squareButton)
+squareButton.scripts.OnLeave(squareButton)
+assert(squareButton.normalTexture.atlas == "common-button-tertiary-square-normal")
 
 local squareWithoutIconSucceeded = pcall(function()
     lib:CreateButton(nil, { variant = "square" })

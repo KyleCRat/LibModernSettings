@@ -260,6 +260,16 @@ for control, controlType in pairs(lib._controlInstances) do
     end
 end
 
+lib:RegisterControlNavigation("textInput", {
+    mode = "editBox",
+    focus = function(control)
+        control:FocusValue()
+    end,
+    release = function(control)
+        return control:CommitAndClearFocus()
+    end,
+})
+
 function lib:CreateTextInput(parent, options)
     options = options or {}
 

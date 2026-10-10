@@ -4,11 +4,22 @@
 
 ### Added
 
+- Navigate text inputs, slider values, dropdowns, checkboxes and expandable
+  headers, plus regular, small and square buttons, with Tab and Shift+Tab in
+  current visual order. Focused buttons, checkboxes and headers show their hover
+  highlight; Enter or Space activates them. Dropdowns stay closed when focused;
+  Enter or Space opens them and confirms their selection without losing focus.
+  Skip hidden or disabled fields, reveal offscreen fields even inside tall sections,
+  and wrap within the canvas. `EnableTabNavigation(parent)` joins inputs in a
+  manually composed window, including its canvas pages. Custom control types can
+  join through `RegisterControlNavigation(type, options)`, including existing
+  instances, without implementing their own keyboard capture or lifecycle hooks.
 - Step focused slider values with the mouse wheel and Up/Down arrows. While
   scrolling, Shift moves ten steps and Ctrl moves fifty, with Ctrl taking priority.
   Open dropdowns use Up/Down to select adjacent choices without wrapping or closing,
   keep the selected row in view, and retain normal mouse-wheel scrolling.
-  Enter confirms the current selection and closes the menu without opening chat.
+  Enter or Space confirms the current selection and closes the menu without
+  triggering chat or game actions.
   Sliders retain editable values outside their track range; unfocused controls
   preserve normal page scrolling.
 - Add canvas `SetSize(width, height)` for resizing existing pages, optional

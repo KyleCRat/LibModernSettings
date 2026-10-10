@@ -248,20 +248,22 @@ return function(lib, makeFrame, inputState)
         self.revealedValue = nil
         return false
     end
-    local function openMenu()
-        dropdown.dropdown:GenerateMenu()
-        menu:SetMenuDescription(dropdown.dropdown:GetMenuDescription())
-        for _, callback in ipairs(dropdown.dropdown:GetMenuDescription().menuAcquiredCallbacks) do
+    local function openMenu(owner)
+        owner = owner or dropdown
+        owner.dropdown:GenerateMenu()
+        menu:SetMenuDescription(owner.dropdown:GetMenuDescription())
+        for _, callback in ipairs(owner.dropdown:GetMenuDescription().menuAcquiredCallbacks) do
             callback(menu)
         end
         menu:Show()
         menu.scripts.OnShow(menu)
-        dropdown.dropdown.menu = menu
+        owner.dropdown.menu = menu
         -- Blizzard's OnMenuOpen passes only the dropdown, unlike OnMenuClose.
-        dropdown.dropdown:TriggerEvent(DropdownButtonMixin.Event.OnMenuOpen, dropdown.dropdown)
+        owner.dropdown:TriggerEvent(DropdownButtonMixin.Event.OnMenuOpen, owner.dropdown)
     end
+    function dropdown.dropdown:OpenMenu() openMenu(dropdown) end
     local function key(keyName)
-        local keyboard = lib._dropdownKeyboardFrame
+        local keyboard = lib._navigationKeyboardFrame
         keyboard.scripts.OnKeyDown(keyboard, keyName)
     end
     local function wheel(delta)
@@ -284,7 +286,7 @@ return function(lib, makeFrame, inputState)
 
     assert(not dropdown.dropdown:IsMouseWheelEnabled())
     openMenu()
-    local keyboard = lib._dropdownKeyboardFrame
+    local keyboard = lib._navigationKeyboardFrame
     assert(dropdown._libModernSettingsOpenMenu == menu)
     assert(keyboard:IsShown() and not dropdown.dropdown:IsMouseWheelEnabled())
     assert(menu:GetScript("OnMouseWheel") == nativeWheel and not menu:IsMouseWheelEnabled())
@@ -308,6 +310,9 @@ return function(lib, makeFrame, inputState)
     inputState.keyboardFocus = input
     key("DOWN")
     assert(picks == 2 and keyboard.propagateKeyboardInput, "text input must keep its arrow keys")
+    key("SPACE")
+    assert(dropdown.dropdown:IsMenuOpen() and keyboard.propagateKeyboardInput,
+        "typing a space must not confirm a dropdown behind the edit box")
     key("ENTER")
     assert(dropdown.dropdown:IsMenuOpen() and keyboard.propagateKeyboardInput,
         "focused text input must keep Enter")
@@ -340,13 +345,16 @@ return function(lib, makeFrame, inputState)
     key("DOWN")
     key("ENTER")
     assert(dropdown.dropdown:IsMenuOpen(), "combat must release keyboard confirmation")
+    key("SPACE")
+    assert(dropdown.dropdown:IsMenuOpen(), "combat must also release Space")
     inputState.inCombat = false
     keyboard.scripts.OnEvent(keyboard, "PLAYER_REGEN_ENABLED")
     assert(keyboard:IsShown())
     local selected = dropdown.dropdown:GetMenuDescription().radioButtons[2]
     dropdown.dropdown:Pick(selected, MenuInputContext.MouseButton)
     assert(dropdown:GetValue() == 2 and not dropdown.dropdown:IsMenuOpen())
-    assert(not keyboard:IsShown() and keyboard.control == nil)
+    assert(keyboard:IsShown() and keyboard.control == dropdown and keyboard:GetParent() == dropdown.dropdown,
+        "selection must transfer focus before the native menu hides its children")
     assert(menu:GetScript("OnMouseWheel") == nativeWheel and not menu:IsMouseWheelEnabled())
     assert(menu.ScrollBox:GetScript("OnMouseWheel") == nativeWheel and menu.ScrollBox:IsMouseWheelEnabled())
     assert(not dropdown.dropdown:IsMouseWheelEnabled())
@@ -355,30 +363,64 @@ return function(lib, makeFrame, inputState)
     assert(nativeWheels == beforeWheel + 1, "a reused Blizzard menu must retain its native wheel handler")
 
     openMenu()
-    assert(lib._dropdownKeyboardFrame == keyboard)
+    assert(lib._navigationKeyboardFrame == keyboard)
     key("DOWN")
     local confirmedValue, beforeConfirm = dropdown:GetValue(), picks
     key("ENTER")
     assert(dropdown:GetValue() == confirmedValue and picks == beforeConfirm,
         "Enter must retain the selected value without submitting it twice")
-    assert(not dropdown.dropdown:IsMenuOpen() and not keyboard:IsShown() and keyboard.control == nil)
+    assert(not dropdown.dropdown:IsMenuOpen() and keyboard:IsShown() and keyboard.control == dropdown)
     assert(not keyboard.propagateKeyboardInput, "confirming a dropdown must consume Enter before chat")
     key("ENTER")
-    assert(keyboard.propagateKeyboardInput, "closed menus must release Enter")
-    openMenu()
+    assert(dropdown.dropdown:IsMenuOpen() and not keyboard.propagateKeyboardInput,
+        "Enter on a focused closed dropdown must reopen it")
     key("ENTER")
     assert(not dropdown.dropdown:IsMenuOpen() and picks == beforeConfirm,
         "Enter must also accept the existing selection without arrow navigation")
+    for _, activationKey in ipairs({ "ENTER", "SPACE" }) do
+        openMenu()
+        inputState.mouseFoci = { menu.ScrollBox }
+        keyboard.scripts.OnEvent(keyboard, "GLOBAL_MOUSE_DOWN", "LeftButton")
+        assert(keyboard.control == dropdown, "clicking a menu scrollbar must retain keyboard selection")
+        inputState.mouseFoci = {}
+        key("DOWN")
+        local value, changes = dropdown:GetValue(), picks
+        key(activationKey)
+        assert(not dropdown.dropdown:IsMenuOpen() and dropdown:GetValue() == value and picks == changes)
+        assert(keyboard.control == dropdown and keyboard:IsVisible() and dropdown.dropdown.renderedHover)
+        assert(not keyboard.propagateKeyboardInput, "activation must not reach chat or jump bindings")
+    end
     openMenu()
     key("ESCAPE")
+    assert(not dropdown.dropdown:IsMenuOpen() and keyboard.control == dropdown)
+    key("ESCAPE")
     assert(not dropdown.dropdown:IsMenuOpen() and not keyboard:IsShown())
+    key("ENTER")
+    assert(keyboard.propagateKeyboardInput and not dropdown.dropdown:IsMenuOpen())
+
+    -- Global mouse events may arrive before or after Blizzard closes the menu.
+    for _, closeFirst in ipairs({ false, true }) do
+        openMenu()
+        inputState.mouseFoci = { UIParent }
+        if closeFirst then dropdown.dropdown:CloseMenu() end
+        keyboard.scripts.OnEvent(keyboard, "GLOBAL_MOUSE_DOWN", "LeftButton")
+        if not closeFirst then dropdown.dropdown:CloseMenu() end
+        assert(keyboard.control == nil and not keyboard:IsShown() and not dropdown.dropdown.renderedHover,
+            "outside clicks must release focus regardless of menu-close callback order")
+    end
+    inputState.mouseFoci = {}
+
+    dropdown:_FocusForTab()
+    dropdown.dropdown:SetEnabled(false)
+    assert(keyboard.control == nil and not keyboard:IsShown(), "disabling a closed dropdown must release focus")
+    dropdown:SetControlEnabled(true)
     openMenu()
     dropdown:SetControlEnabled(false)
     assert(not dropdown.dropdown:IsMenuOpen() and not keyboard:IsShown())
     dropdown:SetControlEnabled(true)
     openMenu()
     dropdown:Hide()
-    dropdown.scripts.OnHide(dropdown)
+    dropdown.dropdown.scripts.OnHide(dropdown.dropdown)
     assert(not dropdown.dropdown:IsMenuOpen() and not keyboard:IsShown())
     assert(#dropdown.dropdown.callbacks.OnMenuOpen == 1 and #dropdown.dropdown.callbacks.OnMenuClose == 1)
     dropdown:Show()
@@ -393,6 +435,9 @@ return function(lib, makeFrame, inputState)
     key("ENTER")
     assert(not dropdown.dropdown:IsMenuOpen() and picks == beforeEmpty,
         "confirming an empty menu must not invent a selection")
+    openMenu()
+    key("SPACE")
+    assert(not dropdown.dropdown:IsMenuOpen() and picks == beforeEmpty)
 
     dropdown:SetChoices(choices)
     dropdown:SetValue(1)
@@ -455,9 +500,39 @@ return function(lib, makeFrame, inputState)
     key("DOWN")
     assert(dropdown:GetValue() == 4 and dropdown.dropdown:IsMenuOpen(),
         "live upgrades must replace old menu responders before stepping")
+    lib._dropdownKeyboardFrame = lib._navigationKeyboardFrame
+    lib._navigationKeyboardFrame = nil
+    lib._loadedModules["Utilities/KeyboardNavigation"] = nil
+    dofile("Utilities/KeyboardNavigation.lua")
+    assert(lib._navigationKeyboardFrame == keyboard and lib._dropdownKeyboardFrame == nil,
+        "compatible upgrades must reuse the existing keyboard frame")
+    key("SPACE")
+    assert(not dropdown.dropdown:IsMenuOpen() and dropdown:GetValue() == 4)
+    openMenu()
     assertMenuLayout()
     dropdown.dropdown:CloseMenu()
     assert(menu.ScrollBox:GetScript("OnMouseWheel") == nativeWheel)
     assert(#dropdown.dropdown.callbacks.OnMenuOpen == 1 and #dropdown.dropdown.callbacks.OnMenuClose == 1)
+
+    -- Existing dropdowns can already have menu navigation but no closed-input focus hooks.
+    dropdown.dropdown._libModernSettingsInputNavigationHooked = nil
+    for _, script in ipairs({ "OnEnter", "OnLeave", "OnDisable", "OnHide" }) do
+        dropdown.dropdown.scriptHooks[script] = nil
+        dropdown.dropdown:SetScript(script, nil)
+    end
+    dropdown.dropdown:SetScript("OnLeave", dropdown.dropdown.OnLeave)
+    lib._loadedModules["Controls/Dropdown"] = nil
+    dofile("Controls/Dropdown.lua")
+    dropdown:_FocusForTab()
+    dropdown.dropdown.scripts.OnLeave(dropdown.dropdown)
+    assert(dropdown.dropdown.renderedHover, "upgraded dropdowns must retain their keyboard hover highlight")
+    dropdown.dropdown:SetEnabled(false)
+    assert(not keyboard:IsShown() and keyboard.control == nil,
+        "upgraded dropdowns must release closed-input focus when disabled")
+    dropdown:SetControlEnabled(true)
+    assert(#dropdown.dropdown.callbacks.OnMenuOpen == 1 and #dropdown.dropdown.callbacks.OnMenuClose == 1)
+    dofile("tests/tab_navigation.lua")(lib, makeFrame, inputState, openMenu, key)
+    dofile("tests/button_navigation.lua")(lib, makeFrame, inputState, openMenu, key)
+    dofile("tests/navigation_contract.lua")(lib, makeFrame, inputState, key)
     print("LibModernSettings navigation tests passed")
 end

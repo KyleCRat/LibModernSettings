@@ -19,19 +19,6 @@ local STEP_MODIFIERS = {
     },
 }
 
-local function createInputContext(source, direction)
-    return {
-        source = source,
-        direction = direction,
-        modifiers = {
-            shift = IsShiftKeyDown(),
-            control = IsControlKeyDown(),
-            alt = IsAltKeyDown(),
-            meta = IsMetaKeyDown(),
-        },
-    }
-end
-
 local function getInputSteps(context)
     local rules = STEP_MODIFIERS[context.source]
     if rules then
@@ -111,15 +98,9 @@ local function configureSliderInput(control)
         updateSliderWheel(control)
         lib:_FinalizeEditBoxOnFocusLost(self, finalizeSliderInput)
     end)
-    valueBox:SetScript("OnArrowPressed", function(_, key)
-        if key == "UP" or key == "DOWN" then
-            control:_StepValue(createInputContext("keyboard", key == "UP" and 1 or -1))
-        end
-    end)
-
     local function onMouseWheel(_, delta)
         if delta ~= 0 then
-            control:_StepValue(createInputContext("wheel", delta > 0 and 1 or -1))
+            control:_StepValue(lib:_CreateNavigationContext("wheel", delta > 0 and 1 or -1))
         end
     end
 
@@ -484,6 +465,27 @@ for control, controlType in pairs(lib._controlInstances) do
         configureSliderInput(control)
     end
 end
+
+local function stepWithKeyboard(control, context)
+    -- Up selects the previous row in a list, but increases a numeric value.
+    control:_StepValue({
+        source = context.source,
+        direction = -context.direction,
+        modifiers = context.modifiers,
+    })
+    return true
+end
+
+lib:RegisterControlNavigation("slider", {
+    mode = "editBox",
+    input = function(control)
+        return control.valueBox
+    end,
+    actions = {
+        previous = stepWithKeyboard,
+        next = stepWithKeyboard,
+    },
+})
 
 function lib:CreateSlider(parent, options)
     options = options or {}

@@ -59,9 +59,11 @@ Every control uses an options table:
   scrolling-menu behavior and are vertically centered on the screen.
   While a menu is open, Up/Down arrows select the previous/next available choice
   without wrapping or closing the menu. The selected row is scrolled into view;
-  the mouse wheel scrolls the list without changing selection. Enter confirms
-  the current selection and closes the menu without opening chat. Escape also
-  closes the menu; clicking a choice behaves normally.
+  the mouse wheel scrolls the list without changing selection. Enter or Space
+  confirms the current selection and closes the menu without triggering chat or
+  game actions. Focus returns to the dropdown input for continued Tab navigation.
+  Escape closes an open menu; a second press releases focus. Clicking a choice
+  behaves normally.
 - `CreateSlider(parent, options)` creates a stepped slider with an editable
   compact value field. A non-empty `label` retains the labeled layout;
   otherwise the control fits the track/value-box row without reserving label
@@ -220,6 +222,27 @@ the mouse is released. Moving directly to another LMS edit box preserves that
 new focus while the previous value finalizes. Consumers should update
 value-only state in place instead of rebuilding unrelated focused controls.
 
+Canvas text inputs, slider value boxes, dropdowns, checkboxes, expandable headers
+and buttons support Tab and Shift+Tab in visual row order, wrapping within the page.
+Hidden and disabled inputs are skipped, responsive columns follow their current
+positions, and focusing an offscreen field scrolls it into view. Moving focus
+commits pending text first; a rejected text commit stops navigation. Dropdowns
+highlight without opening on focus. Enter or Space opens the menu; confirming
+selection closes it while retaining focus. Tab closes an open menu and moves on.
+Checkboxes, headers and all button variants retain their hover highlight while
+focused; Enter or Space invokes their normal click behavior. Escape releases
+focus unless a dropdown menu is open, in which case it closes the menu first.
+Clicking elsewhere, disabling or hiding the control, or focusing another LMS edit
+box releases focus as well. Dropdowns, checkboxes, headers and buttons are skipped
+during combat, when their keyboard navigation is unavailable.
+
+For manually composed windows, call `ModernSettings:EnableTabNavigation(parent)`
+on an ordinary UI container. Its descendant LMS inputs share a cycle, including
+any canvas pages inside it; hidden pages are excluded. This can join a toolbar
+input and the active editor page. Nested explicit navigation roots keep
+their own cycles. Outside a canvas or explicit root, edit boxes retain Blizzard's
+`nextEditBox`/`previousEditBox` behavior.
+
 ## Canvas Layouts
 
 `CreateCanvasLayout(parent, options)` measures `options.measurementFrame` and
@@ -339,6 +362,30 @@ local control = ModernSettings:CreateControl("example", parent, options)
 Method dispatch remains connected to the library's persistent prototypes, so
 existing controls receive compatible method updates when a newer LibStub MINOR
 of the same API family loads.
+
+Call `RegisterControlNavigation(controlType, options)` after registering a control
+type to opt it into the shared navigation behavior. Registration updates existing
+instances and applies to future instances; re-registering updates callbacks without
+duplicating hooks or clearing focus. The options and action map are copied.
+
+| Option | Contract |
+| --- | --- |
+| `mode` | `"keyboard"` (default) uses shared keyboard capture outside combat; `"editBox"` keeps native text editing. |
+| `input(control)` | Returns the control's stable input widget; defaults to the control itself. It must support visibility/enabled checks and belong to the control. Keep its identity and mode stable across upgrades. |
+| `actions` | Maps `activate`, `previous`, `next`, `navigate`, or `dismiss` to functions receiving `(control, context)`. Return `true` to consume the action. Tab traversal and dismissal have defaults. |
+| `focus(control)` | Optional override for acquiring focus. Defaults to native edit focus with text selection, or shared keyboard focus. |
+| `release(control)` | Runs for Tab traversal, default dismissal, and keyboard-input hide/disable cleanup. Return `false` to stop Tab traversal. The default clears native edit focus and flushes pending LMS commits; shared keyboard focus is released before the callback. |
+| `highlight(control, focused)` | Optional keyboard-focus visual update. |
+| `hover(control, highlighted)` | Optional combined mouse/keyboard hover update; disabled inputs receive `false`. |
+
+Action context includes `source`, `direction` (`-1` for previous, `1` for next),
+and a `modifiers` snapshot with `shift`, `control`, `alt`, and `meta`. Numeric
+controls can interpret previous/next differently from list order.
+For native editors, navigation owns `OnTabPressed` and routes `OnArrowPressed`
+when previous/next actions exist. It hooks focus acquisition to release shared
+keyboard capture. The control retains its Enter/Escape, text, and commit behavior;
+Space remains a text character. Put any construction or script reconfiguration
+before navigation registration. Existing public control methods are unaffected.
 
 When a compatible update adds or changes non-method frame state, the control
 module must idempotently reconfigure its existing tracked instances. Method

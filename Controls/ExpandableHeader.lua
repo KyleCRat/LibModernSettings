@@ -191,20 +191,6 @@ local function createExpandableHeader(parent, options)
 
     updateHeaderLayout(header)
 
-    header:SetScript("OnEnter", function(self)
-        if self._libModernSettingsHeaderEnabled ~= false then
-            self._libModernSettingsHeaderNormalTexture:SetAtlas(
-                HEADER_ATLASES.hover,
-                false
-            )
-        end
-    end)
-    header:SetScript("OnLeave", function(self)
-        self._libModernSettingsHeaderNormalTexture:SetAtlas(
-            HEADER_ATLASES.normal,
-            false
-        )
-    end)
     header:SetScript("OnClick", function(self, button)
         self:_HandleExpandableHeaderClick(button)
     end)
@@ -282,10 +268,7 @@ function expandableHeaderMethods:SetControlEnabled(enabled, disabledTooltip)
     enabled = enabled == true
     self._libModernSettingsHeaderEnabled = enabled
     self:SetEnabled(enabled)
-    self._libModernSettingsHeaderNormalTexture:SetAtlas(
-        HEADER_ATLASES.normal,
-        false
-    )
+    self:_RefreshNavigationHover()
     updateHeaderIconState(self)
     updateToggleState(self)
     lib:SetControlTooltipEnabled(self, enabled, disabledTooltip)
@@ -335,6 +318,17 @@ lib:RegisterControlType(
     initializeExpandableHeader,
     refreshHeaderAppearance
 )
+
+lib:RegisterControlNavigation("expandableHeader", {
+    actions = lib._buttonNavigationActions,
+    highlight = lib._SetButtonNavigationHighlight,
+    hover = function(control, highlighted)
+        control._libModernSettingsHeaderNormalTexture:SetAtlas(
+            highlighted and HEADER_ATLASES.hover or HEADER_ATLASES.normal,
+            false
+        )
+    end,
+})
 
 function lib:CreateExpandableHeader(parent, options)
     options = options or {}

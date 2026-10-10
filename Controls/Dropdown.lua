@@ -14,55 +14,33 @@ local DEFAULT_INSET = 0
 local LEGACY_INSET = 8
 local DEFAULT_MENU_HEIGHT_RATIO = 0.75
 
-local function refreshDropdownKeyboard(frame)
-    local control = frame.control
-    if InCombatLockdown() or not control or not control:IsVisible()
-        or not control.dropdown:IsEnabled() or not control.dropdown:IsMenuOpen() then
-        frame:Hide()
-        return
-    end
-
-    frame:EnableKeyboard(true)
-    frame:SetPropagateKeyboardInput(true)
-    frame:Show()
+local function stepSelection(control, context)
+    return control:_StepSelection(context.direction)
 end
 
-local function getDropdownKeyboard()
-    local frame = lib._dropdownKeyboardFrame
-    if not frame then
-        frame = CreateFrame("Frame", nil, UIParent)
-        frame:Hide()
-        frame:RegisterEvent("PLAYER_REGEN_DISABLED")
-        frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-        lib._dropdownKeyboardFrame = frame
-    end
-
-    frame:SetScript("OnEvent", refreshDropdownKeyboard)
-    frame:SetScript("OnKeyDown", function(self, key)
-        if InCombatLockdown() then
-            self:Hide()
-            return
+local NAVIGATION_ACTIONS = {
+    activate = function(control)
+        if control.dropdown:IsMenuOpen() then
+            -- Arrow navigation already applied the current selection.
+            control.dropdown:CloseMenu()
+        else
+            control.dropdown:OpenMenu()
         end
-
-        local control = self.control
-        local closeMenu = key == "ESCAPE" or key == "ENTER"
-        local handled = control and control:IsVisible() and control.dropdown:IsEnabled()
-            and control.dropdown:IsMenuOpen() and not GetCurrentKeyBoardFocus()
-            and (key == "UP" or key == "DOWN" or closeMenu)
-        self:SetPropagateKeyboardInput(not handled)
-        if handled then
-            if closeMenu then
-                -- Arrow navigation already applied the current selection.
-                control.dropdown:CloseMenu()
-            else
-                control:_StepSelection(key == "DOWN" and 1 or -1)
-            end
+        return true
+    end,
+    dismiss = function(control)
+        if control.dropdown:IsMenuOpen() then
+            control.dropdown:CloseMenu()
+        else
+            lib:_ClearNavigationFocus(control)
         end
-    end)
-    return frame
-end
+        return true
+    end,
+    previous = stepSelection,
+    next = stepSelection,
+}
 
-local function configureDropdownNavigation(control)
+local function configureDropdownMenu(control)
     local dropdown = control.dropdown
     if control._libModernSettingsNavigationHooked then
         return
@@ -74,9 +52,6 @@ local function configureDropdownNavigation(control)
     dropdown:RegisterCallback(DropdownButtonMixin.Event.OnMenuClose, function()
         control:_OnMenuClosed()
     end, control)
-    control:HookScript("OnHide", function()
-        dropdown:CloseMenu()
-    end)
     if dropdown:IsMenuOpen() then
         control:_GenerateMenu()
         control:_OnMenuOpened(dropdown.menu)
@@ -253,25 +228,18 @@ local dropdownMethods = {}
 
 function dropdownMethods:_OnMenuOpened(menu)
     self._libModernSettingsOpenMenu = menu
-    local keyboard = getDropdownKeyboard()
-    keyboard.control = self
-    keyboard:SetParent(menu)
-    keyboard:ClearAllPoints()
-    keyboard:SetAllPoints(menu)
-    keyboard:SetFrameLevel(menu:GetFrameLevel() + 1)
-    refreshDropdownKeyboard(keyboard)
+    lib:_SetNavigationFocus(self, menu)
     self:_ScrollSelectionIntoView()
 end
 
 function dropdownMethods:_OnMenuClosed()
     self._libModernSettingsOpenMenu = nil
 
-    local keyboard = lib._dropdownKeyboardFrame
+    local keyboard = lib._navigationKeyboardFrame
     if keyboard and keyboard.control == self then
-        keyboard:Hide()
-        keyboard.control = nil
-        keyboard:SetParent(UIParent)
-        keyboard:ClearAllPoints()
+        -- Blizzard calls OnMenuClose before hiding/recycling the menu. Move the
+        -- keyboard frame back to the input before its old parent disappears.
+        self:_FocusForTab()
     end
 end
 
@@ -315,6 +283,7 @@ function dropdownMethods:_StepSelection(direction)
         dropdown:Pick(description, MenuInputContext.None)
     end
     self:_ScrollSelectionIntoView()
+    return true
 end
 
 function dropdownMethods:_InitializeMenu()
@@ -436,7 +405,7 @@ end
 function dropdownMethods:SetControlEnabled(enabled, disabledTooltip)
     self.dropdown:SetEnabled(enabled == true)
     if not enabled then
-        self.dropdown:CloseMenu()
+        self:_ReleaseTabFocus()
     end
 
     local color = enabled and HIGHLIGHT_FONT_COLOR or GRAY_FONT_COLOR
@@ -447,7 +416,7 @@ end
 
 local function initializeDropdown(dropdown, options)
     dropdown:_InitializeMenu()
-    configureDropdownNavigation(dropdown)
+    configureDropdownMenu(dropdown)
     dropdown:SetValue(options.value)
     dropdown:SetControlEnabled(
         options.enabled ~= false,
@@ -474,6 +443,27 @@ lib:RegisterControlType(
     refreshDropdownAppearance
 )
 
+lib:RegisterControlNavigation("dropdown", {
+    input = function(control)
+        return control.dropdown
+    end,
+    actions = NAVIGATION_ACTIONS,
+    release = function(control)
+        control.dropdown:CloseMenu()
+    end,
+    hover = function(control, highlighted)
+        -- DropdownButton uses ButtonStateBehaviorMixin, not Button highlight textures.
+        if highlighted == (control.dropdown:IsOver() == true) then
+            return
+        end
+        if highlighted then
+            control.dropdown:OnEnter()
+        else
+            control.dropdown:OnLeave()
+        end
+    end,
+})
+
 -- Preserve the reserved space of controls already laid out by an older embed.
 for control, controlType in pairs(lib._controlInstances) do
     if controlType == "dropdown" then
@@ -488,7 +478,7 @@ for control, controlType in pairs(lib._controlInstances) do
             lib:_WatchControlSize(control)
         end
         configureDropdownVisibility(control)
-        configureDropdownNavigation(control)
+        configureDropdownMenu(control)
     end
 end
 

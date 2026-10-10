@@ -14,9 +14,33 @@ Navigation tests cover focused input, modifier combinations and precedence,
 typed values outside the track range, selection boundaries, menu regeneration
 with reused rows, selection visibility, viewport retention, native wheel scrolling,
 and keyboard release during combat or text entry.
+Tab tests also cover forward/reverse wrapping, hidden and disabled fields,
+responsive visual order, offscreen focus, grouped windows, commit-driven changes,
+dropdown transitions and compatible upgrades. Dropdown tests also cover closed
+focus, explicit opening, focus transfer before the native menu hides, and outside
+clicks in either callback order. Button navigation covers hover focus, Enter/Space
+activation for each variant, callbacks, nested controls, focus release and combat
+suspension; tall-section tests cover revealing the focused control.
+Navigation contract tests register independent composite and native-edit control
+types. They cover existing/new instances, shared action context, descriptor and
+prototype updates, rejected releases, invalid registrations and single hook
+installation without changing the traversal or keyboard handlers.
 Validate Blizzard-owned templates and interaction behavior in game:
 
 - Open, close, and reopen every consuming Settings canvas.
+- Tab and Shift+Tab through text inputs, slider values, dropdowns, checkboxes and
+  expandable headers, plus regular, small and square buttons. Verify wrapping,
+  committed edits, selection highlighting and scrolling newly focused fields into
+  view. Dropdowns must stay closed on focus, open with Enter/Space, retain arrow
+  navigation and close on Tab without passing Tab to game bindings. Hide or disable fields,
+  stack responsive columns, and repeat with a pending edit or rejected commit.
+  Confirm hidden pages and separate windows stay outside the focus cycle.
+- Activate focused buttons, checkboxes and headers with Enter and Space, checking one
+  callback per press, retained hover highlights and no chat/jump action. Tab into
+  an expanded section and skip its controls after collapsing it. Check Advanced
+  toggles remain independently reachable. Click elsewhere, focus an edit box,
+  hide/disable the control, close the page or press Escape to release focus.
+  Enter combat and verify keys pass through; repeat after leaving combat.
 - Click enabled and disabled regular, small, and square buttons. Confirm all
   activate on mouse-up.
 - Confirm icon-and-text buttons retain their icon, center the complete content
@@ -43,14 +67,16 @@ Validate Blizzard-owned templates and interaction behavior in game:
   Wheel-scroll tall menus without changing selection, then resume arrow keys.
   Rows must remain ordered and evenly spaced after callbacks update values or
   rebuild choices; an already-visible selection must not reset the viewport.
-  Press Enter after arrow navigation: confirm the current value, close the menu,
-  and keep chat closed without firing a duplicate change callback. Also test
-  Enter without arrow navigation and with an empty list. Click a choice or press
-  Escape to close. Test long/short list transitions, reopening, and wheel behavior
+  Press Enter or Space after arrow navigation: confirm the current value, close the menu,
+  and keep focus on the input without firing a duplicate change callback or opening
+  chat. Tab and Shift+Tab must still move on; Enter/Space must reopen the menu.
+  Also test both keys without arrow navigation and with an empty list. Click a
+  choice or press Escape to close; Escape on the closed input must release focus.
+  Test long/short list transitions, reopening, and wheel behavior
   in an unrelated Blizzard menu.
 - With a dropdown open, enter combat and verify keys pass through normally;
   leave combat and resume selection. Open a text input/chat while the menu is
-  open and confirm it retains its arrow keys and Enter. Hide or disable the owning
+  open and confirm it retains its arrow keys, Enter and typed spaces. Hide or disable the owning
   control and confirm the menu closes and keyboard capture ends.
 - Type valid, invalid, below-minimum, and above-maximum slider values. Confirm
   valid out-of-range values remain in the input and SavedVariables while the

@@ -4,6 +4,9 @@
     <Script file="Utilities\Atlas.lua"/>
     <Script file="Utilities\Tooltip.lua"/>
     <Script file="Utilities\EditBoxCommit.lua"/>
+    <Script file="Utilities\KeyboardNavigation.lua"/>
+    <Script file="Utilities\ControlNavigation.lua"/>
+    <Script file="Utilities\TabNavigation.lua"/>
     <Script file="Elements\Text.lua"/>
     <Script file="Layouts\Control.lua"/>
     <Script file="Controls\Button.lua"/>

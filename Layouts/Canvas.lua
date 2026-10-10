@@ -367,6 +367,42 @@ function Layout:RequestLayout()
     end)
 end
 
+function Layout:_ScrollControlIntoView(control)
+    if not self.scrollBox then
+        return
+    end
+
+    local frame = control
+    local ancestor = control:GetParent()
+    while ancestor and ancestor ~= self.content do
+        if ancestor._libModernSettingsControlType == "field" then
+            frame = ancestor
+        end
+        ancestor = ancestor:GetParent()
+    end
+    if not ancestor then
+        return
+    end
+
+    local contentTop = self.content:GetTop()
+    local frameTop = frame:GetTop()
+    if not contentTop or not frameTop then
+        return
+    end
+
+    local scale = frame:GetEffectiveScale() / self.content:GetEffectiveScale()
+    local top = contentTop - frameTop * scale
+    local height = frame:GetHeight() * scale
+    local bottom = top + height
+    local offset = self.scrollBox:GetDerivedScrollOffset()
+    local extent = self.scrollBox:GetVisibleExtent()
+    if top < offset or height > extent then
+        self.scrollBox:ScrollToOffset(top, ScrollBoxConstants.NoScrollInterpolation)
+    elseif bottom > offset + extent then
+        self.scrollBox:ScrollToOffset(bottom - extent, ScrollBoxConstants.NoScrollInterpolation)
+    end
+end
+
 function Flow:GetWidth()
     return self.width
 end
@@ -909,6 +945,7 @@ function lib:CreateCanvasLayout(parent, options)
 
     parent:SetSize(canvasWidth, canvasHeight)
     layout.content = createContent(layout, options)
+    layout.content._libModernSettingsCanvasLayout = layout
     layout.rootFlow = layout:_CreateFlow(
         0,
         contentWidth,
@@ -927,6 +964,7 @@ end
 -- Tracked canvases keep their original option intent and placement records.
 -- Older, untracked canvases cannot be reconstructed safely from screen pixels.
 for layout in pairs(lib._canvasLayouts) do
+    layout.content._libModernSettingsCanvasLayout = layout
     layout.style = createStyle({ style = layout.styleOverrides })
     layout.contentWidth = layout.canvasWidth - layout.style.paddingLeft
         - layout.style.scrollbarGap - layout.style.scrollbarWidth

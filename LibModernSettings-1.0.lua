@@ -32,7 +32,9 @@ local function getMethodDispatcher(methodName)
     dispatcher = function(control, ...)
         local controlType = control._libModernSettingsControlType
         local definition = lib._controlTypes[controlType]
-        local method = definition and definition.methods[methodName]
+        local navigationMethod = definition and definition.navigation
+            and lib._navigationControlMethods[methodName]
+        local method = navigationMethod or (definition and definition.methods[methodName])
 
         if not method then
             error((
@@ -47,9 +49,14 @@ local function getMethodDispatcher(methodName)
     return dispatcher
 end
 
-local function installControlMethods(control, definition)
+function lib:_InstallControlMethods(control, definition)
     for methodName in pairs(definition.methods) do
         control[methodName] = getMethodDispatcher(methodName)
+    end
+    if definition.navigation then
+        for methodName in pairs(self._navigationControlMethods) do
+            control[methodName] = getMethodDispatcher(methodName)
+        end
     end
 end
 
@@ -63,6 +70,9 @@ function lib:_RefreshControlAppearance(control)
     control._libModernSettingsRefreshingAppearance = true
     definition.refreshAppearance(control, options)
     control._libModernSettingsRefreshingAppearance = nil
+    if definition.navigation then
+        control:_RefreshNavigationHover()
+    end
 end
 
 function lib:RegisterControlType(controlType, factory, methods, initializer, refreshAppearance)
@@ -106,7 +116,7 @@ function lib:RegisterControlType(controlType, factory, methods, initializer, ref
 
     for control, instanceType in pairs(self._controlInstances) do
         if instanceType == controlType then
-            installControlMethods(control, definition)
+            self:_InstallControlMethods(control, definition)
             -- Old releases did not retain option intent. Never guess whether
             -- their measured dimensions were defaults or addon overrides.
             if refreshAppearance and control._libModernSettingsAppearanceOptions then
@@ -143,7 +153,7 @@ function lib:CreateControl(controlType, parent, options)
     control._libModernSettingsControlType = controlType
     control._libModernSettingsAppearanceOptions = appearanceOptions
     self._controlInstances[control] = controlType
-    installControlMethods(control, definition)
+    self:_InstallControlMethods(control, definition)
 
     if definition.refreshAppearance then
         self:_RefreshControlAppearance(control)
@@ -151,6 +161,10 @@ function lib:CreateControl(controlType, parent, options)
 
     if definition.initializer then
         definition.initializer(control, options)
+    end
+
+    if definition.navigation then
+        self:_ConfigureControlNavigation(control)
     end
 
     return control

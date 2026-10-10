@@ -278,14 +278,6 @@ local function createButton(parent, options)
 
     layoutButtonContent(button)
     button._libModernSettingsOnClick = options.onClick
-    if style.hover then
-        button:SetScript("OnEnter", function(self)
-            normalTexture:SetAtlas(getButtonStyle(self).hover, false)
-        end)
-        button:SetScript("OnLeave", function(self)
-            normalTexture:SetAtlas(getButtonStyle(self).normal, false)
-        end)
-    end
     button:SetScript("OnClick", function(self, ...)
         self:_HandleClick(...)
     end)
@@ -337,6 +329,7 @@ end
 
 function buttonMethods:SetControlEnabled(enabled, disabledTooltip)
     self:SetEnabled(enabled == true)
+    self:_RefreshNavigationHover()
 
     if self.icon then
         self.icon:SetDesaturated(enabled ~= true)
@@ -385,6 +378,18 @@ lib:RegisterControlType(
     initializeButton,
     refreshButtonAppearance
 )
+
+lib:RegisterControlNavigation("button", {
+    actions = lib._buttonNavigationActions,
+    highlight = lib._SetButtonNavigationHighlight,
+    hover = function(control, highlighted)
+        local style = getButtonStyle(control)
+        local texture = control:GetNormalTexture()
+        if style.hover and texture then
+            texture:SetAtlas(highlighted and style.hover or style.normal, false)
+        end
+    end,
+})
 
 function lib:CreateButton(parent, options)
     options = options or {}

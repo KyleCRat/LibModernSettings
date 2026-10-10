@@ -183,6 +183,11 @@ lib:RegisterControlType(
     refreshCheckboxAppearance
 )
 
+lib:RegisterControlNavigation("checkbox", {
+    actions = lib._buttonNavigationActions,
+    highlight = lib._SetButtonNavigationHighlight,
+})
+
 function lib:CreateCheckbox(parent, options)
     options = options or {}
 
