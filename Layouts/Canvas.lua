@@ -423,6 +423,8 @@ local function setFlowFramesShown(flow, shown)
             for _, child in ipairs(entry.columns.flows) do
                 setFlowFramesShown(child, shown)
             end
+        elseif entry.group then
+            setFlowFramesShown(entry.group, shown)
         elseif entry.frame then
             entry.frame:SetShown(shown)
         end
@@ -660,6 +662,55 @@ function Flow:AddSpacer(height)
     self.cursor = self.cursor + height
 end
 
+function Flow:BeginGroup(options)
+    options = options or {}
+    assert(type(options) == "table", "group options must be a table")
+    assert(self.entries, "groups require a tracked canvas")
+
+    local x, width = self:_GetRect(options)
+    local marginTop = options.marginTop or 0
+    assert(type(marginTop) == "number" and marginTop >= 0 and marginTop < math.huge,
+        "group top margin must be a non-negative finite number")
+
+    local group = self.layout:_CreateFlow(x, width, self.cursor + marginTop)
+    group.parentFlow = self
+    group.groupOptions = shallowCopy(options)
+    self.entries[#self.entries + 1] = { group = group }
+    return group
+end
+
+function Flow:Finish(options)
+    assert(self.groupOptions, "Finish requires a group flow")
+    options = options or {}
+    assert(type(options) == "table", "group finish options must be a table")
+
+    local marginBottom = options.marginBottom or 0
+    assert(type(marginBottom) == "number" and marginBottom >= 0 and marginBottom < math.huge,
+        "group bottom margin must be a non-negative finite number")
+    self.finishOptions = shallowCopy(options)
+
+    if self.shown ~= false then
+        self.parentFlow.cursor = self.cursor + marginBottom
+    end
+
+    self.layout:RequestLayout()
+    return self.parentFlow.cursor
+end
+
+function Flow:_RefreshGroup()
+    if self.shown == false then
+        return
+    end
+
+    local parentFlow = self.parentFlow
+    self.x, self.width = parentFlow:_GetRect(self.groupOptions)
+    self:_RefreshLayout(parentFlow.cursor + (self.groupOptions.marginTop or 0))
+
+    if self.finishOptions then
+        self:Finish(self.finishOptions)
+    end
+end
+
 function Flow:BeginColumns(options)
     options = options or {}
 
@@ -796,6 +847,8 @@ function Flow:_RefreshLayout(cursor)
     for _, entry in ipairs(self.entries) do
         if entry.columns then
             entry.columns:_RefreshLayout()
+        elseif entry.group then
+            entry.group:_RefreshGroup()
         elseif entry.spacer then
             self.cursor = self.cursor + entry.spacer
         else

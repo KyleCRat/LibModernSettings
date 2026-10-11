@@ -118,6 +118,13 @@ local function buildPage(environment)
     nested.right:AddText({ text = "Nested", fontObject = environment.GameFontNormal })
     nested:Finish({ marginBottom = 7 })
     columns:Finish({ marginBottom = 6 })
+    local group = root:BeginGroup({ indent = 1, marginTop = 3 })
+    group:AddControl("textInput", { value = "Grouped input" })
+    local hiddenGroup = group:BeginGroup()
+    hiddenGroup:AddText({ text = "Hidden child" })
+    hiddenGroup:SetShown(false)
+    hiddenGroup:Finish()
+    group:Finish({ marginBottom = 5 })
     root:AddSpacer(5)
     local following = root:AddControl("textInput", { value = "Saved", height = 38 })
     local automaticInput = root:AddControl("textInput", { value = "Automatic" })
@@ -140,7 +147,7 @@ local function buildPage(environment)
         dropdown = dropdown, explicit = explicit, field = field,
         following = following, customFont = customFont,
         automaticInput = automaticInput, explicitInput = explicitInput, button = button, header = header,
-        checkbox = checkbox,
+        checkbox = checkbox, hiddenGroup = hiddenGroup,
     }
 end
 
@@ -158,6 +165,11 @@ local function compareFlows(left, right)
         elseif entry.columns then
             for column, flow in ipairs(entry.columns.flows) do
                 compareFlows(flow, other.columns.flows[column])
+            end
+        elseif entry.group then
+            assert(entry.group.shown == other.group.shown)
+            if entry.group.shown ~= false then
+                compareFlows(entry.group, other.group)
             end
         end
     end
@@ -194,6 +206,11 @@ assert(page.customFont:GetFontObject() == environment.GameFontNormal)
 local freshEnvironment = newEnvironment()
 loadVersion(freshEnvironment, false)
 local fresh = buildPage(freshEnvironment)
+compareFlows(page.layout.rootFlow, fresh.layout.rootFlow)
+page.hiddenGroup:SetShown(true)
+fresh.hiddenGroup:SetShown(true)
+environment.Flush()
+freshEnvironment.Flush()
 compareFlows(page.layout.rootFlow, fresh.layout.rootFlow)
 assert(page.layout.content:GetHeight() == fresh.layout.content:GetHeight())
 local freshHeight = fresh.layout.content:GetHeight()
@@ -426,6 +443,172 @@ do
         width = 300, height = 200, scrollable = true, viewportMarginTop = 10, viewportMarginBottom = 10,
     })
     assert(not pcall(inset.SetSize, inset, 300, 20))
+end
+
+-- Groups provide full-width geometry immediately and retain nested layout/visibility.
+do
+    local groupEnvironment = newEnvironment()
+    local groupLib = loadVersion(groupEnvironment, false)
+    local parent = groupEnvironment.CreateFrame("Frame")
+    local layout = groupLib:CreateCanvasLayout(parent, { width = 800, height = 160, scrollable = true })
+    local root = layout:GetRootFlow()
+    local options = { marginTop = 7 }
+    local group = root:BeginGroup(options)
+    options.marginTop = 99
+    assert(group:GetWidth() == root:GetWidth(), "groups must start at full width before any reflow")
+
+    local commits = 0
+    local input = group:AddControl("textInput", {
+        value = "Saved",
+        onCommit = function(text)
+            commits = commits + 1
+            return text
+        end,
+    })
+    assert(input:GetWidth() == root:GetWidth())
+    assert(input.point[5] == -root:GetCursor() - 7)
+    local nested = group:BeginGroup({ indent = 1, marginTop = 3 })
+    local nestedInput = nested:AddControl("textInput", { value = "Nested" })
+    nested:Finish({ marginBottom = 2 })
+    local row = group:BeginColumns({ minColumnWidth = 260 })
+    local left = row.left:AddControl("textInput", { value = "Left" })
+    local rightGroup = row.right:BeginGroup()
+    local right = rightGroup:AddControl("textInput", { value = "Right" })
+    rightGroup:Finish()
+    row:Finish()
+    local panel = groupEnvironment.CreateFrame("Frame", nil, layout:GetContent())
+    panel:SetHeight(40)
+    group:AddFrame(panel, { fillWidth = true })
+    local finishOptions = { marginBottom = 9 }
+    group:Finish(finishOptions)
+    finishOptions.marginBottom = 99
+    local following = root:AddControl("textInput", { value = "Following" })
+    layout:Finalize()
+    groupEnvironment.Flush()
+    local frames = groupEnvironment.framesCreated
+    local followingY = following.point[5]
+    assert(-followingY == group:GetCursor() + 9, "group margins must be copied and applied once")
+    assert(nestedInput:GetWidth() == root:GetWidth() - layout:GetStyleValue("indent"))
+    assert(nestedInput.point[4] == layout:GetStyleValue("indent"))
+    assert(left.point[5] == right.point[5] and right.point[4] > left.point[4])
+
+    input:SetFocus()
+    input:SetText("Pending group edit")
+    layout:SetSize(520, 160)
+    layout:SetSize(400, 160)
+    assert(groupEnvironment.QueueSize() == 1)
+    groupEnvironment.Flush()
+    assert(group:GetWidth() == root:GetWidth() and input:GetWidth() == root:GetWidth())
+    assert(panel:GetWidth() == root:GetWidth())
+    assert(left.point[4] == right.point[4] and right.point[5] < left.point[5])
+    assert(following.point[5] < followingY)
+    assert(input:GetText() == "Pending group edit" and input:HasFocus() and commits == 0)
+    assert(groupEnvironment.framesCreated == frames, "group reflows must preserve controls")
+
+    followingY = following.point[5]
+    panel:SetHeight(90)
+    groupEnvironment.Flush()
+    assert(following.point[5] == followingY - 50, "group height changes must move following rows")
+    local height = layout:GetContent():GetHeight()
+    followingY = following.point[5]
+    layout:RefreshLayout()
+    assert(layout:GetContent():GetHeight() == height and following.point[5] == followingY)
+
+    nested:SetShown(false)
+    row.right:SetShown(false)
+    group:SetShown(false)
+    groupEnvironment.Flush()
+    assert(not input:IsShown() and not nestedInput:IsShown() and not right:IsShown())
+    assert(following.point[5] == -layout:GetStyleValue("paddingTop"),
+        "hidden groups must remove their contents and both margins")
+    group:SetShown(true)
+    groupEnvironment.Flush()
+    assert(input:IsShown() and left:IsShown() and not nestedInput:IsShown() and not right:IsShown())
+    assert(left:GetWidth() == root:GetWidth(), "columns in groups retain their visibility rules")
+    nested:SetShown(true)
+    row.right:SetShown(true)
+    groupEnvironment.Flush()
+
+    root:SetShown(false)
+    nested:SetShown(false)
+    group:SetShown(false)
+    group:SetShown(true)
+    rightGroup:SetShown(true)
+    local late = rightGroup:BeginGroup()
+    local lateInput = late:AddControl("textInput", { value = "Added while hidden" })
+    late:Finish()
+    assert(not input:IsShown() and not right:IsShown() and not lateInput:IsShown())
+    root:SetShown(true)
+    groupEnvironment.Flush()
+    assert(input:IsShown() and right:IsShown() and lateInput:IsShown() and not nestedInput:IsShown())
+
+    local empty = root:BeginGroup()
+    local beforeEmpty = root:GetCursor()
+    assert(empty:Finish() == beforeEmpty, "empty groups must add no implicit spacing")
+    groupEnvironment.Flush()
+    local appended = root:BeginGroup({ marginTop = 5 })
+    appended:AddCustom(100)
+    appended:Finish()
+    groupEnvironment.Flush()
+    assert(layout:GetContent():GetHeight() > height, "new groups must update finalized canvases")
+
+    parent.visible = false
+    layout:SetSize(800, 160)
+    group:SetShown(false)
+    group:SetShown(true)
+    assert(groupEnvironment.QueueSize() == 0)
+    parent.visible = true
+    parent.scripts.OnShow(parent)
+    groupEnvironment.Flush()
+    assert(input:GetWidth() == root:GetWidth() and panel:GetWidth() == root:GetWidth())
+    assert(left.point[5] == right.point[5])
+    assert(groupEnvironment.QueueSize() == 0)
+
+    local entryCount = #root.entries
+    for _, invalid in ipairs({ -1, "1", math.huge, 0 / 0 }) do
+        assert(not pcall(root.BeginGroup, root, { marginTop = invalid }))
+        assert(not pcall(group.Finish, group, { marginBottom = invalid }))
+    end
+    assert(#root.entries == entryCount and group.finishOptions.marginBottom == 9)
+    assert(not pcall(root.BeginGroup, root, "invalid"))
+    assert(not pcall(group.Finish, group, "invalid"))
+    assert(not pcall(root.Finish, root))
+    assert(not pcall(row.left.Finish, row.left))
+    assert(not pcall(root.BeginColumns, root, { count = 1 }))
+    assert(not pcall(legacy.rootFlow.BeginGroup, legacy.rootFlow))
+    input:ClearFocus()
+end
+
+-- Existing flows acquire the group API through shared prototypes on upgrade.
+do
+    local upgradeEnvironment = newEnvironment()
+    local upgradeLib = loadVersion(upgradeEnvironment, true)
+    local layout = upgradeLib:CreateCanvasLayout(upgradeEnvironment.CreateFrame("Frame"), {
+        width = 500, height = 160, scrollable = true,
+    })
+    local root = layout:GetRootFlow()
+    local original = root:AddControl("textInput", { value = "Original" })
+    layout:Finalize()
+    upgradeEnvironment.Flush()
+    upgradeLib._canvasFlowPrototype.BeginGroup = nil
+    upgradeLib._canvasFlowPrototype.Finish = nil
+    assert(root.BeginGroup == nil)
+    local frames = upgradeEnvironment.framesCreated
+    loadVersion(upgradeEnvironment, false)
+    upgradeEnvironment.Flush()
+    assert(upgradeEnvironment.framesCreated == frames and original:GetValue() == "Original")
+    local group = root:BeginGroup()
+    local added = group:AddControl("textInput", { value = "After upgrade" })
+    group:Finish()
+    upgradeEnvironment.Flush()
+    assert(added:GetWidth() == root:GetWidth())
+    local beginGroup = root.BeginGroup
+    loadVersion(upgradeEnvironment, true)
+    loadVersion(upgradeEnvironment, false)
+    assert(root.BeginGroup == beginGroup and upgradeEnvironment.QueueSize() == 0)
+    group:SetShown(false)
+    upgradeEnvironment.Flush()
+    assert(original:IsShown() and not added:IsShown())
 end
 
 -- Tab order follows the current visual rows, including offscreen and stacked fields.

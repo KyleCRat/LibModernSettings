@@ -4,6 +4,8 @@
 
 ### Added
 
+- Add canvas `BeginGroup()` for full-width regions with independent visibility,
+  nesting, spacing and responsive reflow while retaining controls and input state.
 - Add `ApplyTertiarySquareArtwork` for matching inset artwork and reusable masks
   on custom tertiary-square buttons. Bundled media follows the selected embed.
 - Add reusable `CreateFlashMessages(owner, options)` stacks for success, info and

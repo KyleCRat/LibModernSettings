@@ -419,7 +419,7 @@ their normal size. Override these with `titleOptions.fontObject` on the header
 or `fontObject` on the section when a consumer needs different typography.
 
 Flows provide `AddControl`, `AddText`, `AddSection`, `AddCustom`, `AddFrame`,
-`AddSpacer`, and nested `BeginColumns`. An expandable header can be placed with
+`AddSpacer`, and nested `BeginGroup` / `BeginColumns`. An expandable header can be placed with
 `AddControl("expandableHeader", options)`. Pass `indent = 1` to a placement
 table for standard sub-input indentation. Custom regions keep complex
 addon-owned positioning local without returning the whole page to absolute
@@ -430,9 +430,27 @@ Spacing follows CSS-style terminology: `padding*` is internal container space,
 `columnGap` separate sibling items or tracks. `Columns:Finish()` accepts
 `marginBottom` when the completed column region needs additional space below it.
 
+Use `BeginGroup()` for a full-width region with independent visibility. It
+returns a child flow with the same operations, including nested groups and
+responsive columns. Its width is available immediately during construction.
+Call `Finish()` before adding the next sibling to the parent flow:
+
+```lua
+local details = root:BeginGroup({ marginTop = 4 })
+details:AddText({ text = "Additional settings" })
+details:AddControl("slider", sliderOptions)
+details:Finish({ marginBottom = 4 })
+details:SetShown(showDetails)
+```
+
+`BeginGroup` accepts `indent` and `marginTop`; its `Finish` accepts
+`marginBottom` and requests a reflow, including when appending to a finalized
+canvas. Hidden groups remove their contents and both margins. Groups require
+a tracked canvas and own their controls' visibility through `SetShown`.
+
 Scrollable layouts use `WowScrollBox` with `MinimalScrollBar`. `Finalize()`
 derives the content height from the completed flow and refreshes the ScrollBox.
-Flows retain frames, nested columns, spacers, and explicit placement options.
+Flows retain frames, nested groups and columns, spacers, and explicit placement options.
 Changes to a placed frame's size automatically queue one reflow for a visible
 canvas; hidden canvases wait until shown. `layout:RequestLayout()` requests that
 same coalesced pass after changes such as editing a FontString directly.
