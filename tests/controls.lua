@@ -197,7 +197,20 @@ local function makeRegion()
     function region:SetScale(scale) self.scale = scale end
     function region:SetVertexColor(...) self.vertexColor = { ... } end
     function region:SetColorTexture(...) self.color = { ... } end
-    function region:SetTexture(texture) self.texture = texture end
+    function region:SetTexture(texture, wrapHorizontal, wrapVertical)
+        self.atlas = nil
+        self.texture = texture
+        self.wrapHorizontal = wrapHorizontal
+        self.wrapVertical = wrapVertical
+    end
+    function region:SetDrawLayer(layer, sublevel)
+        self.drawLayer = layer
+        self.sublevel = sublevel
+    end
+    function region:AddMaskTexture(mask)
+        self.masks = self.masks or {}
+        self.masks[#self.masks + 1] = mask
+    end
     function region:SetTexCoord(...) self.texCoord = { ... } end
     function region:SetGradient(...) self.gradient = { ... } end
 
@@ -426,6 +439,12 @@ local function makeFrame(frameType, parent, template)
         return texture
     end
 
+    function frame:CreateMaskTexture()
+        local mask = makeRegion()
+        mask.parent = self
+        return mask
+    end
+
     function frame:CreateFontString(_, _, fontObject, ...)
         assert(select("#", ...) == 0)
         local fontString = makeFontString()
@@ -488,6 +507,10 @@ local function makeFrame(frameType, parent, template)
 
     function frame:SetHighlightTexture(texture)
         self.highlightTexture = texture
+    end
+
+    function frame:GetHighlightTexture()
+        return self.highlightTexture
     end
 
     function frame:SetPushedTexture(texture)

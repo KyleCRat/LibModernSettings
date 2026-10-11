@@ -16,6 +16,10 @@ Load LibStub before `embed.xml`, then acquire the library with:
 local ModernSettings = LibStub("LibModernSettings-1.0")
 ```
 
+Embed the library at `Libs/LibModernSettings-1.0`, including its `Media` directory,
+or install the standalone package. Bundled textures resolve from the copy selected
+by LibStub, so every consumer uses that copy's media.
+
 ## Controls
 
 Every control uses an options table:
@@ -50,6 +54,11 @@ Every control uses an options table:
   right-side `label`. It supports optional class/accent modes and a shared picker
   with hex/RGB(A) entry, recent colors, favorites, and class/item-quality swatches. See
   [Color inputs](#color-inputs) for value, persistence and cancellation contracts.
+- `ApplyTertiarySquareArtwork(button, texture, buttonSize)` fits and masks an existing
+  texture inside a fixed-size tertiary square. Use it for spell/item artwork or
+  solid color fills; texture, color and UVs remain caller-owned. Keep button state
+  artwork below `OVERLAY` sublevel 1. It returns the attached mask and reuses it
+  on later calls, including compatible library upgrades.
 - `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
   selector. Use `label`, `width`, `value`, `choices` or `getChoices`,
   `tooltip`, and `onChanged`. A non-empty `label` enables the labeled layout;

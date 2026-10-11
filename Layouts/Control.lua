@@ -97,10 +97,12 @@ function lib:_RefreshControlLayout(control, layout)
     control._libModernSettingsUpdatingLayout = nil
 end
 
-local function onControlSizeChanged(control, width, height)
+local function onControlSizeChanged(control)
     if control._libModernSettingsUpdatingLayout then
         return
     end
+    -- A queued notification may describe geometry from an earlier layout pass.
+    local width, height = control:GetWidth(), control:GetHeight()
     local widthChanged = not lib:_LayoutSizeMatches(width, control._libModernSettingsLayoutWidth)
     local heightChanged = not lib:_LayoutSizeMatches(height, control._libModernSettingsLayoutHeight)
     if not widthChanged and not heightChanged then
@@ -137,7 +139,7 @@ function lib:_SetControlWidth(width)
     )
     self:SetWidth(width)
     -- Keep the explicit sizing method synchronous even before native layout resolves.
-    onControlSizeChanged(self, self:GetWidth(), self:GetHeight())
+    onControlSizeChanged(self)
 end
 
 function lib:_SetControlHeight(height)

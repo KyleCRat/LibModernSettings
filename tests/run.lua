@@ -26,7 +26,7 @@ end
 
 setmetatable(LibStub, { __call = LibStub.GetLibrary })
 
-dofile("LibModernSettings-1.0.lua")
+assert(loadfile("LibModernSettings-1.0.lua"))("LibModernSettings-1.0")
 
 local lib = LibStub("LibModernSettings-1.0")
 

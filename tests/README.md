@@ -69,7 +69,9 @@ Validate Blizzard-owned templates and interaction behavior in game:
   selected. Hex must remain six RGB digits when opacity changes. Six-digit edits
   preserve opacity; eight-digit RRGGBBAA imports it and returns to six digits on
   commit. Test both with/without #, zero alpha, rejected seven-digit input, and
-  RGB-only inputs discarding imported alpha. Swatches must have no checkerboard. Check the compact
+  RGB-only inputs discarding imported alpha. Swatches must have no checkerboard;
+  masked fills must fit the bevel in normal, hover and selected states on inputs,
+  samples and compact palettes. Check the compact
   Favorites, Recent, Class and Quality rows: labels sit close to aligned swatches,
   row gaps match swatch gaps, and there is no divider. Check action buttons beneath
   the right-hand inputs. Invalid fields must show external flash messages without

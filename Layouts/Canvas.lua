@@ -546,7 +546,8 @@ local function watchEntrySize(entry, layout)
     if not frame:HasScript("OnSizeChanged") then
         return -- FontStrings are measured during layout and visible OnShow.
     end
-    frame:HookScript("OnSizeChanged", function(_, width, height)
+    frame:HookScript("OnSizeChanged", function()
+        local width, height = frame:GetWidth(), frame:GetHeight()
         if entry.autoWidth and not lib:_LayoutSizeMatches(width, entry.allocatedWidth)
             and not layout.refreshing
             and not frame._libModernSettingsUpdatingLayout

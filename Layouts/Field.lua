@@ -178,10 +178,10 @@ end
 
 local function watchFieldSize(field)
     lib:_WatchControlSize(field)
-    field.control:HookScript("OnSizeChanged", function(_, _, height)
+    field.control:HookScript("OnSizeChanged", function(control)
         -- The Field owns width; only a changed child height needs parent layout.
         -- Re-anchoring on its own settled-size notification invalidates edit text.
-        if not lib:_LayoutSizeMatches(height, field._libModernSettingsFieldLayout.controlHeight) then
+        if not lib:_LayoutSizeMatches(control:GetHeight(), field._libModernSettingsFieldLayout.controlHeight) then
             field:RefreshLayout()
         end
     end)

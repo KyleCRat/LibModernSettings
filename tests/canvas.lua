@@ -81,7 +81,7 @@ local function loadVersion(environment, old)
         end
         local chunk = assert(loadstring(source, '@' .. path))
         setfenv(chunk, environment)
-        chunk()
+        chunk(MAJOR)
         if path == scripts[1] then
             local lib = environment.LibStub(MAJOR)
             -- Tooltip behavior has its own suite; no game tooltip is needed here.
@@ -547,6 +547,59 @@ do
     keyboard.scripts.OnKeyDown(keyboard, "TAB")
     assert(keyboard.control == sectionHeader and layout.scrollBox:GetDerivedScrollOffset() == sectionTop)
     tabLib:_ClearNavigationFocus()
+end
+
+-- Late native size notifications must not pin a dynamic Field to an old height.
+do
+    local dynamicEnvironment = newEnvironment()
+    local dynamicLib = loadVersion(dynamicEnvironment, false)
+    dynamicLib:RegisterControlType("dynamicContent", function(parent, options)
+        local control = dynamicEnvironment.CreateFrame("Frame", nil, parent)
+        control:SetSize(options.width, 1)
+        return control
+    end, {
+        SetControlEnabled = function(self, enabled)
+            self.enabled = enabled
+        end,
+    })
+
+    local parent = dynamicEnvironment.CreateFrame("Frame")
+    local layout = dynamicLib:CreateCanvasLayout(parent, { width = 500, height = 200 })
+    local root = layout:GetRootFlow()
+    local field = root:AddControl("field", {
+        label = "Dynamic choices",
+        controlType = "dynamicContent",
+    })
+    local following = root:AddControl("textInput", {})
+    local control = field:GetControl()
+    layout:Finalize()
+    dynamicEnvironment.Flush()
+
+    for _, height in ipairs({ 150, 72, 228 }) do
+        parent:Hide()
+        local oldWidth, oldHeight = field:GetWidth(), field:GetHeight()
+        control:SetHeight(height)
+        local expected = field:GetHeight()
+        assert(expected > height)
+
+        field.scripts.OnSizeChanged(field, oldWidth, oldHeight)
+        assert(field._libModernSettingsExplicitHeight == nil,
+            "a stale Field size notification must not become an explicit height")
+        assert(field:GetHeight() == expected)
+
+        parent:Show()
+        parent.scripts.OnShow(parent)
+        dynamicEnvironment.Flush()
+        assert(-following.point[5] >= -field.point[5] + expected,
+            "the next row must reserve the dynamic control's full height")
+    end
+
+    local oldWidth, oldHeight = field:GetWidth(), field:GetHeight()
+    layout:SetSize(720, 200)
+    dynamicEnvironment.Flush()
+    field.scripts.OnSizeChanged(field, oldWidth, oldHeight)
+    assert(root.entries[1].autoWidth, "stale dimensions must preserve the canvas's width ownership")
+    assert(dynamicEnvironment.QueueSize() == 0, "stale dimensions must not repeat settled layout work")
 end
 
 print("LibModernSettings canvas upgrade and responsive layout tests passed")

@@ -20,19 +20,14 @@ local function createSwatch(parent, options)
         SetNormalTexture = "normal",
         SetPushedTexture = "pressed",
         SetDisabledTexture = "disabled",
-        SetHighlightTexture = "hover",
     }) do
-        button[method](button, lib:_CreateAtlasTexture(button,
-            method == "SetHighlightTexture" and "HIGHLIGHT" or "BACKGROUND",
-            "common-button-tertiary-square-" .. state))
+        local texture = lib:_CreateAtlasTexture(button, "BACKGROUND",
+            "common-button-tertiary-square-" .. state)
+        button[method](button, texture)
     end
     button.selection = lib:_CreateAtlasTexture(button, "BORDER", "common-button-tertiary-square-selected")
     button.selection:Hide()
     button.swatch = button:CreateTexture(nil, "OVERLAY")
-    local colorSize = math.floor(18 * size / SIZE + 0.5)
-    button.swatch:SetSize(colorSize, colorSize)
-    -- The tertiary-square artwork has a heavier bottom edge.
-    button.swatch:SetPoint("CENTER", button, "CENTER", 0, 1)
     button.onClick = options.onClick
     button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     button:SetScript("OnClick", function(self, mouseButton)
@@ -62,10 +57,27 @@ function swatchMethods:SetControlEnabled(enabled, disabledTooltip)
     lib:SetControlTooltipEnabled(self, enabled, disabledTooltip)
 end
 
-lib:RegisterControlType("_colorSwatch", createSwatch, swatchMethods)
+local function refreshSwatchAppearance(button)
+    if not button.hover then
+        -- Retire the native highlight when updating an existing swatch.
+        local highlight = button:GetHighlightTexture()
+        if highlight then
+            highlight:SetTexture(nil)
+            highlight:Hide()
+            button:UnlockHighlight()
+        end
+        button.hover = lib:_CreateAtlasTexture(button, "OVERLAY", "common-button-tertiary-square-hover")
+        button.hover:Hide()
+    end
+    button.swatchMask = lib:ApplyTertiarySquareArtwork(button, button.swatch, button:GetWidth())
+end
+
+lib:RegisterControlType("_colorSwatch", createSwatch, swatchMethods, nil, refreshSwatchAppearance)
 lib:RegisterControlNavigation("_colorSwatch", {
     actions = lib._buttonNavigationActions,
-    highlight = lib._SetButtonNavigationHighlight,
+    hover = function(control, highlighted)
+        control.hover:SetShown(highlighted)
+    end,
 })
 
 function lib:_CreateColorSwatch(parent, options)

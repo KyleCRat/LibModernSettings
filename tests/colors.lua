@@ -148,6 +148,65 @@ return function(lib, makeFrame, inputState)
     assert(not control.buttons.class.selection:IsShown())
     assert(control.buttons.accent.point[4] == 38)
     assert(control.buttons.custom.point[4] == 76)
+    for _, button in pairs(control.buttons) do
+        assert(button:GetNormalTexture().atlas == "common-button-tertiary-square-normal")
+        assert(not button:GetHighlightTexture(), "native highlights would cover the masked fill")
+        assert(not button.hover:IsShown(), "idle swatches must not show the hover border")
+        assert(button.swatch:GetWidth() == 24 and button.swatch:GetHeight() == 24)
+        assert(button.swatch.point[4] == 0 and button.swatch.point[5] == 1)
+        assert(button.swatch.drawLayer == "OVERLAY" and button.swatch.sublevel == 1)
+        assert(button.swatchMask.allPoints == button.swatch)
+        assert(button.swatch.masks[1] == button.swatchMask and #button.swatch.masks == 1)
+        assert(button.swatchMask.texture == lib._tertiarySquareMask)
+        assert(button.swatchMask.wrapHorizontal == "CLAMPTOBLACKADDITIVE")
+        assert(button.swatchMask.wrapVertical == "CLAMPTOBLACKADDITIVE")
+    end
+    local customMask = control.buttons.custom.swatchMask
+
+    do
+        local owner = makeFrame("Frame")
+        lib:EnableTabNavigation(owner)
+        for _, dimensions in ipairs({ { 28, 20 }, { 40, 28 } }) do
+            local button = lib:_CreateColorSwatch(owner, { size = dimensions[1] })
+            button:SetValue(red)
+            assert(button.swatch:GetWidth() == dimensions[2])
+            assert(button.swatch:GetHeight() == dimensions[2])
+            local mask = button.swatchMask
+            lib:_RefreshControlAppearance(button)
+            assert(button.swatchMask == mask and #button.swatch.masks == 1)
+            equalColor(button.color, red)
+            assert(button.swatch.color[4] == red.a, "masked fills must retain opacity")
+
+            button:SetSelected(true)
+            button.scripts.OnEnter(button)
+            assert(button.hover:IsShown())
+            button:_FocusForTab()
+            button.scripts.OnLeave(button)
+            assert(button.hover:IsShown(), "keyboard focus must preserve hover after mouse leave")
+            lib:_ClearNavigationFocus()
+            assert(not button.hover:IsShown() and button.selection:IsShown(),
+                "selection must persist without hover or keyboard focus")
+
+            button.scripts.OnEnter(button)
+            button:_FocusForTab()
+            lib:_ClearNavigationFocus()
+            assert(button.hover:IsShown(), "mouse hover must persist after keyboard focus clears")
+            button:_FocusForTab()
+            button:SetControlEnabled(false)
+            assert(not button.hover:IsShown() and lib._navigationKeyboardFrame.control == nil)
+            button:SetControlEnabled(true)
+            assert(not button.hover:IsShown())
+            button.scripts.OnEnter(button)
+            button:Hide()
+            button.scripts.OnHide(button)
+            button:Show()
+            assert(not button.hover:IsShown(), "reopening must not restore stale hover")
+        end
+        local texture = owner:CreateTexture(nil, "ARTWORK")
+        for _, invalid in ipairs({ 0, -1, math.huge, 0 / 0, "40" }) do
+            assert(not pcall(lib.ApplyTertiarySquareArtwork, lib, owner, texture, invalid))
+        end
+    end
     assert(#notifications == 0)
     local returned = control:GetValue()
     returned.r = 0
@@ -474,10 +533,25 @@ return function(lib, makeFrame, inputState)
     -- Existing instances and palette objects keep dispatching after a compatible reload.
     local methods = lib._colorPalettePrototype
     local originalPrototype = lib._colorPickerPrototype
+    local customButton = control.buttons.custom
+    local legacyHighlight = customButton.hover
+    customButton.hover = nil
+    customButton:SetHighlightTexture(legacyHighlight)
+    customButton:LockHighlight()
+    legacyHighlight:Show()
     for _, module in ipairs({ "Utilities/Color", "Controls/Color", "Utilities/ColorPicker" }) do
         lib._loadedModules[module] = nil
         dofile(module .. ".lua")
     end
+    assert(control.buttons.custom.swatchMask == customMask)
+    assert(#control.buttons.custom.swatch.masks == 1, "compatible upgrades must reuse the attached mask")
+    assert(not legacyHighlight:IsShown() and legacyHighlight.atlas == nil,
+        "upgrading must retire the old native highlight")
+    assert(not customButton.hover:IsShown() and not customButton.highlightLocked)
+    customButton.scripts.OnEnter(customButton)
+    assert(customButton.hover:IsShown())
+    customButton.scripts.OnLeave(customButton)
+    assert(not customButton.hover:IsShown())
     assert(lib._colorPalettePrototype == methods and lib._colorPickerPrototype == originalPrototype)
     rgb:SetValue(blue)
     rgb:OpenPicker()

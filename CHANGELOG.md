@@ -4,6 +4,8 @@
 
 ### Added
 
+- Add `ApplyTertiarySquareArtwork` for matching inset artwork and reusable masks
+  on custom tertiary-square buttons. Bundled media follows the selected embed.
 - Add reusable `CreateFlashMessages(owner, options)` stacks for success, info and
   error feedback outside windows or input groups, with Blizzard's metal dialog
   border, dark status-colored backgrounds and lighter matching text. Compact
@@ -32,8 +34,9 @@
   focus to the input.
   `CreateColorPalette` supports consumer-owned persistence without a database
   dependency. Changing the input value, hiding it, or disabling it cancels its
-  pending picker edit. Swatches center within the button border and show opacity
-  without a checkerboard texture.
+  pending picker edit. Larger swatch fills use the matching beveled mask at all
+  button sizes and show opacity without a checkerboard texture. Swatch hover
+  borders follow the pointer or keyboard focus and stay hidden when idle.
 - Navigate text inputs, slider values, dropdowns, checkboxes and expandable
   headers, plus regular, small and square buttons, with Tab and Shift+Tab in
   current visual order. Focused buttons, checkboxes and headers show their hover
@@ -59,6 +62,8 @@
 
 ### Fixed
 
+- Ignore outdated size notifications so dynamic Fields keep their content height
+  and canvas width after hidden-page updates and resizing.
 - Keep text inputs focused after rejected Enter or Tab commits so keyboard
   navigation can continue, while preserving focus when clicking another input.
 - Keep scrolling dropdown rows ordered and preserve the viewport when callbacks

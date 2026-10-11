@@ -1,9 +1,15 @@
+local addonName = ...
 local MAJOR, MINOR = "LibModernSettings-1.0", 8
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not lib then
     return
 end
+
+-- Owned media follows the selected standalone package or canonical embed.
+local libraryFolder = addonName == MAJOR and "" or "Libs\\" .. MAJOR .. "\\"
+lib._tertiarySquareMask = "Interface\\AddOns\\" .. addonName .. "\\" .. libraryFolder
+    .. "Media\\Textures\\common-button-tertiary-square-mask.tga"
 
 lib._implementationMinor = MINOR
 lib._loadedModules = lib._loadedModules or {}

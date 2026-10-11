@@ -45,7 +45,7 @@ local PREVIOUS_MINOR = CURRENT_MINOR - 1
 
 assert(PREVIOUS_MINOR > 0)
 
-local function loadLibraryMinor(environment, minor)
+local function loadLibraryMinor(environment, minor, addonName)
     local source
     local replacements
 
@@ -63,7 +63,7 @@ local function loadLibraryMinor(environment, minor)
 
     assert(chunk, errorMessage)
     setfenv(chunk, environment)
-    chunk()
+    chunk(addonName or MAJOR)
 end
 
 local function createEnvironment()
@@ -178,5 +178,27 @@ end
 testOldFirst()
 testNewFirst()
 testDuplicateCopy()
+
+-- Textures belong to the accepted embed, even when another copy loads later.
+do
+    local environment = createEnvironment()
+    loadLibraryMinor(environment, PREVIOUS_MINOR, "OlderConsumer")
+    local lib = environment.LibStub(MAJOR)
+    assert(lib._tertiarySquareMask == "Interface\\AddOns\\OlderConsumer\\Libs\\" .. MAJOR
+        .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga")
+
+    loadLibraryMinor(environment, CURRENT_MINOR, "NewerConsumer")
+    local selectedPath = "Interface\\AddOns\\NewerConsumer\\Libs\\" .. MAJOR
+        .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga"
+    assert(lib._tertiarySquareMask == selectedPath)
+    loadLibraryMinor(environment, PREVIOUS_MINOR, "LateOlderConsumer")
+    loadLibraryMinor(environment, CURRENT_MINOR, "EqualConsumer")
+    assert(lib._tertiarySquareMask == selectedPath)
+
+    local standalone = createEnvironment()
+    loadLibraryMinor(standalone, CURRENT_MINOR)
+    assert(standalone.LibStub(MAJOR)._tertiarySquareMask == "Interface\\AddOns\\" .. MAJOR
+        .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga")
+end
 
 print("LibModernSettings mixed load-order tests passed")

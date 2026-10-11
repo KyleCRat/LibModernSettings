@@ -22,6 +22,28 @@ function lib:_CreateAtlasTexture(owner, layer, atlas)
     return texture
 end
 
+function lib:ApplyTertiarySquareArtwork(button, artwork, buttonSize)
+    assert(type(buttonSize) == "number" and buttonSize > 0 and buttonSize < math.huge,
+        "tertiary-square button size must be a positive finite number")
+
+    -- Keep artwork above the state textures' opaque centers and inside the bevel.
+    local size = math.max(1, math.floor(buttonSize * 0.7 + 0.5))
+    artwork:SetDrawLayer("OVERLAY", 1)
+    artwork:ClearAllPoints()
+    artwork:SetSize(size, size)
+    artwork:SetPoint("CENTER", button, "CENTER", 0, 1)
+
+    local mask = artwork._libModernSettingsSquareMask
+    if not mask then
+        mask = button:CreateMaskTexture()
+        mask:SetAllPoints(artwork)
+        artwork:AddMaskTexture(mask)
+        artwork._libModernSettingsSquareMask = mask
+    end
+    mask:SetTexture(self._tertiarySquareMask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    return mask
+end
+
 function lib:_CreateEditBoxFocusTexture(editBox)
     local texture = editBox:CreateTexture(nil, "BORDER")
 
