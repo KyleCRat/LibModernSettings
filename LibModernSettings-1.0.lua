@@ -1,5 +1,5 @@
 local addonName = ...
-local MAJOR, MINOR = "LibModernSettings-1.0", 9
+local MAJOR, MINOR = "LibModernSettings-1.0", 10
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not lib then

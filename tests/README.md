@@ -45,7 +45,9 @@ Validate Blizzard-owned templates and interaction behavior in game:
 
 - Check selected regular, small, and square buttons with mouse hover, keyboard
   focus, pressing, disabling/re-enabling, and changing the selected entry. Native
-  selected artwork should persist until the consumer clears selection.
+  selected artwork should persist until the consumer clears selection. With
+  1.8.0 and 1.9.0 embeds enabled together, confirm the selection API is available
+  regardless of load order, including on buttons created before the upgrade.
 - Attach flash stacks to a window and a group inside a scroll frame. Show success,
   info and error messages, including wrapped text. Verify the neutral Blizzard
   metal border, dark green/blue/red backgrounds and lighter matching text. Corners

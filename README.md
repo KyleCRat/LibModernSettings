@@ -6,7 +6,7 @@ construction, Blizzard art, value synchronization, enabled or disabled tooltip
 behavior, and optional canvas layout and table geometry. The consuming addon continues to own
 SavedVariables, category registration, page composition, and runtime callbacks.
 
-Release `1.8.0` uses the `LibModernSettings-1.0` API family with LibStub MINOR `9`.
+Release `1.9.0` uses the `LibModernSettings-1.0` API family with LibStub MINOR `10`.
 
 ## Embedding
 
@@ -42,7 +42,7 @@ Every control uses an options table:
   `IsSelected()` reads the current state. Selection uses each variant's native
   tertiary selected artwork and survives hover, focus, disable/re-enable, and
   appearance refreshes. Clicking does not toggle it automatically or fire a
-  separate selection callback. This API is new in the Unreleased development build.
+  separate selection callback. This API requires release 1.9.0 or newer.
 - `CreateExpandableHeader(parent, options)` creates a full-width tertiary
   section header with a right-aligned yellow arrow that points down while
   collapsed and up while expanded. Use `text`, `width`, `height`, and
