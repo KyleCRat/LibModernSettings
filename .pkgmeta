@@ -5,5 +5,8 @@ manual-changelog:
     markup-type: markdown
 
 ignore:
+    - AGENTS.md
+    - FIXME.md
     - tests
     - TODO.md
+    - Media/Textures/common-button-tertiary-square-mask.afphoto

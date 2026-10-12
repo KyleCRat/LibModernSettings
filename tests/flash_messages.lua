@@ -195,10 +195,13 @@ return function(lib, makeFrame, inputState)
     local factory = lib.CreateFlashMessages
     dofile("Utilities/FlashMessages.lua")
     assert(lib.CreateFlashMessages == factory, "duplicate modules must not replace the factory")
-    lib._implementationMinor = 9
+    local currentMinor = lib._implementationMinor
+    lib._loadedModules["Utilities/FlashMessages"] = nil
+    lib._implementationMinor = currentMinor + 1
     dofile("Utilities/FlashMessages.lua")
     assert(lib.CreateFlashMessages == factory, "older modules must not overwrite a newer library")
-    lib._implementationMinor = 8
+    lib._implementationMinor = currentMinor
+    lib._loadedModules["Utilities/FlashMessages"] = currentMinor
 
     otherOwner:Hide()
     other.frame.scripts.OnUpdate(other.frame, 0)

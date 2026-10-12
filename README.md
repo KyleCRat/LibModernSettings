@@ -1,12 +1,12 @@
 # LibModernSettings
 
 LibModernSettings provides consistent modern controls for custom World of
-Warcraft Settings canvas pages. It owns control construction, Blizzard art,
-value synchronization, enabled or disabled tooltip behavior, and optional
-canvas layout and table geometry. The consuming addon continues to own
+Warcraft Settings canvas pages and standalone options windows. It owns control
+construction, Blizzard art, value synchronization, enabled or disabled tooltip
+behavior, and optional canvas layout and table geometry. The consuming addon continues to own
 SavedVariables, category registration, page composition, and runtime callbacks.
 
-Release `1.7.0` uses the `LibModernSettings-1.0` API family with LibStub MINOR `8`.
+Release `1.8.0` uses the `LibModernSettings-1.0` API family with LibStub MINOR `9`.
 
 ## Embedding
 
@@ -16,9 +16,9 @@ Load LibStub before `embed.xml`, then acquire the library with:
 local ModernSettings = LibStub("LibModernSettings-1.0")
 ```
 
-Embed the library at `Libs/LibModernSettings-1.0`, including its `Media` directory,
-or install the standalone package. Bundled textures resolve from the copy selected
-by LibStub, so every consumer uses that copy's media.
+Embed the library at `Libs/LibModernSettings-1.0`, including its `Media` directory.
+Bundled textures resolve from the copy selected by LibStub, so every consumer
+uses that copy's media.
 
 ## Controls
 
@@ -565,6 +565,12 @@ scale from stored values.
 
 ## Validation
 
+Run the automated suite from the library root with Lua 5.1:
+
+```sh
+lua tests/run.lua
+```
+
 Blizzard frame templates and the layout builders require the game client.
-Consumers should smoke-test their settings pages in game before updating a
-pinned library release.
+Follow [the validation checklist](tests/README.md) and smoke-test consumer
+settings pages in game before updating a pinned library release.

@@ -559,9 +559,12 @@ return function(lib, makeFrame, inputState)
     picker:Cancel()
     lib:_ClearNavigationFocus()
     local factory = lib._controlTypes.color.factory
-    lib._implementationMinor = 9
+    local currentMinor = lib._implementationMinor
+    lib._loadedModules["Controls/Color"] = nil
+    lib._implementationMinor = currentMinor + 1
     dofile("Controls/Color.lua")
     assert(lib._controlTypes.color.factory == factory, "an older embed must not replace a newer control")
-    lib._implementationMinor = 8
+    lib._implementationMinor = currentMinor
+    lib._loadedModules["Controls/Color"] = currentMinor
     print("LibModernSettings color picker tests passed")
 end

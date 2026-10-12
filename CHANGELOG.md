@@ -1,66 +1,32 @@
 # Changelog
 
-## [Unreleased]
+## [1.8.0] - 2026-10-12
 
 ### Added
 
-- Add canvas `BeginGroup()` for full-width regions with independent visibility,
-  nesting, spacing and responsive reflow while retaining controls and input state.
-- Add `ApplyTertiarySquareArtwork` for matching inset artwork and reusable masks
-  on custom tertiary-square buttons. Bundled media follows the selected embed.
-- Add reusable `CreateFlashMessages(owner, options)` stacks for success, info and
-  error feedback outside windows or input groups, with Blizzard's metal dialog
-  border, dark status-colored backgrounds and lighter matching text. Compact
-  rows keep equal left/right insets and grow for wrapped text. Messages stack newest last,
-  sit directly above the owner when space below is insufficient, follow owner
-  movement and scale, fade after a configurable duration, and dismiss with X.
-  Hovering a message or its close button pauses its remaining lifetime and fade.
-  Repeated messages renew instead of duplicating; stacks reuse frames, bound
-  visible messages, clear when the owner hides and stop updating when empty.
-- Add `CreateColor` / canvas `color` inputs with tertiary-square swatches and
-  optional persistent class/accent selection modes that retain the separate
-  Custom color. A compact hue/SV picker places RGB or RGBA, six-digit RGB hex,
-  separate opacity controls, and new/previous samples beside the hue strip, with
-  compact Favorites, Recent, Class and Quality rows below. Inline labels sit
-  close to aligned swatches, with matching horizontal and vertical gaps,
-  consistent outer padding and no divider.
-  Pasted RRGGBBAA imports opacity and normalizes to the six-digit RGB display;
-  hex accepts exactly six or eight digits with an optional # prefix.
-  Apply/Cancel sit below the inputs beside the hue strip, with no helper footer.
-  Validation uses flash messages without resizing the picker or taking input
-  focus; valid edits and field changes preserve their timed lifetime. Failed
-  Apply returns focus to the invalid field. Favorites reserve their
-  first row even when empty and grow only when another row is needed. Edits are
-  staged until Apply/Cancel.
-  Color choices join Tab/Enter/Space navigation; closing returns
-  focus to the input.
-  `CreateColorPalette` supports consumer-owned persistence without a database
-  dependency. Changing the input value, hiding it, or disabling it cancels its
-  pending picker edit. Larger swatch fills use the matching beveled mask at all
-  button sizes and show opacity without a checkerboard texture. Swatch hover
-  borders follow the pointer or keyboard focus and stay hidden when idle.
-- Navigate text inputs, slider values, dropdowns, checkboxes and expandable
-  headers, plus regular, small and square buttons, with Tab and Shift+Tab in
-  current visual order. Focused buttons, checkboxes and headers show their hover
-  highlight; Enter or Space activates them. Dropdowns stay closed when focused;
-  Enter or Space opens them and confirms their selection without losing focus.
-  Skip hidden or disabled fields, reveal offscreen fields even inside tall sections,
-  and wrap within the canvas. `EnableTabNavigation(parent)` joins inputs in a
-  manually composed window, including its canvas pages. Custom control types can
-  join through `RegisterControlNavigation(type, options)`, including existing
-  instances, without implementing their own keyboard capture or lifecycle hooks.
-- Step focused slider values with the mouse wheel and Up/Down arrows. While
-  scrolling, Shift moves ten steps and Ctrl moves fifty, with Ctrl taking priority.
-  Open dropdowns use Up/Down to select adjacent choices without wrapping or closing,
-  keep the selected row in view, and retain normal mouse-wheel scrolling.
-  Enter or Space confirms the current selection and closes the menu without
-  triggering chat or game actions.
-  Sliders retain editable values outside their track range; unfocused controls
-  preserve normal page scrolling.
-- Add canvas `SetSize(width, height)` for resizing existing pages, optional
-  `BeginColumns({ minColumnWidth = ... })` stacking, and flow `SetShown(boolean)`
-  to remove conditional columns from layout. Reuse controls and coalesce visible
-  reflows; defer hidden canvas work until shown.
+- Add `CreateColor` and canvas `color` inputs with RGB/RGBA editing, RGB hex
+  entry, RGBA paste, opacity, new/previous samples and Apply/Cancel. Optional
+  class/accent shortcuts retain the separate Custom color. Recent colors,
+  favorites and class/item-quality presets share `CreateColorPalette`, with
+  optional consumer-owned persistence. Validation preserves focus and picker size.
+- Add `CreateFlashMessages(owner, options)` for success, info and error feedback
+  outside windows or input groups. Messages use modern Blizzard borders, follow
+  their owner, fit above it when needed, fade automatically and pause on hover.
+  Close buttons, duplicate renewal, bounded stacks and owner cleanup are included.
+- Add Tab/Shift+Tab navigation across all inputs and buttons, with Enter/Space
+  activation, hidden/disabled-field skipping and automatic scrolling to focused
+  fields. `EnableTabNavigation` joins manually composed windows;
+  `RegisterControlNavigation` lets custom controls use the same behavior.
+- Add mouse-wheel and Up/Down stepping for focused sliders; Shift+wheel moves
+  ten steps and Ctrl+wheel moves fifty. Open dropdowns use Up/Down for adjacent
+  choices and Enter/Space to confirm while retaining focus; their mouse wheel
+  continues scrolling the menu.
+- Add responsive canvas resizing with `SetSize`, optional column stacking via
+  `minColumnWidth`, and flow visibility via `SetShown`. Full-width `BeginGroup`
+  regions support nesting and independent visibility. Reflow retains controls,
+  values and pending edits.
+- Add `ApplyTertiarySquareArtwork` to fit and mask custom artwork or color fills
+  inside tertiary-square buttons. Bundled media follows the selected embed.
 
 ### Fixed
 
@@ -70,12 +36,14 @@
   navigation can continue, while preserving focus when clicking another input.
 - Keep scrolling dropdown rows ordered and preserve the viewport when callbacks
   update values or choices in an open menu.
-- Prevent an error when opening dropdowns by matching Blizzard's menu-open
-  callback arguments.
 - Reject non-finite slider values and restore valid input after invalid edits.
 - Give `CreateText` and plain canvas `AddText` calls a default font before
   assigning text, preventing `Font not set` errors when `fontObject` is omitted.
-  Explicit font overrides remain supported.
+
+### Upgrade Notes
+
+- Use LibStub MINOR 9 within the existing `LibModernSettings-1.0` API family.
+- Include the new `Media` directory at the documented embed path when upgrading.
 
 ## [1.7.0] - 2026-09-14
 
@@ -127,14 +95,3 @@
   and canvas placement metadata for future visual upgrades. Already-built
   layouts from older copies remain preserved rather than guessing which
   dimensions were consumer overrides.
-
-## [1.6.0] - 2026-09-08
-
-- Add public ownership-aware `RefreshTooltip` and `HideOwnedTooltip` methods
-  for dynamic or reused tooltip targets.
-- Add a full-width tertiary expandable section header with an optional leading
-  atlas icon, an optically aligned borderless yellow down/up state arrow with
-  dedicated disabled art, and a user-input expansion callback.
-- Allow settings-table rows to grow beneath their fixed-height control cells at
-  runtime, reflow following rows, and notify consumers when the table's total
-  height changes.
