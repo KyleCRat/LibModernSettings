@@ -43,6 +43,9 @@ Picker feedback keeps its lifetime through Tab, valid submissions, color
 changes and palette refreshes.
 Validate Blizzard-owned templates and interaction behavior in game:
 
+- Check selected regular, small, and square buttons with mouse hover, keyboard
+  focus, pressing, disabling/re-enabling, and changing the selected entry. Native
+  selected artwork should persist until the consumer clears selection.
 - Attach flash stacks to a window and a group inside a scroll frame. Show success,
   info and error messages, including wrapped text. Verify the neutral Blizzard
   metal border, dark green/blue/red backgrounds and lighter matching text. Corners

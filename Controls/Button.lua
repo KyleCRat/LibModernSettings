@@ -15,6 +15,7 @@ local BUTTON_STYLES = {
         hover = "common-button-tertiary-hover",
         pressed = "common-button-tertiary-pressed",
         disabled = "common-button-tertiary-disabled",
+        selected = "common-button-tertiary-selected",
         normalFont = GameFontNormal,
         highlightFont = GameFontHighlight,
         disabledFont = GameFontDisable,
@@ -28,6 +29,7 @@ local BUTTON_STYLES = {
         hover = "common-button-tertiary-hover-small",
         pressed = "common-button-tertiary-pressed-small",
         disabled = "common-button-tertiary-disabled-small",
+        selected = "common-button-tertiary-selected-small",
         normalFont = GameFontNormalSmall,
         highlightFont = GameFontHighlightSmall,
         disabledFont = GameFontDisableSmall,
@@ -41,6 +43,7 @@ local BUTTON_STYLES = {
         normal = "common-button-tertiary-square-normal",
         pressed = "common-button-tertiary-square-pressed",
         disabled = "common-button-tertiary-square-disabled",
+        selected = "common-button-tertiary-square-selected",
         highlight = "common-button-tertiary-square-normal",
         normalFont = GameFontNormal,
         highlightFont = GameFontHighlight,
@@ -163,6 +166,10 @@ local function createButton(parent, options)
         "onClick must be a function or nil"
     )
     assert(
+        options.selected == nil or type(options.selected) == "boolean",
+        "selected must be a boolean or nil"
+    )
+    assert(
         options.iconAtlas == nil or type(options.iconAtlas) == "string",
         "iconAtlas must be a string or nil"
     )
@@ -212,6 +219,7 @@ local function createButton(parent, options)
 
     button:SetSize(initialWidth, initialHeight)
     button._libModernSettingsButtonStyle = style
+    button._libModernSettingsSelected = options.selected == true
     button._libModernSettingsFitToContent = options.fitToContent == true
     button._libModernSettingsMinWidth = options.minWidth
         or (options.fitToContent and options.width)
@@ -312,6 +320,18 @@ function buttonMethods:SetOnClick(onClick)
     self._libModernSettingsOnClick = onClick
 end
 
+-- Selection is consumer-owned persistent state, not a pressed/hover effect.
+-- Clicking still calls onClick; it never toggles selection automatically.
+function buttonMethods:SetSelected(selected)
+    assert(type(selected) == "boolean", "selected must be a boolean")
+    self._libModernSettingsSelected = selected
+    self:_RefreshNavigationHover()
+end
+
+function buttonMethods:IsSelected()
+    return self._libModernSettingsSelected == true
+end
+
 function buttonMethods:SetButtonText(text)
     assert(type(text) == "string", "button text must be a string")
     assert(
@@ -385,8 +405,17 @@ lib:RegisterControlNavigation("button", {
     hover = function(control, highlighted)
         local style = getButtonStyle(control)
         local texture = control:GetNormalTexture()
-        if style.hover and texture then
-            texture:SetAtlas(highlighted and style.hover or style.normal, false)
+
+        if texture then
+            local atlas = style.normal
+
+            if control:IsSelected() then
+                atlas = style.selected
+            elseif highlighted and style.hover then
+                atlas = style.hover
+            end
+
+            texture:SetAtlas(atlas, false)
         end
     end,
 })

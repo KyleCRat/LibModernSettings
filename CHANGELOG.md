@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Persistent selected states for regular, small, and square buttons via
+  `selected`, `SetSelected()`, and `IsSelected()`, using native tertiary artwork.
+
 ## [1.8.0] - 2026-10-12
 
 ### Added

@@ -902,6 +902,7 @@ end, {
 })
 
 local oldButton = lib:CreateControl("button", nil, {})
+assert(oldButton.SetSelected == nil, "older buttons have no selection API")
 
 lib:RegisterControlType("dropdown", function(parent)
     local control = makeFrame("Frame", parent)
@@ -1010,6 +1011,10 @@ oldButton:SetButtonText("Updated")
 assert(oldButton.label.point[1] == "CENTER")
 oldButton:FitToContents()
 assert(oldButton.width == 65)
+assert(not oldButton:IsSelected(), "upgraded buttons default to unselected")
+oldButton:SetSelected(true)
+assert(oldButton:IsSelected(), "existing buttons gain the selection API")
+oldButton:SetSelected(false)
 
 oldDropdown:SetControlWidth(180)
 assert(oldDropdown.width == 180)
@@ -2030,6 +2035,7 @@ do
 end
 
 dofile("tests/navigation.lua")(lib, makeFrame, inputState)
+dofile("tests/button_selection.lua")(lib, makeFrame)
 
 -- Controls constructed by an older embed adopt navigation without new instances.
 do

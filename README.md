@@ -38,6 +38,11 @@ Every control uses an options table:
   `height` keeps both dimensions equal. Buttons retain Blizzard's normal
   mouse-up activation timing and finalize a pending text edit before invoking
   their consumer callback.
+  For persistent selection, pass `selected = true` or call `SetSelected(boolean)`;
+  `IsSelected()` reads the current state. Selection uses each variant's native
+  tertiary selected artwork and survives hover, focus, disable/re-enable, and
+  appearance refreshes. Clicking does not toggle it automatically or fire a
+  separate selection callback. This API is new in the Unreleased development build.
 - `CreateExpandableHeader(parent, options)` creates a full-width tertiary
   section header with a right-aligned yellow arrow that points down while
   collapsed and up while expanded. Use `text`, `width`, `height`, and
