@@ -157,16 +157,12 @@ local function layoutButtonContent(button)
         and button._libModernSettingsIconGap
         or 0
 
-    label:ClearAllPoints()
-
     if icon then
-        icon:ClearAllPoints()
-
         if style.iconOnly then
             local mask = lib:_ApplyTertiarySquareMask(button, icon, button:GetWidth())
-            icon:SetPoint("CENTER", mask, "CENTER", 0, 0)
+            lib:_SetLayoutPoint(icon, "CENTER", mask, "CENTER", 0, 0)
         else
-            icon:SetPoint(
+            lib:_SetLayoutPoint(icon,
                 "CENTER",
                 button,
                 "CENTER",
@@ -175,7 +171,7 @@ local function layoutButtonContent(button)
             )
         end
 
-        label:SetPoint(
+        lib:_SetLayoutPoint(label,
             "CENTER",
             button,
             "CENTER",
@@ -183,7 +179,7 @@ local function layoutButtonContent(button)
             0
         )
     else
-        label:SetPoint("CENTER", button, "CENTER", 0, 0)
+        lib:_SetLayoutPoint(label, "CENTER", button, "CENTER", 0, 0)
     end
 
     if button._libModernSettingsFitToContent then

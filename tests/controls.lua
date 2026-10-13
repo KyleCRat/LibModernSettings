@@ -176,6 +176,7 @@ local function makeRegion()
     end
 
     function region:ClearAllPoints()
+        self.clearPointsCount = (self.clearPointsCount or 0) + 1
         self.allPoints = nil
         self.point = nil
         self.points = nil
@@ -184,7 +185,23 @@ local function makeRegion()
     function region:SetPoint(...)
         self.point = { ... }
         self.points = self.points or {}
+
+        for index, point in ipairs(self.points) do
+            if point[1] == self.point[1] then
+                self.points[index] = self.point
+                return
+            end
+        end
+
         self.points[#self.points + 1] = self.point
+    end
+
+    function region:GetNumPoints()
+        return self.allPoints and 2 or #(self.points or {})
+    end
+
+    function region:GetPoint(index)
+        return unpack(self.points and self.points[index or 1] or {})
     end
 
     function region:SetDesaturated(desaturated)
@@ -358,6 +375,7 @@ local function makeFrame(frameType, parent, template)
     end
 
     function frame:ClearAllPoints()
+        self.clearPointsCount = (self.clearPointsCount or 0) + 1
         self.point = nil
         self.pointsByName = {}
     end
@@ -370,6 +388,14 @@ local function makeFrame(frameType, parent, template)
 
     function frame:GetPoint()
         return unpack(self.point or {})
+    end
+
+    function frame:GetNumPoints()
+        local count = 0
+        for _ in pairs(self.pointsByName or {}) do
+            count = count + 1
+        end
+        return count
     end
 
     function frame:GetPointByName(name)

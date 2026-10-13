@@ -37,9 +37,8 @@ function lib:_ApplyTertiarySquareMask(button, artwork, buttonSize)
     -- Clip at the button's inner bevel, not at the icon's own corners. Small
     -- glyphs keep their shape; larger artwork cannot cover the frame's border.
     local size = math.max(1, math.floor(buttonSize * 0.7 + 0.5))
-    mask:ClearAllPoints()
     mask:SetSize(size, size)
-    mask:SetPoint("CENTER", button, "CENTER", 0, 1)
+    self:_SetLayoutPoint(mask, "CENTER", button, "CENTER", 0, 1)
     mask:SetTexture(self._tertiarySquareMask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 
     return mask
@@ -51,9 +50,8 @@ function lib:ApplyTertiarySquareArtwork(button, artwork, buttonSize)
     -- Filled artwork uses the entire inset; ordinary button icons retain their
     -- requested size and aspect ratio while sharing this same clipping area.
     artwork:SetDrawLayer("OVERLAY", 1)
-    artwork:ClearAllPoints()
     artwork:SetSize(mask:GetWidth(), mask:GetHeight())
-    artwork:SetPoint("CENTER", mask, "CENTER", 0, 0)
+    self:_SetLayoutPoint(artwork, "CENTER", mask, "CENTER", 0, 0)
 
     return mask
 end

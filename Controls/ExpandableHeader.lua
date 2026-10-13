@@ -57,7 +57,6 @@ end
 local function updateHeaderLayout(header)
     local label = header.label
 
-    label:ClearAllPoints()
     if header._libModernSettingsHeaderIconAtlas then
         label:SetPoint(
             "LEFT",
@@ -109,8 +108,7 @@ local function updateToggleState(header)
     header.toggleIcon:SetRotation(
         expanded and TOGGLE_EXPANDED_ROTATION or TOGGLE_COLLAPSED_ROTATION
     )
-    header.toggleIcon:ClearAllPoints()
-    header.toggleIcon:SetPoint(
+    lib:_SetLayoutPoint(header.toggleIcon,
         "RIGHT",
         header,
         "RIGHT",
@@ -144,6 +142,7 @@ local function createExpandableHeader(parent, options)
     label:SetWordWrap(false)
     label:SetMaxLines(1)
     header:SetFontString(label)
+    label:ClearAllPoints()
     header:SetNormalFontObject(options.normalFont or GameFontNormalLarge)
     header:SetHighlightFontObject(
         options.highlightFont or GameFontHighlightLarge

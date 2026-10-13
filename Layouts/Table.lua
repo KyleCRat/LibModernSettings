@@ -166,8 +166,7 @@ function TableView:_ReflowRows()
         local row = self.rows[index]
         local rowFrame = row.frame
 
-        rowFrame:ClearAllPoints()
-        rowFrame:SetPoint(
+        lib:_SetLayoutPoint(rowFrame,
             "TOPLEFT",
             self.frame,
             "TOPLEFT",

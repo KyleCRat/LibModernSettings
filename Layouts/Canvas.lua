@@ -155,6 +155,16 @@ local function getFrameHeight(frame, explicitHeight)
     return height
 end
 
+-- Native linear placement detaches children on every FullUpdate. This view
+-- retains one frame with a width owned by Layout:SetSize, while native code
+-- still owns extent calculation, scroll offsets and scrollbar handling.
+local function layoutScrollContent(view, scrollBox)
+    local content = view:GetFrames()[1]
+    if content then
+        lib:_SetLayoutPoint(content, "TOPLEFT", scrollBox:GetScrollTarget(), "TOPLEFT", 0, 0)
+    end
+end
+
 local function createContent(layout, options)
     local parent = layout.parent
 
@@ -186,6 +196,7 @@ local function createContent(layout, options)
 
     local view = CreateScrollBoxLinearView()
 
+    view.Layout = layoutScrollContent
     view:SetPanExtent(options.panExtent or 40)
     area:Init(view)
 
@@ -250,16 +261,29 @@ function Layout:SetSize(width, height)
     assert(not self.scrollBox or height > self.viewportMarginTop + self.viewportMarginBottom,
         "scroll viewport margins must leave a positive height")
 
-    if lib:_LayoutSizeMatches(width, self.canvasWidth)
-        and lib:_LayoutSizeMatches(height, self.canvasHeight) then
+    local widthChanged = not lib:_LayoutSizeMatches(width, self.canvasWidth)
+    local heightChanged = not lib:_LayoutSizeMatches(height, self.canvasHeight)
+    if not widthChanged and not heightChanged then
         return
     end
 
     self.canvasWidth, self.canvasHeight = width, height
     self.contentWidth = contentWidth
     self.rootFlow.width = contentWidth
-    self.parent:SetSize(width, height)
-    self.content:SetWidth(contentWidth)
+    -- Do not write an unchanged axis back to a content-sized parent, or feed
+    -- resolved geometry back through its own OnSizeChanged notification.
+    local resizeWidth = widthChanged and not lib:_LayoutSizeMatches(self.parent:GetWidth(), width)
+    local resizeHeight = heightChanged and not lib:_LayoutSizeMatches(self.parent:GetHeight(), height)
+    if resizeWidth and resizeHeight then
+        self.parent:SetSize(width, height)
+    elseif resizeWidth then
+        self.parent:SetWidth(width)
+    elseif resizeHeight then
+        self.parent:SetHeight(height)
+    end
+    if not lib:_LayoutSizeMatches(self.content:GetWidth(), contentWidth) then
+        self.content:SetWidth(contentWidth)
+    end
     self:RequestLayout()
 end
 
@@ -532,8 +556,7 @@ function Flow:_PlaceFrame(frame, options, role)
         frame:SetWidth(width)
     end
 
-    frame:ClearAllPoints()
-    frame:SetPoint(
+    lib:_SetLayoutPoint(frame,
         "TOPLEFT",
         self.parent,
         "TOPLEFT",
@@ -1070,6 +1093,7 @@ for layout in pairs(lib._canvasLayouts) do
     if layout.scrollBox then
         layout.viewportMarginTop = layout.geometry.top
         layout.viewportMarginBottom = layout.geometry.bottom
+        layout.scrollBox:GetView().Layout = layoutScrollContent
 
         if layout.scrollArea then
             layout.scrollArea:_ApplyGeometry(layout.geometry)

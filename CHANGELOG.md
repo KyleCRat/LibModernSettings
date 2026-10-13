@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Retain canvas and input anchors during resize/reflow, including scrolling
+  content and header controls. Preserve measured section heights when only
+  their width changes, without rebuilding controls or discarding pending edits.
+
 ## [1.10.0] - 2026-10-12
 
 ### Added

@@ -45,21 +45,49 @@ local function newEnvironment()
     environment.GameFontNormalHuge = { height = 20 }
     environment.ScrollBoxConstants = { UpdateImmediately = 1, NoScrollInterpolation = 0 }
     function environment.CreateScrollBoxLinearView()
-        return { SetPanExtent = function() end }
+        local view = { frames = {}, SetPanExtent = function() end }
+        function view:GetFrames() return self.frames end
+        function view:Layout(scrollBox)
+            for _, frame in ipairs(self.frames) do
+                -- Blizzard's linear view clears/rebuilds child anchors on a full update.
+                frame:ClearAllPoints()
+                frame:SetPoint("TOPLEFT", scrollBox:GetScrollTarget(), "TOPLEFT", 0, 0)
+                frame:SetPoint("TOPRIGHT", scrollBox:GetScrollTarget(), "TOPRIGHT", 0, 0)
+            end
+        end
+        return view
     end
     environment.ScrollUtil = { InitScrollBoxWithScrollBar = function(scrollBox, scrollBar, view)
         scrollBox.nativeView = view
         scrollBox.initCount = (scrollBox.initCount or 0) + 1
+        scrollBox.scrollTarget = environment.CreateFrame("Frame", nil, scrollBox)
+        scrollBox.scrollTarget:SetSize(1, 1)
+        scrollBox.scrollTarget:SetPoint("TOPLEFT", scrollBox, "TOPLEFT", 0, 0)
+        function scrollBox:GetScrollTarget() return self.scrollTarget end
+        function scrollBox:GetView() return self.nativeView end
+        if view.frames then
+            for _, child in ipairs({ scrollBox:GetChildren() }) do
+                if child.scrollable then
+                    child:SetParent(scrollBox.scrollTarget)
+                    view.frames[#view.frames + 1] = child
+                end
+            end
+            view:Layout(scrollBox)
+        end
         function scrollBox:FullUpdate()
             self.updateCount = (self.updateCount or 0) + 1
+            if view.Layout then
+                view:Layout(self)
+                self:ScrollToOffset(self:GetDerivedScrollOffset(), environment.ScrollBoxConstants.NoScrollInterpolation)
+            end
         end
         function scrollBox:GetDerivedScrollOffset() return self.scrollOffset or 0 end
         function scrollBox:GetVisibleExtent() return self:GetParent():GetHeight() end
         function scrollBox:ScrollToOffset(offset, interpolation)
             assert(interpolation == environment.ScrollBoxConstants.NoScrollInterpolation)
-            local content = self:GetChildren()
+            local content = self.nativeView:GetFrames()[1]
             self.scrollOffset = math.max(0, math.min(offset, content:GetHeight() - self:GetVisibleExtent()))
-            content:SetPoint("TOPLEFT", self, "TOPLEFT", 0, self.scrollOffset)
+            self.scrollTarget:SetPoint("TOPLEFT", self, "TOPLEFT", 0, self.scrollOffset)
         end
     end }
     environment.ScrollUtil.InitScrollBoxListWithScrollBar = environment.ScrollUtil.InitScrollBoxWithScrollBar
@@ -848,3 +876,4 @@ end
 
 print("LibModernSettings canvas upgrade and responsive layout tests passed")
 dofile("tests/scroll_area.lua")(newEnvironment, loadVersion)
+dofile("tests/canvas_resize.lua")(newEnvironment, loadVersion)

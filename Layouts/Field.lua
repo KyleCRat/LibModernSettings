@@ -127,8 +127,6 @@ local function layoutField(field)
         control:SetWidth(controlWidth)
     end
     layout.controlHeight = control:GetHeight()
-    label:ClearAllPoints()
-    control:ClearAllPoints()
 
     local height
     if layout.labelPosition == "left" then
@@ -142,15 +140,15 @@ local function layoutField(field)
         if hasDescription then
             -- Center the input and label within their row, not the description.
             label:SetHeight(height)
-            label:SetPoint("TOPLEFT", field, "TOPLEFT", 0, 0)
-            control:SetPoint(
+            lib:_SetLayoutPoint(label, "TOPLEFT", field, "TOPLEFT", 0, 0)
+            lib:_SetLayoutPoint(control,
                 "TOPLEFT", field, "TOPLEFT", layout.labelWidth + layout.gap,
                 -(height - layout.controlHeight) / 2
             )
         else
             label:SetHeight(field._libModernSettingsExplicitHeight or height)
-            label:SetPoint("LEFT", field, "LEFT", 0, 0)
-            control:SetPoint("LEFT", field, "LEFT", layout.labelWidth + layout.gap, 0)
+            lib:_SetLayoutPoint(label, "LEFT", field, "LEFT", 0, 0)
+            lib:_SetLayoutPoint(control, "LEFT", field, "LEFT", layout.labelWidth + layout.gap, 0)
         end
     else
         label:SetWidth(width)
@@ -170,8 +168,7 @@ local function layoutField(field)
     local gap = layout.descriptionGap or DEFAULT_DESCRIPTION_GAP
     description:SetWidth(width)
     description:SetText(layout.descriptionText)
-    description:ClearAllPoints()
-    description:SetPoint("TOPLEFT", field, "TOPLEFT", 0, -height - gap)
+    lib:_SetLayoutPoint(description, "TOPLEFT", field, "TOPLEFT", 0, -height - gap)
     description:Show()
     return height + gap + description:GetStringHeight()
 end

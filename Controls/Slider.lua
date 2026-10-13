@@ -55,8 +55,7 @@ local function layoutSlider(control)
     control.label:SetWidth(width)
     inputRow:SetSize(width, rowHeight)
     slider:SetWidth(math.max(1, width - valueBox:GetWidth() - inputGap - INPUT_RIGHT_INSET))
-    slider:ClearAllPoints()
-    slider:SetPoint("LEFT", inputRow, "LEFT", 0, 0)
+    lib:_SetLayoutPoint(slider, "LEFT", inputRow, "LEFT", 0, 0)
 
     if control.label:IsShown() then
         local layout = control._libModernSettingsLabelLayout
@@ -65,8 +64,7 @@ local function layoutSlider(control)
         return lib:_LayoutStackedLabel(control, control.label, inputRow, layout)
     end
 
-    inputRow:ClearAllPoints()
-    inputRow:SetPoint("LEFT", control, "LEFT", 0, 0)
+    lib:_SetLayoutPoint(inputRow, "LEFT", control, "LEFT", 0, 0)
     return rowHeight
 end
 
@@ -431,8 +429,7 @@ local function refreshSliderAppearance(control, options)
         options.inputWidth or DEFAULT_INPUT_WIDTH,
         options.inputHeight or C_Texture.GetAtlasInfo(INPUT_ATLAS).height
     )
-    control.valueBox:ClearAllPoints()
-    control.valueBox:SetPoint("LEFT", control.slider, "RIGHT", control._libModernSettingsInputGap, 0)
+    lib:_SetLayoutPoint(control.valueBox, "LEFT", control.slider, "RIGHT", control._libModernSettingsInputGap, 0)
     lib:_ApplyDefaultFont(control.label, options.fontObject or GameFontHighlight)
     lib:_ApplyDefaultFont(control.valueBox, options.inputFontObject or GameFontHighlight)
     control:RefreshLayout()

@@ -565,6 +565,10 @@ It updates the canvas parent, content width and viewport height, and requests
 the same coalesced reflow. Dimensions must be finite, positive and leave room
 after the configured content insets and viewport margins. This can be called
 from the parent's `OnSizeChanged`; unchanged dimensions do no work.
+Read the frame's current dimensions in that callback rather than replaying its
+possibly queued width/height arguments. Only changed axes are resized: a width
+change preserves a content-sized parent's measured height instead of resetting
+it to the canvas's original minimum height.
 
 `BeginColumns({ minColumnWidth = 260 })` stacks its flows in declaration order
 when their equal-width columns would be narrower than that minimum. Omit the

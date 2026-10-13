@@ -14,6 +14,24 @@ function lib:_LayoutSizeMatches(measured, expected)
     return expected ~= nil and ApproximatelyEqual(measured, expected, LAYOUT_SIZE_EPSILON)
 end
 
+-- A layout owns this region's single anchor. Updating it in place keeps the
+-- region and its descendants measurable throughout a resize/reflow callback.
+function lib:_SetLayoutPoint(region, point, relativeTo, relativePoint, x, y)
+    local count = region:GetNumPoints()
+    if count > 0 then
+        local oldPoint, oldRelativeTo, oldRelativePoint, oldX, oldY = region:GetPoint(1)
+        if count == 1 and oldPoint == point then
+            if oldRelativeTo == relativeTo and oldRelativePoint == relativePoint
+                and self:_LayoutSizeMatches(oldX, x) and self:_LayoutSizeMatches(oldY, y) then
+                return
+            end
+        else
+            region:ClearAllPoints()
+        end
+    end
+    region:SetPoint(point, relativeTo, relativePoint, x, y)
+end
+
 function lib:_ApplyInputWidth(control, width)
     control._libModernSettingsUpdatingLayout = true
     control:SetWidth(width)
@@ -72,10 +90,8 @@ function lib:_LayoutStackedLabel(owner, label, input, options)
 
     label:SetHeight(options.labelHeight or label:GetStringHeight())
     label:SetJustifyV("TOP")
-    label:ClearAllPoints()
-    label:SetPoint("TOPLEFT", owner, "TOPLEFT", 0, 0)
-    input:ClearAllPoints()
-    input:SetPoint(
+    self:_SetLayoutPoint(label, "TOPLEFT", owner, "TOPLEFT", 0, 0)
+    self:_SetLayoutPoint(input,
         "TOPLEFT", label, "BOTTOMLEFT", options.inputOffsetX or 0,
         topInset - gap
     )

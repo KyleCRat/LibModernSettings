@@ -100,13 +100,11 @@ local function layoutColor(control)
     for _, mode in ipairs(MODES) do
         local button = control.buttons[mode]
         if button then
-            button:ClearAllPoints()
-            button:SetPoint("LEFT", control, "LEFT", x, 0)
+            lib:_SetLayoutPoint(button, "LEFT", control, "LEFT", x, 0)
             x = x + SIZE + GAP
         end
     end
-    control.label:ClearAllPoints()
-    control.label:SetPoint("LEFT", control, "LEFT", x, 0)
+    lib:_SetLayoutPoint(control.label, "LEFT", control, "LEFT", x, 0)
     control.label:SetWidth(math.max(1, control:GetWidth() - x))
     control.buttons.custom:SetHitRectInsets(0, -math.max(0, control:GetWidth() - x + GAP), 0, 0)
     return SIZE

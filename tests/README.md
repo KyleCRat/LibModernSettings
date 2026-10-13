@@ -18,6 +18,9 @@ Responsive canvas tests cover resizing, stacked and conditional columns,
 unchanged-size coalescing, hidden-page updates, nested visibility and retained
 control identity, values and pending text edits. Vertical column alignment is
 checked across changing heights, nested groups, hiding and responsive stacking.
+Resize regressions include retained anchors in headers, inputs and the native
+scroll target, scroll-position preservation/clamping, hidden-page return,
+content-sized section heights, and upgrades of existing native canvas views.
 Full-width group tests cover immediate construction widths, nested groups/columns, margins, visibility,
 dynamic content heights, additions to finalized canvases and compatible upgrades.
 Navigation tests cover focused input, modifier combinations and precedence,
@@ -170,9 +173,9 @@ Validate Blizzard-owned templates and interaction behavior in game:
   change, clear, and restore descriptions while the canvas is visible and
   hidden. Confirm only the affected canvas reflows and input text remains visible.
 - Resize canvas viewports through the minimum column width while scrolled to
-  the bottom. Hide/show individual flows and entire rows, including nested
-  groups and columns; check full-width groups fit from the first opening,
-  remaining controls fill the width and hidden groups leave no space.
+  the top, middle and bottom. Hide/show individual flows and entire rows,
+  including nested groups and columns; check full-width groups fit from the
+  first opening, remaining controls fill the width and hidden groups leave no space.
   Repeat with pending edits, checked controls, long labels and hidden canvases.
 - Open a Settings subcategory directly from its addon button on a cold login;
   confirm dropdown selection text and arrows appear without switching pages.

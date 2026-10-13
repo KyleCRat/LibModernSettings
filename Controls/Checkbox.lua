@@ -169,8 +169,7 @@ local function refreshCheckboxAppearance(checkbox, options)
         local width = options.width or 220
         lib:_ApplyDefaultFont(checkbox.label, options.fontObject or GameFontHighlight)
         checkbox.label:SetWidth(math.max(width - checkbox:GetWidth() - LABEL_GAP, 1))
-        checkbox.label:ClearAllPoints()
-        checkbox.label:SetPoint("LEFT", checkbox, "RIGHT", LABEL_GAP, 0)
+        lib:_SetLayoutPoint(checkbox.label, "LEFT", checkbox, "RIGHT", LABEL_GAP, 0)
         checkbox:SetHitRectInsets(0, math.min(checkbox:GetWidth() - width, 0), 0, 0)
     end
 end

@@ -106,8 +106,7 @@ local function layoutDropdown(control)
         ) + bottomInset
     end
 
-    control.dropdown:ClearAllPoints()
-    control.dropdown:SetPoint("LEFT", control, "LEFT", leftInset, 0)
+    lib:_SetLayoutPoint(control.dropdown, "LEFT", control, "LEFT", leftInset, 0)
     return inputHeight
 end
 
