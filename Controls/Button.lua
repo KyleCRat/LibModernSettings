@@ -53,6 +53,17 @@ local BUTTON_STYLES = {
 }
 
 local DEFAULT_ICON_GAP = 4
+local DEFAULT_TEXTURE_ICON_SIZE = 16
+
+local function validateButtonIcon(options, style)
+    assert(options.iconAtlas == nil or type(options.iconAtlas) == "string",
+        "iconAtlas must be a string or nil")
+    assert(options.iconTexture == nil or type(options.iconTexture) == "string"
+        or type(options.iconTexture) == "number", "iconTexture must be a texture path, file ID, or nil")
+    assert(not (options.iconAtlas and options.iconTexture), "use either iconAtlas or iconTexture")
+    assert(not style.iconOnly or options.iconAtlas or options.iconTexture,
+        "square buttons require iconAtlas or iconTexture")
+end
 
 local function sizeButtonIcon(icon, style, options)
     if options.iconSize then
@@ -82,6 +93,33 @@ local function sizeButtonIcon(icon, style, options)
     )
 end
 
+local function applyButtonIcon(button, style, options)
+    if not options.iconAtlas and not options.iconTexture then
+        if button.icon then button.icon:Hide() end
+        return
+    end
+
+    local icon = button.icon
+
+    if not icon then
+        icon = button:CreateTexture(nil, "OVERLAY", nil, 1)
+        button.icon = icon
+    end
+
+    if options.iconAtlas then
+        icon:SetAtlas(options.iconAtlas, true)
+    else
+        icon:SetTexture(options.iconTexture)
+        icon:SetTexCoord(0, 1, 0, 1)
+        icon:SetSize(DEFAULT_TEXTURE_ICON_SIZE, DEFAULT_TEXTURE_ICON_SIZE)
+    end
+
+    sizeButtonIcon(icon, style, options)
+    icon:SetDesaturated(not button:IsEnabled())
+    icon:SetAlpha(button:IsEnabled() and 1 or 0.5)
+    icon:Show()
+end
+
 local function getButtonStyle(button)
     if button._libModernSettingsButtonStyle then
         return button._libModernSettingsButtonStyle
@@ -96,6 +134,10 @@ local function layoutButtonContent(button)
     local style = getButtonStyle(button)
     local label = button.label or button:GetFontString()
     local icon = button.icon
+
+    if icon and not icon:IsShown() then
+        icon = nil
+    end
 
     if not label then
         return
@@ -119,13 +161,20 @@ local function layoutButtonContent(button)
 
     if icon then
         icon:ClearAllPoints()
-        icon:SetPoint(
-            "CENTER",
-            button,
-            "CENTER",
-            -((textWidth + gap) / 2),
-            0
-        )
+
+        if style.iconOnly then
+            local mask = lib:_ApplyTertiarySquareMask(button, icon, button:GetWidth())
+            icon:SetPoint("CENTER", mask, "CENTER", 0, 0)
+        else
+            icon:SetPoint(
+                "CENTER",
+                button,
+                "CENTER",
+                -((textWidth + gap) / 2),
+                0
+            )
+        end
+
         label:SetPoint(
             "CENTER",
             button,
@@ -169,10 +218,7 @@ local function createButton(parent, options)
         options.selected == nil or type(options.selected) == "boolean",
         "selected must be a boolean or nil"
     )
-    assert(
-        options.iconAtlas == nil or type(options.iconAtlas) == "string",
-        "iconAtlas must be a string or nil"
-    )
+    validateButtonIcon(options, style)
     assert(
         options.iconSize == nil
             or (type(options.iconSize) == "number"
@@ -184,10 +230,6 @@ local function createButton(parent, options)
             or (type(options.maxIconSize) == "number"
                 and options.maxIconSize > 0),
         "maxIconSize must be a positive number or nil"
-    )
-    assert(
-        not style.iconOnly or type(options.iconAtlas) == "string",
-        "square buttons require iconAtlas"
     )
     assert(
         not style.iconOnly or options.text == nil or options.text == "",
@@ -275,15 +317,7 @@ local function createButton(parent, options)
     button:SetText(options.text or "")
     button.label = label
 
-    if options.iconAtlas then
-        local icon = button:CreateTexture(nil, "OVERLAY", nil, 1)
-
-        icon:SetAtlas(options.iconAtlas, true)
-        sizeButtonIcon(icon, style, options)
-
-        button.icon = icon
-    end
-
+    applyButtonIcon(button, style, options)
     layoutButtonContent(button)
     button._libModernSettingsOnClick = options.onClick
     button:SetScript("OnClick", function(self, ...)
@@ -342,6 +376,16 @@ function buttonMethods:SetButtonText(text)
     layoutButtonContent(self)
 end
 
+function buttonMethods:SetButtonIcon(options)
+    assert(type(options) == "table", "button icon options must be a table")
+    validateButtonIcon(options, getButtonStyle(self))
+
+    local appearance = self._libModernSettingsAppearanceOptions
+    appearance.iconAtlas = options.iconAtlas
+    appearance.iconTexture = options.iconTexture
+    lib:_RefreshControlAppearance(self)
+end
+
 function buttonMethods:FitToContents()
     self._libModernSettingsFitToContent = true
     layoutButtonContent(self)
@@ -384,11 +428,15 @@ local function refreshButtonAppearance(button, options)
         options.normalFont or style.normalFont,
         options.highlightFont or style.highlightFont,
         options.disabledFont or style.disabledFont)
-    if button.icon then
-        button.icon:SetAtlas(options.iconAtlas, true)
-        sizeButtonIcon(button.icon, style, options)
-    end
+    applyButtonIcon(button, style, options)
     layoutButtonContent(button)
+
+    if style.iconOnly and not button._libModernSettingsIconMaskSizeHooked then
+        button._libModernSettingsIconMaskSizeHooked = true
+        button:HookScript("OnSizeChanged", function(self)
+            lib:_ApplyTertiarySquareMask(self, self.icon, self:GetWidth())
+        end)
+    end
 end
 
 lib:RegisterControlType(

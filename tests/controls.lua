@@ -176,6 +176,7 @@ local function makeRegion()
     end
 
     function region:ClearAllPoints()
+        self.allPoints = nil
         self.point = nil
         self.points = nil
     end
@@ -2036,6 +2037,7 @@ end
 
 dofile("tests/navigation.lua")(lib, makeFrame, inputState)
 dofile("tests/button_selection.lua")(lib, makeFrame)
+dofile("tests/button_icons.lua")(lib, makeFrame)
 
 -- Controls constructed by an older embed adopt navigation without new instances.
 do

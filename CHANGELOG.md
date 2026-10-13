@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Buttons accept texture-file icons through `iconTexture`, alongside existing
+  atlas icons. `SetButtonIcon()` updates either source on retained buttons.
+
+### Changed
+
+- Square icon buttons automatically clip artwork to the tertiary border's
+  corners while preserving icon sizing and aspect ratio.
+
 ## [1.9.0] - 2026-10-12
 
 ### Added

@@ -27,17 +27,26 @@ Every control uses an options table:
 - `CreateButton(parent, options)` creates regular, small, or square tertiary
   buttons.
   Use `text`, `width`, `height`, `variant`, `tooltip`, and `onClick`. Pass
-  `iconAtlas` for a centered icon-and-text command and `fitToContent = true`
+  `iconAtlas` or `iconTexture` for a centered icon-and-text command and `fitToContent = true`
   to derive the width from the complete content group. Use regular buttons by
   default; reserve `variant = "small"` for dense rows or constrained layouts.
   Small buttons automatically constrain native atlas icons to 14px while
   preserving aspect ratio. `maxIconSize` changes that cap while preserving the
   atlas ratio; `iconSize` explicitly forces a square size. Use
-  `variant = "square"` with `iconAtlas` for an icon-only action button. It
+  `variant = "square"` with either icon source for an icon-only action button. It
   defaults to 34px square with an icon no larger than 16px; custom `width` or
-  `height` keeps both dimensions equal. Buttons retain Blizzard's normal
+  `height` keeps both dimensions equal. Square buttons automatically mask both
+  atlas and texture icons to the inner border without changing their sizing or
+  aspect ratio. Regular and small buttons do not mask their icons.
+  Buttons retain Blizzard's normal
   mouse-up activation timing and finalize a pending text edit before invoking
   their consumer callback.
+  `iconTexture` accepts a texture path or file ID and defaults to 16px square;
+  use `iconSize` for another size. `SetButtonIcon({ iconTexture = pathOrID })`
+  or `SetButtonIcon({ iconAtlas = atlas })` replaces the source while preserving
+  sizing and selection. Pass `{}` to remove a text button's icon; square buttons
+  must keep an icon. Texture icons, automatic square masking, and this setter
+  are currently unreleased.
   For persistent selection, pass `selected = true` or call `SetSelected(boolean)`;
   `IsSelected()` reads the current state. Selection uses each variant's native
   tertiary selected artwork and survives hover, focus, disable/re-enable, and
@@ -60,8 +69,9 @@ Every control uses an options table:
   with hex/RGB(A) entry, recent colors, favorites, and class/item-quality swatches. See
   [Color inputs](#color-inputs) for value, persistence and cancellation contracts.
 - `ApplyTertiarySquareArtwork(button, texture, buttonSize)` fits and masks an existing
-  texture inside a fixed-size tertiary square. Use it for spell/item artwork or
-  solid color fills; texture, color and UVs remain caller-owned. Keep button state
+  texture inside a fixed-size tertiary square. Use it for custom artwork or
+  solid color fills; `CreateButton` already masks its square icons automatically.
+  Texture, color and UVs remain caller-owned. Keep button state
   artwork below `OVERLAY` sublevel 1. It returns the attached mask and reuses it
   on later calls, including compatible library upgrades.
 - `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
