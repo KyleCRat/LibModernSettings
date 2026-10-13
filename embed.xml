@@ -20,6 +20,7 @@
     <Script file="Controls\Color.lua"/>
     <Script file="Utilities\ColorPicker.lua"/>
     <Script file="Layouts\Field.lua"/>
+    <Script file="Layouts\ScrollArea.lua"/>
     <Script file="Layouts\Canvas.lua"/>
     <Script file="Layouts\Table.lua"/>
 </Ui>

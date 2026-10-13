@@ -5,7 +5,8 @@ local scripts = {
     "Utilities/KeyboardNavigation.lua", "Utilities/ControlNavigation.lua", "Utilities/TabNavigation.lua",
     "Elements/Text.lua", "Layouts/Control.lua", "Controls/Button.lua", "Controls/Checkbox.lua",
     "Controls/ExpandableHeader.lua", "Controls/Dropdown.lua",
-    "Controls/Slider.lua", "Controls/TextInput.lua", "Layouts/Field.lua", "Layouts/Canvas.lua",
+    "Controls/Slider.lua", "Controls/TextInput.lua", "Layouts/Field.lua",
+    "Layouts/ScrollArea.lua", "Layouts/Canvas.lua",
 }
 local sources = {}
 for _, path in ipairs(scripts) do
@@ -46,7 +47,9 @@ local function newEnvironment()
     function environment.CreateScrollBoxLinearView()
         return { SetPanExtent = function() end }
     end
-    environment.ScrollUtil = { InitScrollBoxWithScrollBar = function(scrollBox)
+    environment.ScrollUtil = { InitScrollBoxWithScrollBar = function(scrollBox, scrollBar, view)
+        scrollBox.nativeView = view
+        scrollBox.initCount = (scrollBox.initCount or 0) + 1
         function scrollBox:FullUpdate()
             self.updateCount = (self.updateCount or 0) + 1
         end
@@ -59,6 +62,7 @@ local function newEnvironment()
             content:SetPoint("TOPLEFT", self, "TOPLEFT", 0, self.scrollOffset)
         end
     end }
+    environment.ScrollUtil.InitScrollBoxListWithScrollBar = environment.ScrollUtil.InitScrollBoxWithScrollBar
     return environment
 end
 
@@ -786,3 +790,4 @@ do
 end
 
 print("LibModernSettings canvas upgrade and responsive layout tests passed")
+dofile("tests/scroll_area.lua")(newEnvironment, loadVersion)

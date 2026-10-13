@@ -387,6 +387,68 @@ favorites never silently evict a saved color when full. Palette objects expose
 `GetColors("recent" | "favorites")`, `Record(color)` and `ToggleFavorite(color)`.
 The latter returns the new favorite state, or `nil, message` when full.
 
+## Scroll Areas
+
+`CreateScrollArea(parent, options)` creates a native ScrollBox and modern
+`MinimalScrollBar` inside an addon-owned pane. The addon keeps ownership of the
+pane's border, size, anchors, visibility, headers and footers. LMS owns the
+viewport and scrollbar column; Blizzard owns scrolling and list virtualization.
+No surrounding window or inset artwork is created.
+
+For forms and free-form control layouts, use `CreateCanvasLayout` with the
+`scrollArea` option below. For a native list, configure its view normally and
+initialize the area once:
+
+```lua
+local area = ModernSettings:CreateScrollArea(insetFrame, {
+    preset = "inset",
+    contentSpacing = "compact",
+})
+
+local view = CreateScrollBoxListLinearView()
+view:SetElementExtent(50)
+view:SetElementInitializer("MyAddonListRowTemplate", initializeRow)
+area:Init(view)
+area:GetScrollBox():SetDataProvider(dataProvider)
+```
+
+The parent should describe the entire pane. Do not shrink it by another layer
+of scrollbar padding. The native children follow its anchors when it resizes;
+LMS never resizes or reanchors the parent. Size-dependent content should read
+the area measurements after the parent has a usable size.
+
+| Option | Default and meaning |
+| --- | --- |
+| `preset` | `"inset"`: border clearance of 4px left, 6px right/top, 5px bottom. `"none"` starts with zero border clearance. Neither draws a border. |
+| `contentSpacing` | `"regular"`: 16px content margins and scrollbar gap. `"compact"`: 8px content margins and a 4px scrollbar gap for rows that already have internal padding. |
+| `borderInsets` | Partial `{ left, right, top, bottom }` overrides for another border. Unspecified edges retain the preset. |
+| `contentPadding` | Partial `{ left, top, bottom }` content margins, measured from the parent's edges, not added to the border clearance. A thicker border becomes the minimum safe margin. |
+| `scrollbarGap` | Space between the content and the scrollbar column; overrides the spacing preset. |
+| `scrollbarWidth` | 17px, reserving the native arrows and hit area as well as the narrower track. |
+| `kind` | `"list"` creates `WowScrollBoxList`; `"canvas"` creates `WowScrollBox` for a caller-owned linear view and content frame. |
+
+Numeric overrides must be finite and non-negative; scrollbar width must be
+positive. Zero is an explicit override. Options are copied, including the
+border/content tables. The scrollbar column stays reserved when content fits,
+so overflow never changes the content width.
+
+Areas expose:
+
+- `Init(view)`: connects the appropriate native view once, after configuring
+  list rows or creating canvas children. Does not change the view's padding.
+- `GetScrollBox()` / `GetScrollBar()`: the native widgets.
+- `GetContentWidth()` / `GetViewportHeight()`: current available dimensions.
+- `GetContentInsets()`: left, right, top, bottom offsets from the parent. The
+  right offset includes the scrollbar reservation, useful for header alignment.
+- `GetContentPadding()`: top and bottom padding inside the viewport. Lists
+  return zero because their content margins are reserved outside the viewport.
+  Canvas callers include this padding in their content height; a canvas layout
+  handles it automatically.
+
+For example, `borderInsets = { right = 8 }` adjusts only right-side clearance.
+There is no need to recalculate the content width or subtract border offsets
+from content padding in addon code.
+
 ## Canvas Layouts
 
 `CreateCanvasLayout(parent, options)` measures `options.measurementFrame` and
@@ -399,6 +461,32 @@ geometry is 8px left padding, an 8px scrollbar gap, a 17px scrollbar
 reservation, a 15px column gap, a 16px indent, and 8px table padding. Override
 defaults through `options.style` when a consumer intentionally needs a distinct
 visual system.
+
+To use a scroll area's inset spacing, opt in explicitly:
+
+```lua
+local layout = ModernSettings:CreateCanvasLayout(insetFrame, {
+    scrollable = true,
+    scrollArea = {
+        preset = "inset",
+        contentSpacing = "compact",
+        -- borderInsets = { right = 8 }, -- Optional border-specific adjustment.
+    },
+})
+```
+
+With this option, pass the full pane dimensions, including its border clearance.
+Omit `contentSpacing` for regular form spacing. A non-scrolling header can use
+the same `scrollArea` options to align its horizontal content bounds while
+keeping its own `style.paddingTop` and `style.paddingBottom`. Both kinds of
+layout expose `GetContentInsets()` (left, right, top, bottom).
+
+When `scrollArea` is present it owns `paddingLeft`, `scrollbarGap`, and
+`scrollbarWidth`, plus top/bottom padding for scrolling layouts. Supplying
+competing `style`/top-level values or `viewportMarginTop`/`viewportMarginBottom`
+is an error: use the scroll area's border/content options instead. Other style
+options, such as column gaps and row spacing, remain independent. Omitting
+`scrollArea` preserves all existing canvas defaults and overrides.
 
 The root flow is full width. `BeginColumns()` creates independent half-width
 flows, allowing one column to contain more controls without inserting empty

@@ -4,6 +4,9 @@
 
 ### Added
 
+- Reusable scroll areas for native lists and canvas layouts, with inset spacing
+  presets, compact content spacing, and independent border overrides. Existing
+  canvas spacing remains unchanged unless the new options are selected.
 - Buttons accept texture-file icons through `iconTexture`, alongside existing
   atlas icons. `SetButtonIcon()` updates either source on retained buttons.
 

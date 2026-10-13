@@ -73,6 +73,56 @@ local function createStyle(options)
     return style
 end
 
+local function createGeometry(style, options)
+    if options.scrollArea ~= nil then
+        assert(options.viewportMarginTop == nil and options.viewportMarginBottom == nil,
+            "scrollArea owns viewport margins; use its borderInsets instead")
+
+        local overrides = options.style or {}
+
+        for _, key in ipairs({ "paddingLeft", "scrollbarGap", "scrollbarWidth", "paddingTop", "paddingBottom" }) do
+            local headerPadding = not options.scrollable and (key == "paddingTop" or key == "paddingBottom")
+            assert(headerPadding or (overrides[key] == nil and options[key] == nil),
+                "scrollArea owns " .. key .. "; configure its contentPadding or scrollbar options instead")
+        end
+
+        local geometry = lib:_ResolveScrollAreaGeometry(options.scrollArea)
+        style.paddingLeft = geometry.left
+        style.scrollbarGap = geometry.scrollbarGap
+        style.scrollbarWidth = geometry.scrollbarWidth
+
+        if options.scrollable then
+            style.paddingTop, style.paddingBottom = geometry.paddingTop, geometry.paddingBottom
+        else
+            -- Non-scrolling headers can share the horizontal content bounds
+            -- without also adopting the scrolling body's vertical padding.
+            geometry.top, geometry.bottom = 0, 0
+            geometry.paddingTop, geometry.paddingBottom = style.paddingTop, style.paddingBottom
+        end
+
+        return geometry
+    end
+
+    local top = options.scrollable and (options.viewportMarginTop or 0) or 0
+    local bottom = options.scrollable and (options.viewportMarginBottom or 0) or 0
+    assert(type(top) == "number" and top >= 0 and top < math.huge,
+        "scroll viewport top margin must be finite and non-negative")
+    assert(type(bottom) == "number" and bottom >= 0 and bottom < math.huge,
+        "scroll viewport bottom margin must be finite and non-negative")
+
+    return {
+        left = style.paddingLeft,
+        right = style.scrollbarGap + style.scrollbarWidth,
+        top = top,
+        bottom = bottom,
+        paddingTop = style.paddingTop,
+        paddingBottom = style.paddingBottom,
+        scrollbarRight = 0,
+        scrollbarWidth = style.scrollbarWidth,
+        scrollbarGap = style.scrollbarGap,
+    }
+end
+
 local function getMeasuredDimension(frame, methodName)
     if not frame then
         return
@@ -116,69 +166,15 @@ local function createContent(layout, options)
             "TOPLEFT",
             parent,
             "TOPLEFT",
-            layout.style.paddingLeft,
+            layout.geometry.left,
             0
         )
 
         return content
     end
 
-    local viewportMarginTop = options.viewportMarginTop or 0
-    local viewportMarginBottom = options.viewportMarginBottom or 0
-
-    assert(
-        type(viewportMarginTop) == "number" and viewportMarginTop >= 0,
-        "scroll viewport top margin must be non-negative"
-    )
-    assert(
-        type(viewportMarginBottom) == "number"
-            and viewportMarginBottom >= 0,
-        "scroll viewport bottom margin must be non-negative"
-    )
-    assert(
-        viewportMarginTop + viewportMarginBottom < layout.canvasHeight,
-        "scroll viewport margins must leave a positive height"
-    )
-
-    local scrollBox = CreateFrame("Frame", nil, parent, "WowScrollBox")
-
-    scrollBox:SetPoint(
-        "TOPLEFT",
-        parent,
-        "TOPLEFT",
-        layout.style.paddingLeft,
-        -viewportMarginTop
-    )
-    scrollBox:SetPoint(
-        "BOTTOMRIGHT",
-        parent,
-        "BOTTOMRIGHT",
-        -(layout.style.scrollbarGap + layout.style.scrollbarWidth),
-        viewportMarginBottom
-    )
-
-    local scrollBar = CreateFrame(
-        "EventFrame",
-        nil,
-        parent,
-        "MinimalScrollBar"
-    )
-
-    scrollBar:SetWidth(layout.style.scrollbarWidth)
-    scrollBar:SetPoint(
-        "TOPLEFT",
-        scrollBox,
-        "TOPRIGHT",
-        layout.style.scrollbarGap,
-        0
-    )
-    scrollBar:SetPoint(
-        "BOTTOMLEFT",
-        scrollBox,
-        "BOTTOMRIGHT",
-        layout.style.scrollbarGap,
-        0
-    )
+    local area = lib:_CreateScrollArea(parent, layout.geometry, { kind = "canvas" })
+    local scrollBox = area:GetScrollBox()
 
     local content = CreateFrame("Frame", nil, scrollBox)
 
@@ -191,12 +187,13 @@ local function createContent(layout, options)
     local view = CreateScrollBoxLinearView()
 
     view:SetPanExtent(options.panExtent or 40)
-    ScrollUtil.InitScrollBoxWithScrollBar(scrollBox, scrollBar, view)
+    area:Init(view)
 
+    layout.scrollArea = area
     layout.scrollBox = scrollBox
-    layout.scrollBar = scrollBar
-    layout.viewportMarginTop = viewportMarginTop
-    layout.viewportMarginBottom = viewportMarginBottom
+    layout.scrollBar = area:GetScrollBar()
+    layout.viewportMarginTop = layout.geometry.top
+    layout.viewportMarginBottom = layout.geometry.bottom
 
     return content
 end
@@ -221,6 +218,15 @@ function Layout:GetContentWidth()
     return self.contentWidth
 end
 
+function Layout:GetContentInsets()
+    local geometry = self.geometry
+    local paddingBottom = self.finalizeOptions and self.finalizeOptions.paddingBottom
+    if paddingBottom == nil then paddingBottom = self.style.paddingBottom end
+
+    return geometry.left, geometry.right,
+        geometry.top + self.style.paddingTop, geometry.bottom + paddingBottom
+end
+
 function Layout:GetStyleValue(key)
     return self.style[key]
 end
@@ -239,8 +245,7 @@ function Layout:SetSize(width, height)
     assert(type(height) == "number" and height > 0 and height < math.huge,
         "canvas height must be a positive finite number")
 
-    local contentWidth = width - self.style.paddingLeft
-        - self.style.scrollbarGap - self.style.scrollbarWidth
+    local contentWidth = width - self.geometry.left - self.geometry.right
     assert(contentWidth > 0, "canvas insets must leave positive content width")
     assert(not self.scrollBox or height > self.viewportMarginTop + self.viewportMarginBottom,
         "scroll viewport margins must leave a positive height")
@@ -904,10 +909,8 @@ function lib:CreateCanvasLayout(parent, options)
         or getMeasuredDimension(measurementFrame, "GetHeight")
         or getMeasuredDimension(parent, "GetHeight")
         or style.canvasHeight
-    local contentWidth = canvasWidth
-        - style.paddingLeft
-        - style.scrollbarGap
-        - style.scrollbarWidth
+    local geometry = createGeometry(style, options)
+    local contentWidth = canvasWidth - geometry.left - geometry.right
 
     assert(
         type(canvasWidth) == "number" and canvasWidth > 0,
@@ -979,10 +982,14 @@ function lib:CreateCanvasLayout(parent, options)
         "canvas header bottom margin must be non-negative"
     )
     assert(contentWidth > 0, "canvas layout content width must be positive")
+    assert(canvasHeight > geometry.top + geometry.bottom,
+        "scroll viewport margins must leave a positive height")
 
     local layout = setmetatable({
         parent = parent,
         style = style,
+        geometry = geometry,
+        scrollAreaOptions = options.scrollArea and lib:_CopyScrollAreaOptions(options.scrollArea),
         canvasWidth = canvasWidth,
         canvasHeight = canvasHeight,
         contentWidth = contentWidth,
@@ -1019,23 +1026,40 @@ end
 -- Older, untracked canvases cannot be reconstructed safely from screen pixels.
 for layout in pairs(lib._canvasLayouts) do
     layout.content._libModernSettingsCanvasLayout = layout
-    layout.style = createStyle({ style = layout.styleOverrides })
-    layout.contentWidth = layout.canvasWidth - layout.style.paddingLeft
-        - layout.style.scrollbarGap - layout.style.scrollbarWidth
+    local options = {
+        style = layout.styleOverrides,
+        scrollable = layout.scrollBox ~= nil,
+        scrollArea = layout.scrollAreaOptions,
+    }
+
+    if not options.scrollArea then
+        options.viewportMarginTop = layout.viewportMarginTop
+        options.viewportMarginBottom = layout.viewportMarginBottom
+    end
+
+    layout.style = createStyle(options)
+    layout.geometry = createGeometry(layout.style, options)
+    layout.contentWidth = layout.canvasWidth - layout.geometry.left - layout.geometry.right
     layout.content:SetWidth(layout.contentWidth)
     layout.rootFlow.width = layout.contentWidth
+
     if layout.scrollBox then
-        layout.scrollBox:ClearAllPoints()
-        layout.scrollBox:SetPoint("TOPLEFT", layout.parent, "TOPLEFT", layout.style.paddingLeft, -layout.viewportMarginTop)
-        layout.scrollBox:SetPoint("BOTTOMRIGHT", layout.parent, "BOTTOMRIGHT",
-            -(layout.style.scrollbarGap + layout.style.scrollbarWidth), layout.viewportMarginBottom)
-        layout.scrollBar:SetWidth(layout.style.scrollbarWidth)
-        layout.scrollBar:ClearAllPoints()
-        layout.scrollBar:SetPoint("TOPLEFT", layout.scrollBox, "TOPRIGHT", layout.style.scrollbarGap, 0)
-        layout.scrollBar:SetPoint("BOTTOMLEFT", layout.scrollBox, "BOTTOMRIGHT", layout.style.scrollbarGap, 0)
+        layout.viewportMarginTop = layout.geometry.top
+        layout.viewportMarginBottom = layout.geometry.bottom
+
+        if layout.scrollArea then
+            layout.scrollArea:_ApplyGeometry(layout.geometry)
+        else
+            layout.scrollArea = lib:_CreateScrollArea(layout.parent, layout.geometry, {
+                kind = "canvas",
+                scrollBox = layout.scrollBox,
+                scrollBar = layout.scrollBar,
+            })
+        end
     else
         layout.content:ClearAllPoints()
-        layout.content:SetPoint("TOPLEFT", layout.parent, "TOPLEFT", layout.style.paddingLeft, 0)
+        layout.content:SetPoint("TOPLEFT", layout.parent, "TOPLEFT", layout.geometry.left, 0)
     end
+
     layout:RequestLayout()
 end

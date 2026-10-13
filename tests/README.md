@@ -1,5 +1,11 @@
 # In-Game Validation
 
+Scroll-area tests cover legacy canvas spacing, inset/compact presets, independent
+border overrides, header alignment, native lists, resizing, invalid geometry,
+and retained native widgets across library upgrades. In game, compare both
+LibChangelog panes with their approved spacing, scroll long notes, resize a
+native list, and check existing settings pages with no `scrollArea` option.
+
 Automated tests cover the library's Lua-only registry, live prototype dispatch,
 text-input commit/cancel behavior, focus retention after rejected Enter/Tab edits,
 mouse-safe focus-loss commits, field
