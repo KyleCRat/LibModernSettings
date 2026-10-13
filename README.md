@@ -6,7 +6,7 @@ construction, Blizzard art, value synchronization, enabled or disabled tooltip
 behavior, and optional canvas layout and table geometry. The consuming addon continues to own
 SavedVariables, category registration, page composition, and runtime callbacks.
 
-Release `1.9.0` uses the `LibModernSettings-1.0` API family with LibStub MINOR `10`.
+Release `1.10.0` uses the `LibModernSettings-1.0` API family with LibStub MINOR `11`.
 
 ## Embedding
 
@@ -46,7 +46,7 @@ Every control uses an options table:
   or `SetButtonIcon({ iconAtlas = atlas })` replaces the source while preserving
   sizing and selection. Pass `{}` to remove a text button's icon; square buttons
   must keep an icon. Texture icons, automatic square masking, and this setter
-  are currently unreleased.
+  require release 1.10.0 or newer.
   For persistent selection, pass `selected = true` or call `SetSelected(boolean)`;
   `IsSelected()` reads the current state. Selection uses each variant's native
   tertiary selected artwork and survives hover, focus, disable/re-enable, and
