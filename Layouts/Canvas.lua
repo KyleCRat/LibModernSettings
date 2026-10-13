@@ -740,6 +740,9 @@ function Flow:BeginColumns(options)
         or (type(options.minColumnWidth) == "number"
             and options.minColumnWidth > 0 and options.minColumnWidth < math.huge),
         "minimum column width must be a positive finite number or nil")
+    assert(options.verticalAlign == nil or options.verticalAlign == "top"
+        or options.verticalAlign == "center" or options.verticalAlign == "bottom",
+        "column vertical alignment must be 'top', 'center', or 'bottom'")
 
     self.cursor = self.cursor + marginTop
 
@@ -824,12 +827,14 @@ function Columns:_RefreshLayout()
     parentFlow.cursor = parentFlow.cursor + (options.marginTop or 0)
     local cursor = parentFlow.cursor
     local visibleIndex = 0
+    local bottom = cursor
 
     for _, flow in ipairs(self.flows) do
         if flow.shown ~= false then
             flow.x = stacked and x or x + visibleIndex * (columnWidth + gap)
             flow.width = stacked and width or columnWidth
             flow:_RefreshLayout(cursor)
+            bottom = math.max(bottom, flow.cursor)
             visibleIndex = visibleIndex + 1
 
             if stacked then
@@ -837,6 +842,25 @@ function Columns:_RefreshLayout()
             end
         end
     end
+
+    -- Measure at the final column widths first, then align shorter columns.
+    -- Stacked flows keep their normal sequential placement.
+    if not stacked and options.verticalAlign and options.verticalAlign ~= "top" then
+        for _, flow in ipairs(self.flows) do
+            if flow.shown ~= false then
+                local offset = bottom - flow.cursor
+
+                if options.verticalAlign == "center" then
+                    offset = offset / 2
+                end
+
+                if offset > 0 then
+                    flow:_RefreshLayout(cursor + offset)
+                end
+            end
+        end
+    end
+
     if self.finishOptions then
         self:Finish(self.finishOptions)
     end

@@ -571,6 +571,11 @@ when their equal-width columns would be narrower than that minimum. Omit the
 option to retain fixed columns. Use a separate column region for each logical
 row when narrow layouts should read left-to-right, then top-to-bottom.
 
+`BeginColumns({ verticalAlign = "center" })` vertically centers shorter flows
+beside the tallest column; `"bottom"` aligns their bottoms. The default is
+`"top"`. Alignment follows measured content, including wrapping and nested
+groups, and does not add space when responsive columns stack.
+
 `flow:SetShown(false)` hides that flow's frames and removes its space, including
 column gaps. Remaining columns fill the available width; an entirely hidden
 column region occupies no space. `SetShown(true)` restores its controls without

@@ -449,6 +449,63 @@ do
     assert(not pcall(inset.SetSize, inset, 300, 20))
 end
 
+-- Column alignment follows measured heights without changing flow order or size.
+for _, alignment in ipairs({ "top", "center", "bottom" }) do
+    local environment = newEnvironment()
+    local lib = loadVersion(environment, false)
+    local parent = environment.CreateFrame("Frame")
+    local layout = lib:CreateCanvasLayout(parent, { width = 800, height = 1 })
+    local root = layout:GetRootFlow()
+    local row = root:BeginColumns({ verticalAlign = alignment, minColumnWidth = 260, marginTop = 7 })
+    local group = row.left:BeginGroup()
+    local content = environment.CreateFrame("Frame", nil, layout:GetContent())
+    content:SetSize(100, 40)
+    group:AddFrame(content, { fillWidth = true, marginBottom = 0 })
+    group:Finish()
+    local checkbox = row.right:AddControl("checkbox", { label = "Show on login" }, { marginBottom = 0 })
+    row:Finish({ marginBottom = 5 })
+    local following = root:AddControl("textInput", {})
+    layout:Finalize()
+    environment.Flush()
+
+    local factor = alignment == "center" and 0.5 or alignment == "bottom" and 1 or 0
+    local start = layout:GetStyleValue("paddingTop") + 7
+    assert(content.point[5] == -start and checkbox.point[5] == -(start + 6 * factor),
+        "shorter columns align within the tallest measured column")
+    local followingY = following.point[5]
+    assert(followingY == -(start + 40 + 5), "alignment adds no height to the column region")
+    layout:RefreshLayout()
+    assert(following.point[5] == followingY and checkbox.point[5] == -(start + 6 * factor),
+        "repeated layout does not accumulate alignment offsets")
+
+    content:SetHeight(20)
+    environment.Flush()
+    assert(content.point[5] == -(start + 14 * factor) and checkbox.point[5] == -start,
+        "dynamic measurement can change which column is tallest, including nested groups")
+
+    row.left:SetShown(false)
+    environment.Flush()
+    assert(checkbox.point[5] == -start, "hidden columns reserve no alignment space")
+    row.right:SetShown(false)
+    environment.Flush()
+    assert(following.point[5] == -layout:GetStyleValue("paddingTop"),
+        "fully hidden aligned columns leave no margins")
+
+    row.left:SetShown(true)
+    row.right:SetShown(true)
+    layout:SetSize(500, 1)
+    environment.Flush()
+    assert(content.point[5] == -start and checkbox.point[5] == -(start + 20),
+        "stacked columns ignore vertical alignment and keep sequential placement")
+    assert(following.point[5] == -(start + 20 + 34 + 5),
+        "stacking includes each column exactly once")
+    layout:SetSize(800, 1)
+    environment.Flush()
+    assert(content.point[5] == -(start + 14 * factor) and checkbox.point[5] == -start,
+        "returning to side-by-side columns restores alignment without rebuilding controls")
+    assert(not pcall(root.BeginColumns, root, { verticalAlign = "middle" }))
+end
+
 -- Groups provide full-width geometry immediately and retain nested layout/visibility.
 do
     local groupEnvironment = newEnvironment()

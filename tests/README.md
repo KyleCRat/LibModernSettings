@@ -16,8 +16,9 @@ well, alongside content-sized controls, Field descriptions, canvas reflows,
 retained appearance overrides, and duplicate-module initialization.
 Responsive canvas tests cover resizing, stacked and conditional columns,
 unchanged-size coalescing, hidden-page updates, nested visibility and retained
-control identity, values and pending text edits. Full-width group tests cover
-immediate construction widths, nested groups/columns, margins, visibility,
+control identity, values and pending text edits. Vertical column alignment is
+checked across changing heights, nested groups, hiding and responsive stacking.
+Full-width group tests cover immediate construction widths, nested groups/columns, margins, visibility,
 dynamic content heights, additions to finalized canvases and compatible upgrades.
 Navigation tests cover focused input, modifier combinations and precedence,
 typed values outside the track range, selection boundaries, menu regeneration

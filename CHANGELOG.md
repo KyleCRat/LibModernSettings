@@ -9,6 +9,8 @@
   canvas spacing remains unchanged unless the new options are selected.
 - Buttons accept texture-file icons through `iconTexture`, alongside existing
   atlas icons. `SetButtonIcon()` updates either source on retained buttons.
+- Canvas columns support vertical alignment to center or bottom-align content
+  of different heights.
 
 ### Changed
 
