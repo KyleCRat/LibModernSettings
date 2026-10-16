@@ -417,6 +417,11 @@ of scrollbar padding. The native children follow its anchors when it resizes;
 LMS never resizes or reanchors the parent. Size-dependent content should read
 the area measurements after the parent has a usable size.
 
+Wheel input anywhere in the pane, including its margins and scrollbar gap,
+uses the native scrolling handler. It remains consumed at the scroll limits
+and when content fits. Child controls such as focused sliders retain their
+own wheel behavior; the pane's click, motion and script handling is unchanged.
+
 | Option | Default and meaning |
 | --- | --- |
 | `preset` | `"inset"`: border clearance of 4px left, 6px right/top, 5px bottom. `"none"` starts with zero border clearance. Neither draws a border. |

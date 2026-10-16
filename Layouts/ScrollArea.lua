@@ -118,6 +118,32 @@ function Area:GetContentPadding()
     return self.geometry.paddingTop, self.geometry.paddingBottom
 end
 
+local function onMarginMouseWheel(frame, delta)
+    local area = frame.scrollArea
+    if not area.initialized then return end
+
+    local scrollBox = area.scrollBox
+    local handler = scrollBox:GetScript("OnMouseWheel")
+    if handler then handler(scrollBox, delta) end
+end
+
+function Area:_ConfigureMouseWheel()
+    -- Keep the pane's gaps wheel-active below its widgets. Clicks and motion
+    -- still reach the caller's frame; focused child controls own their wheel.
+    local frame = self.scrollBox._libModernSettingsWheelFrame
+    if not frame then
+        frame = CreateFrame("Frame", nil, self.parent)
+        self.scrollBox._libModernSettingsWheelFrame = frame
+    end
+
+    frame.scrollArea = self
+    frame:SetAllPoints(self.parent)
+    frame:SetFrameLevel(self.parent:GetFrameLevel())
+    frame:EnableMouse(false)
+    frame:EnableMouseWheel(true)
+    frame:SetScript("OnMouseWheel", onMarginMouseWheel)
+end
+
 function Area:_ApplyGeometry(geometry)
     self.geometry = geometry
     local top, bottom = geometry.top, geometry.bottom
@@ -155,7 +181,7 @@ function Area:Init(view)
 end
 
 -- Canvas layouts also use this constructor to adopt existing native widgets
--- during an embed upgrade. Adoption never creates frames or reinitializes a view.
+-- during an embed upgrade. Adoption preserves the widgets and their initialized view.
 function lib:_CreateScrollArea(parent, geometry, options)
     local kind = options.kind == nil and "list" or options.kind
     assert(kind == "list" or kind == "canvas", "scroll area kind must be list or canvas")
@@ -169,6 +195,7 @@ function lib:_CreateScrollArea(parent, geometry, options)
         area.scrollBar = CreateFrame("EventFrame", nil, parent, "MinimalScrollBar")
     end
 
+    area:_ConfigureMouseWheel()
     area:_ApplyGeometry(geometry)
     self._scrollAreas[area] = true
     return area
@@ -187,6 +214,7 @@ function lib:CreateScrollArea(parent, options)
 end
 
 for area in pairs(lib._scrollAreas) do
+    area:_ConfigureMouseWheel()
     if area.options then
         area:_ApplyGeometry(lib:_ResolveScrollAreaGeometry(area.options))
     end

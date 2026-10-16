@@ -2,8 +2,12 @@
 
 Scroll-area tests cover legacy canvas spacing, inset/compact presets, independent
 border overrides, header alignment, native lists, resizing, invalid geometry,
-and retained native widgets across library upgrades. In game, compare both
-LibChangelog panes with their approved spacing, scroll long notes, resize a
+and retained native widgets across library upgrades. Wheel tests cover full-pane
+coverage, native handler forwarding, initialization, nested owners and upgrades.
+In game, scroll in every margin and the scrollbar gap on long/short panes and
+at both scroll limits: game wheel bindings must not fire. Verify focused slider
+stepping, nested panes, scrollbar dragging and parent click/drag handling.
+Compare both LibChangelog panes with their approved spacing, scroll long notes, resize a
 native list, and check existing settings pages with no `scrollArea` option.
 
 Automated tests cover the library's Lua-only registry, live prototype dispatch,
