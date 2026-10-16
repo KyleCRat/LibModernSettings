@@ -251,7 +251,8 @@ function dropdownMethods:_ScrollSelectionIntoView()
     local value = self:GetValue()
     menu.ScrollBox:ScrollToElementDataByPredicate(function(frame)
         -- An onChanged callback can regenerate the menu, replacing descriptions.
-        return frame:GetElementDescription():GetData() == value
+        local description = frame:GetElementDescription()
+        return description:IsRadio() and description:GetData() == value
     end, ScrollBoxConstants.AlignNearest, 0, ScrollBoxConstants.NoScrollInterpolation)
 end
 
@@ -328,12 +329,24 @@ function dropdownMethods:_BuildMenu(rootDescription)
     for i = 1, #choices do
         local choice = choices[i]
 
-        rootDescription:CreateRadio(
-            choice.label,
-            isSelected,
-            setSelected,
-            choice.value
-        )
+        if choice.type == "title" then
+            rootDescription:CreateTitle(choice.label)
+        elseif choice.type == "divider" then
+            rootDescription:CreateDivider()
+        else
+            assert(choice.type == nil or choice.type == "choice", "unknown dropdown choice type")
+            local description = rootDescription:CreateRadio(
+                choice.label,
+                isSelected,
+                setSelected,
+                choice.value
+            )
+            description:SetEnabled(choice.enabled ~= false)
+
+            if choice.tooltip then
+                description:SetTitleAndTextTooltip(choice.tooltipTitle or choice.label, choice.tooltip)
+            end
+        end
     end
 end
 

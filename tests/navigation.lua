@@ -274,7 +274,7 @@ return function(lib, makeFrame, inputState)
             for index, row in ipairs(menu.rows) do
                 assert(menu.ScrollBox.dataProvider[index] == row,
                     "the scrolling provider must follow the rebuilt menu order")
-                assert(row.description == dropdown.dropdown:GetMenuDescription().radioButtons[index])
+                assert(row.description == dropdown.dropdown:GetMenuDescription().elements[index])
                 if row:IsShown() then
                     assert(row.parent == menu.ScrollBox, "visible rows must stay in their scrolling slots")
                 end
@@ -481,6 +481,58 @@ return function(lib, makeFrame, inputState)
         picks = picks + 1
         dropdown:SetValue(value)
     end)
+
+    local grouped = {
+        { type = "title", label = "First group" },
+        { value = 1, label = "First", tooltip = "First explanation" },
+        { value = 2, label = "Unavailable", enabled = false, tooltip = "Disabled explanation" },
+        { type = "divider" },
+        { type = "title", label = "Second group" },
+        { value = 3, label = "Last", tooltipTitle = "Custom title", tooltip = "Last explanation" },
+    }
+    dropdown:SetChoices(grouped)
+    dropdown:SetValue(1)
+    openMenu()
+    local description = dropdown.dropdown:GetMenuDescription()
+    assert(#description.elements == 6 and #description.radioButtons == 3)
+    assert(description.elements[1].kind == "title" and description.elements[1].label == "First group")
+    assert(description.elements[4].kind == "divider" and not description.elements[4]:CanSelect())
+    assert(description.radioButtons[1].tooltipTitle == "First")
+    assert(description.radioButtons[1].tooltipText == "First explanation")
+    assert(not description.radioButtons[2]:CanSelect())
+    assert(description.radioButtons[2].tooltipText == "Disabled explanation")
+    assert(description.radioButtons[3].tooltipTitle == "Custom title")
+    key("DOWN")
+    assert(dropdown:GetValue() == 3 and menu.ScrollBox.revealedValue == 3,
+        "arrows skip headings, dividers and disabled choices, then reveal the selected row")
+    assertMenuLayout()
+    local groupedPicks = picks
+    key("DOWN")
+    assert(picks == groupedPicks and dropdown:GetValue() == 3, "grouped menus stop at their last choice")
+    key("UP")
+    assert(dropdown:GetValue() == 1)
+    dropdown:SetValue(2)
+    key("DOWN")
+    assert(dropdown:GetValue() == 3, "a disabled saved selection remains a navigation starting point")
+    dropdown:SetValue(nil)
+    dropdown:_ScrollSelectionIntoView()
+    assert(menu.ScrollBox.revealedValue == nil, "an unset selection must not scroll to a heading")
+    key("DOWN")
+    assert(dropdown:GetValue() == 1, "an unset selection starts at the first enabled radio")
+    dropdown:SetValue(nil)
+    key("UP")
+    assert(dropdown:GetValue() == 3, "reverse navigation starts at the last enabled radio")
+    grouped[3].enabled = true
+    grouped[3].tooltip = nil
+    dropdown:SetChoices(grouped)
+    key("UP")
+    description = dropdown.dropdown:GetMenuDescription()
+    assert(dropdown:GetValue() == 2 and description.radioButtons[2]:CanSelect())
+    assert(description.radioButtons[2].tooltipText == nil, "menu regeneration must drop removed tooltip data")
+    assertMenuLayout()
+    key("SPACE")
+    assert(not dropdown.dropdown:IsMenuOpen() and keyboard.control == dropdown,
+        "grouped selections preserve input focus when confirmed")
 
     -- Emulate an already-open menu from an embed predating navigation.
     dropdown:SetChoices(choices)

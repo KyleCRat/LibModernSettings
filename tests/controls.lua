@@ -82,7 +82,7 @@ MenuResponse = { Refresh = 2, CloseAll = 4 }
 ScrollBoxConstants = { AlignNearest = "nearest", NoScrollInterpolation = 0 }
 
 local function createMenuDescription(dropdown)
-    local root = { menuAcquiredCallbacks = {}, radioButtons = {} }
+    local root = { menuAcquiredCallbacks = {}, radioButtons = {}, elements = {} }
     function root:SetScrollMode(height)
         self.maxScrollExtent = height
     end
@@ -95,11 +95,28 @@ local function createMenuDescription(dropdown)
         function description:IsRadio() return true end
         function description:CanSelect() return not self.disabled end
         function description:IsSelected() return self[2](self[4]) end
+        function description:SetEnabled(enabled) self.disabled = not enabled end
+        function description:SetTitleAndTextTooltip(title, text)
+            self.tooltipTitle = title
+            self.tooltipText = text
+        end
         self.radioButtons[#self.radioButtons + 1] = description
+        self.elements[#self.elements + 1] = description
         return description
     end
+    function root:CreateDecoration(kind, label)
+        local description = { kind = kind, label = label }
+        function description:GetData() return nil end
+        function description:IsRadio() return false end
+        function description:CanSelect() return false end
+        function description:IsSelected() return false end
+        self.elements[#self.elements + 1] = description
+        return description
+    end
+    function root:CreateTitle(label) return self:CreateDecoration("title", label) end
+    function root:CreateDivider() return self:CreateDecoration("divider") end
     function root:EnumerateElementDescriptions()
-        return ipairs(self.radioButtons)
+        return ipairs(self.elements)
     end
     dropdown.menuCallback(dropdown, root)
     return root
@@ -695,9 +712,9 @@ local function makeFrame(frameType, parent, template)
     function frame:CollectSelectionData()
         local previous, following, selected = nil, nil, {}
         for _, description in self.menuDescription:EnumerateElementDescriptions() do
-            if description:IsSelected() then
+            if description:IsRadio() and description:IsSelected() then
                 selected[#selected + 1] = description
-            elseif description:CanSelect() then
+            elseif description:IsRadio() and description:CanSelect() then
                 if #selected == 0 then
                     previous = description
                 elseif not following then

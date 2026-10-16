@@ -1,5 +1,11 @@
 # In-Game Validation
 
+Grouped-dropdown tests cover headings/dividers, disabled saved selections,
+tooltips, menu regeneration and keyboard navigation across groups. In game,
+hover enabled/disabled choices, navigate long grouped lists with Up/Down, and
+confirm with Enter/Space: tooltips must follow their rows, decorators must be
+skipped, selected rows must stay in view, and Tab focus must remain on the input.
+
 Color preview tests cover draft callbacks, duplicate suppression, RGB/RGBA,
 Apply ordering, all cancellation paths, owner rebinding and callback replacement.
 In game, enable `onPreview`, drag hue/saturation/opacity, edit hex/channels and

@@ -4,6 +4,9 @@
 
 ### Added
 
+- Dropdown choices support native headings, dividers, per-choice tooltips and
+  disabled entries. Keyboard navigation skips non-selectable rows while keeping
+  a disabled saved selection visible.
 - Color inputs support optional `onPreview(value)` callbacks for live drafts,
   with `onPreview(nil)` cleanup on every close path. Apply still commits once
   through `onChanged`; saved values and recent colors remain unchanged until then.

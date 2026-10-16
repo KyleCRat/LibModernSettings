@@ -76,7 +76,13 @@ Every control uses an options table:
   on later calls, including compatible library upgrades.
 - `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
   selector. Use `label`, `width`, `value`, `choices` or `getChoices`,
-  `tooltip`, and `onChanged`. A non-empty `label` enables the labeled layout;
+  `tooltip`, and `onChanged`. Choice records use `{ value, label }`, with optional
+  `tooltip` text, `tooltipTitle` and `enabled = false`. Add `{ type = "title", label = "Group" }`
+  and `{ type = "divider" }` records for native menu headings and separators.
+  Headings, dividers and disabled choices are skipped by arrow navigation;
+  a disabled saved value can remain selected. `SetChoices()` and `getChoices`
+  support the same records, including updated tooltip and enabled state.
+  A non-empty `label` enables the labeled layout;
   omitting it or passing `""` creates an unlabeled selector with a 34px footprint
   around the native 25px button artwork. Both layouts default to zero side
   insets; `leftInset` and `rightInset` override either side independently. A built-in label adds its
