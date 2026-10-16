@@ -13,6 +13,8 @@
 
 ### Fixed
 
+- Non-scrolling canvases can set `scrollbarWidth = 0` to remove the right inset
+  from nested sections. Scrolling canvases still require a positive width.
 - Scroll-area margins now consume mouse-wheel input and scroll their pane,
   preventing wheel bindings from firing through gaps beside the scrollbar.
 - Retain canvas and input anchors during resize/reflow, including scrolling

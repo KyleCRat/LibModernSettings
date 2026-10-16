@@ -479,11 +479,15 @@ creates a per-page layout object. Geometry is never stored in shared mutable
 library state, so independently embedded addons cannot overwrite one another's
 page measurements.
 
-Every page reserves the same scrollbar area, whether or not it scrolls. Default
+By default, pages reserve the same scrollbar area whether or not they scroll. Default
 geometry is 8px left padding, an 8px scrollbar gap, a 17px scrollbar
 reservation, a 15px column gap, a 16px indent, and 8px table padding. Override
 defaults through `options.style` when a consumer intentionally needs a distinct
 visual system.
+
+For a nested non-scrolling layout without `scrollArea`, set `style.paddingLeft`,
+`style.scrollbarGap`, and `style.scrollbarWidth` to `0` to use the full parent
+width. Scrolling layouts still require a positive scrollbar width.
 
 To use a scroll area's inset spacing, opt in explicitly:
 

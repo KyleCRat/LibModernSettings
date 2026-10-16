@@ -329,6 +329,38 @@ legacy.rootFlow:AddSpacer(5)
 legacy.rootFlow:AddControl("textInput", { height = 34 })
 assert(legacy:Finalize() == 126)
 
+-- Nested non-scrolling sections can fill their parent without a scrollbar inset.
+do
+    local sectionEnvironment = newEnvironment()
+    local sectionLib = loadVersion(sectionEnvironment, false)
+    local parent = sectionEnvironment.CreateFrame("Frame")
+    local layout = sectionLib:CreateCanvasLayout(parent, {
+        width = 500, height = 200, scrollable = false,
+        style = { paddingLeft = 0, scrollbarGap = 0, scrollbarWidth = 0 },
+    })
+    local input = layout:GetRootFlow():AddControl("textInput", {})
+    layout:Finalize()
+
+    for _, width in ipairs({ 500, 320, 760 }) do
+        layout:SetSize(width, 200)
+        sectionEnvironment.Flush()
+        local left, right = layout:GetContentInsets()
+        assert(left == 0 and right == 0, "non-scrolling sections must allow zero side insets")
+        assert(layout:GetContentWidth() == width and input:GetWidth() == width,
+            "full-width content must remain aligned after resizing")
+        assert(layout:GetScrollBox() == nil)
+    end
+
+    for _, options in ipairs({
+        { width = 500, height = 200, scrollable = true, style = { scrollbarWidth = 0 } },
+        { width = 500, height = 200, scrollable = false, style = { scrollbarWidth = -1 } },
+    }) do
+        local success, message = pcall(sectionLib.CreateCanvasLayout, sectionLib, parent, options)
+        assert(not success and message:find("canvas scrollbar width", 1, true),
+            "scrolling layouts need a positive scrollbar width; negative widths are always invalid")
+    end
+end
+
 -- Wrapped descriptions resize their Field and reflow only its containing page.
 do
     local layout = freshLib:CreateCanvasLayout(freshEnvironment.CreateFrame("Frame"), {

@@ -976,8 +976,9 @@ function lib:CreateCanvasLayout(parent, options)
         "canvas scrollbar gap must be non-negative"
     )
     assert(
-        type(style.scrollbarWidth) == "number" and style.scrollbarWidth > 0,
-        "canvas scrollbar width must be positive"
+        type(style.scrollbarWidth) == "number" and style.scrollbarWidth >= 0
+            and (not options.scrollable or style.scrollbarWidth > 0),
+        "canvas scrollbar width must be non-negative, and positive for scrolling layouts"
     )
     assert(
         type(style.columnGap) == "number" and style.columnGap >= 0,
