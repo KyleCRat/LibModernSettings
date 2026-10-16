@@ -85,6 +85,17 @@ Every control uses an options table:
   Headings, dividers and disabled choices are skipped by arrow navigation;
   a disabled saved value can remain selected. `SetChoices()` and `getChoices`
   support the same records, including updated tooltip and enabled state.
+  Set `multiSelect = true` for native checkboxes. `value`, `SetValue()` and
+  `GetValue()` then use a set such as `{ combat = true, mounted = true }`,
+  with string, number or boolean choice keys. Nil means an empty set; false
+  entries are omitted. Inputs, returned sets and callback values are copied.
+  `onChanged(values, changedValue, checked)` runs once per user toggle; the
+  menu stays open. Up/Down moves focus without changing checks, Enter/Space
+  toggles the focused checkbox, and Escape or Tab closes it. Unknown saved
+  keys survive choice-list changes; disabled options are skipped by navigation.
+  Both selection modes accept `placeholder` for no selection and
+  `selectionText(value, choices)` to format the displayed summary; returning
+  nil uses native selected labels. Single-select callbacks remain unchanged.
   A non-empty `label` enables the labeled layout;
   omitting it or passing `""` creates an unlabeled 34px selector whose body artwork
   stays inside its bounds, aligned with regular/square tertiary buttons.
@@ -100,7 +111,7 @@ Every control uses an options table:
   Dropdown menus retain their natural height up
   to three quarters of `UIParent`; longer lists use Blizzard's native
   scrolling-menu behavior and are vertically centered on the screen.
-  While a menu is open, Up/Down arrows select the previous/next available choice
+  In single-select menus, Up/Down arrows select the previous/next available choice
   without wrapping or closing the menu. The selected row is scrolled into view;
   the mouse wheel scrolls the list without changing selection. Enter or Space
   confirms the current selection and closes the menu without triggering chat or
@@ -570,11 +581,12 @@ their normal size. Override these with `titleOptions.fontObject` on the header
 or `fontObject` on the section when a consumer needs different typography.
 
 Flows provide `AddControl`, `AddText`, `AddSection`, `AddCustom`, `AddFrame`,
-`AddSpacer`, and nested `BeginGroup` / `BeginColumns`. An expandable header can be placed with
+`AddSpacer`, and nested `BeginGroup` / `BeginColumns` / `BeginGrid`. An expandable header can be placed with
 `AddControl("expandableHeader", options)`. Pass `indent = 1` to a placement
 table for standard sub-input indentation. Custom regions keep complex
 addon-owned positioning local without returning the whole page to absolute
-coordinates.
+coordinates. Use `AddCustom(height, { fillWidth = true })` when a custom region
+should follow the available width during resize; otherwise it keeps its initial width.
 
 Spacing follows CSS-style terminology: `padding*` is internal container space,
 `marginTop` and `marginBottom` surround one placed element, and `rowGap` or
@@ -622,6 +634,29 @@ it to the canvas's original minimum height.
 when their equal-width columns would be narrower than that minimum. Omit the
 option to retain fixed columns. Use a separate column region for each logical
 row when narrow layouts should read left-to-right, then top-to-bottom.
+
+Use `BeginGrid` for a list of cells that should wrap through intermediate column
+counts. `minColumnWidth` is required; `maxColumns` optionally caps the count.
+Cells retain their controls and flow left-to-right, then top-to-bottom:
+
+```lua
+local grid = root:BeginGrid({ minColumnWidth = 220, maxColumns = 3 })
+for _, choice in ipairs(choices) do
+    local cell = grid:AddCell()
+    cell:AddControl("checkbox", choice)
+end
+grid:Finish()
+```
+
+Each cell is a normal flow supporting nested groups/columns/grids and `SetShown`.
+Hidden cells take no space; each row uses its tallest visible cell. Grids fall
+back to one column when the available width is below the minimum, and keep equal
+cell widths on partial rows. `columnGap` defaults to the canvas style; `rowGap`
+adds space between rows beyond their cells' normal control margins (default 0).
+`indent` and `marginTop` apply to the region; `Finish({ marginBottom = ... })`
+sets its bottom margin and requests layout. Call `Finalize()` after construction;
+later additions, visibility changes and resizing reflow without recreating inputs.
+Grids require a tracked canvas.
 
 `BeginColumns({ verticalAlign = "center" })` vertically centers shorter flows
 beside the tallest column; `"bottom"` aligns their bottoms. The default is

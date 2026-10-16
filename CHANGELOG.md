@@ -4,6 +4,11 @@
 
 ### Added
 
+- Canvas grids wrap retained cells across a configurable number of columns,
+  with minimum widths, measured row heights and independent cell visibility.
+- Dropdowns support optional checkbox multi-selection, copied value sets,
+  custom summary text and empty-selection placeholders. Arrow keys move focus;
+  Enter/Space toggles checks without closing, with native scrolling and tooltips.
 - Sliders support `valueLabels` for numeric states such as Auto or Inherit,
   including case-insensitive input, normal stepping and numeric callbacks.
 - Dropdown choices support native headings, dividers, per-choice tooltips and

@@ -92,10 +92,22 @@ local function createMenuDescription(dropdown)
     function root:CreateRadio(label, selected, responder, value)
         local description = { label, selected, responder, value }
         function description:GetData() return self[4] end
-        function description:IsRadio() return true end
+        function description:IsRadio() return not self.checkbox end
+        function description:IsCheckbox() return self.checkbox == true end
         function description:CanSelect() return not self.disabled end
         function description:IsSelected() return self[2](self[4]) end
         function description:SetEnabled(enabled) self.disabled = not enabled end
+        function description:AddInitializer(callback)
+            self.initializers = self.initializers or {}
+            self.initializers[#self.initializers + 1] = callback
+        end
+        function description:AddResetter(callback)
+            self.resetters = self.resetters or {}
+            self.resetters[#self.resetters + 1] = callback
+        end
+        function description:HookOnLeave(callback)
+            self.onLeave = callback
+        end
         function description:SetTitleAndTextTooltip(title, text)
             self.tooltipTitle = title
             self.tooltipText = text
@@ -104,10 +116,17 @@ local function createMenuDescription(dropdown)
         self.elements[#self.elements + 1] = description
         return description
     end
+    function root:CreateCheckbox(label, selected, responder, value)
+        local description = self:CreateRadio(label, selected, responder, value)
+        description.checkbox = true
+        table.remove(self.radioButtons)
+        return description
+    end
     function root:CreateDecoration(kind, label)
         local description = { kind = kind, label = label }
         function description:GetData() return nil end
         function description:IsRadio() return false end
+        function description:IsCheckbox() return false end
         function description:CanSelect() return false end
         function description:IsSelected() return false end
         self.elements[#self.elements + 1] = description
@@ -682,6 +701,12 @@ local function makeFrame(frameType, parent, template)
     function frame:SetupMenu(callback)
         self.menuCallback = callback
     end
+    function frame:SetDefaultText(text)
+        self.defaultText = text
+    end
+    function frame:SetSelectionText(callback)
+        self.selectionFunc = callback
+    end
 
     function frame:GenerateMenu()
         self.generateMenuCount = (self.generateMenuCount or 0) + 1
@@ -705,6 +730,11 @@ local function makeFrame(frameType, parent, template)
             for _, child in ipairs({ menu:GetChildren() }) do
                 if child.scripts.OnHide then
                     child.scripts.OnHide(child)
+                end
+            end
+            for _, row in ipairs(menu.rows or {}) do
+                for _, resetter in ipairs(row.description.resetters or {}) do
+                    resetter(row)
                 end
             end
         end

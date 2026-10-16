@@ -3,7 +3,7 @@ return function(newEnvironment, loadVersion)
     local lib = loadVersion(environment, false)
     local parent = environment.CreateFrame("Frame")
     local header = lib:CreateCanvasLayout(parent, { width = 700, height = 34 })
-    local toolbar = header:GetRootFlow():AddCustom(34)
+    local toolbar = header:GetRootFlow():AddCustom(34, { fillWidth = true })
     local name = lib:CreateTextInput(toolbar, { value = "Retained name" })
     name:SetPoint("LEFT", toolbar, "LEFT", 0, 0)
     local enabled = lib:CreateCheckbox(toolbar, { value = true, label = "Enabled" })
@@ -50,6 +50,8 @@ return function(newEnvironment, loadVersion)
             header:SetSize(width, 34)
             layout:SetSize(width, 160)
             environment.Flush()
+            assert(toolbar:GetWidth() == header:GetContentWidth(),
+                "a filling custom header must resize with its content bounds")
             assert(layout:GetScrollBox():GetDerivedScrollOffset() == offset,
                 "reflow must preserve the scrolled position while it remains in range")
             for _, region in ipairs(regions) do

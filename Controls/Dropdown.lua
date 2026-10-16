@@ -24,6 +24,10 @@ end
 local NAVIGATION_ACTIONS = {
     activate = function(control)
         if control.dropdown:IsMenuOpen() then
+            if control._libModernSettingsMultiSelect then
+                control:_ToggleFocusedChoice()
+                return true
+            end
             -- Arrow navigation already applied the current selection.
             control.dropdown:CloseMenu()
         else
@@ -45,6 +49,31 @@ local NAVIGATION_ACTIONS = {
 
 local function onButtonStateChanged(dropdown)
     dropdown._libModernSettingsDropdownControl:_RefreshButtonState()
+end
+
+local function copySelections(value)
+    assert(value == nil or type(value) == "table", "multi-select value must be a set table or nil")
+    local result = {}
+    for key, selected in pairs(value or {}) do
+        assert(type(key) == "string" or type(key) == "number" or type(key) == "boolean",
+            "multi-select keys must be strings, numbers or booleans")
+        assert(type(selected) == "boolean", "multi-select values must be booleans")
+        if selected then
+            result[key] = true
+        end
+    end
+    return result
+end
+
+local function refreshMenuRowFocus(control, button, description)
+    -- Menu rows use an attached BACKGROUND highlight rather than a Button's
+    -- HIGHLIGHT texture. Preserve native mouse hover while adding keyboard focus.
+    if description:GetData() == control._libModernSettingsMenuFocus then
+        button.highlight:SetAlpha(1)
+        button.highlight:Show()
+    elseif not button:IsMouseMotionFocus() then
+        button.highlight:Hide()
+    end
 end
 
 local function configureDropdownButton(control)
@@ -176,6 +205,9 @@ local function configureDropdownVisibility(control)
 end
 
 local function createDropdown(parent, options)
+    assert(options.multiSelect == nil or type(options.multiSelect) == "boolean", "multiSelect must be a boolean or nil")
+    assert(options.selectionText == nil or type(options.selectionText) == "function", "selectionText must be a function or nil")
+    assert(options.placeholder == nil or type(options.placeholder) == "string", "placeholder must be a string or nil")
     assert(
         options.choices == nil or type(options.choices) == "table",
         "choices must be a table or nil"
@@ -217,6 +249,7 @@ local function createDropdown(parent, options)
     control._libModernSettingsChoices = options.choices or {}
     control._libModernSettingsGetChoices = options.getChoices
     control._libModernSettingsOnChanged = options.onChanged
+    control._libModernSettingsMultiSelect = options.multiSelect == true
     control._libModernSettingsLeftInset = leftInset
     control._libModernSettingsRightInset = rightInset
     control._libModernSettingsLabelLayout = { inputOffsetX = leftInset }
@@ -236,8 +269,16 @@ local function createDropdown(parent, options)
 
     control.label = label
     control.dropdown = dropdown
-    control.currentValue = options.value
+    control.currentValue = options.multiSelect and copySelections(options.value) or options.value
     configureDropdownButton(control)
+    if options.placeholder then
+        dropdown:SetDefaultText(options.placeholder)
+    end
+    if options.selectionText then
+        dropdown:SetSelectionText(function()
+            return options.selectionText(control:GetValue(), control:_GetChoices())
+        end)
+    end
 
     if not hasLabel then
         label:Hide()
@@ -285,12 +326,17 @@ end
 function dropdownMethods:_OnMenuOpened(menu)
     self._libModernSettingsOpenMenu = menu
     lib:_SetNavigationFocus(self, menu)
+    if self._libModernSettingsMultiSelect then
+        self:_EnsureMenuFocus()
+        self:_RefreshMenuFocus()
+    end
     self:_ScrollSelectionIntoView()
     self:_RefreshButtonState()
 end
 
 function dropdownMethods:_OnMenuClosed()
     self._libModernSettingsOpenMenu = nil
+    self._libModernSettingsMenuFocus = nil
     self:_RefreshButtonState()
 
     local keyboard = lib._navigationKeyboardFrame
@@ -307,11 +353,17 @@ function dropdownMethods:_ScrollSelectionIntoView()
         return
     end
 
-    local value = self:GetValue()
+    local multiSelect = self._libModernSettingsMultiSelect
+    local value
+    if multiSelect then
+        value = self._libModernSettingsMenuFocus
+    else
+        value = self:GetValue()
+    end
     menu.ScrollBox:ScrollToElementDataByPredicate(function(frame)
         -- An onChanged callback can regenerate the menu, replacing descriptions.
         local description = frame:GetElementDescription()
-        return description:IsRadio() and description:GetData() == value
+        return (multiSelect and description:IsCheckbox() or description:IsRadio()) and description:GetData() == value
     end, ScrollBoxConstants.AlignNearest, 0, ScrollBoxConstants.NoScrollInterpolation)
 end
 
@@ -319,6 +371,17 @@ function dropdownMethods:_StepSelection(direction)
     local dropdown = self.dropdown
     if not self:IsVisible() or not dropdown:IsEnabled() or not dropdown:IsMenuOpen() then
         return
+    end
+
+    if self._libModernSettingsMultiSelect then
+        local choices, index = self:_EnsureMenuFocus()
+        if index then
+            local target = math.max(1, math.min(#choices, index + direction))
+            self._libModernSettingsMenuFocus = choices[target]:GetData()
+            self:_ScrollSelectionIntoView()
+            self:_RefreshMenuFocus()
+        end
+        return true
     end
 
     local previous, following, selections = dropdown:CollectSelectionData()
@@ -343,6 +406,42 @@ function dropdownMethods:_StepSelection(direction)
     end
     self:_ScrollSelectionIntoView()
     return true
+end
+
+function dropdownMethods:_EnsureMenuFocus()
+    local choices, index, selected = {}, nil, nil
+    for _, description in self.dropdown:GetMenuDescription():EnumerateElementDescriptions() do
+        if description:IsCheckbox() and description:CanSelect() then
+            choices[#choices + 1] = description
+            if description:GetData() == self._libModernSettingsMenuFocus then
+                index = #choices
+            end
+            if not selected and description:IsSelected() then
+                selected = #choices
+            end
+        end
+    end
+    index = index or selected or (#choices > 0 and 1 or nil)
+    self._libModernSettingsMenuFocus = nil
+    if index then
+        self._libModernSettingsMenuFocus = choices[index]:GetData()
+    end
+    return choices, index
+end
+
+function dropdownMethods:_RefreshMenuFocus()
+    for button, description in pairs(self._libModernSettingsMenuRows or {}) do
+        refreshMenuRowFocus(self, button, description)
+    end
+end
+
+function dropdownMethods:_ToggleFocusedChoice()
+    local choices, index = self:_EnsureMenuFocus()
+    if index then
+        self.dropdown:Pick(choices[index], MenuInputContext.None)
+        self:_ScrollSelectionIntoView()
+        self:_RefreshMenuFocus()
+    end
 end
 
 function dropdownMethods:_InitializeMenu()
@@ -375,12 +474,15 @@ function dropdownMethods:_BuildMenu(rootDescription)
     rootDescription:AddMenuAcquiredCallback(centerScrollableMenuOnShow)
 
     local function isSelected(value)
+        if control._libModernSettingsMultiSelect then
+            return control.currentValue[value] == true
+        end
         return control:GetValue() == value
     end
 
     local function setSelected(value, inputData)
         control:_SelectValue(value)
-        if inputData.context ~= MenuInputContext.MouseButton then
+        if control._libModernSettingsMultiSelect or inputData.context ~= MenuInputContext.MouseButton then
             return MenuResponse.Refresh
         end
     end
@@ -394,7 +496,9 @@ function dropdownMethods:_BuildMenu(rootDescription)
             rootDescription:CreateDivider()
         else
             assert(choice.type == nil or choice.type == "choice", "unknown dropdown choice type")
-            local description = rootDescription:CreateRadio(
+            local multiSelect = control._libModernSettingsMultiSelect
+            local createChoice = multiSelect and rootDescription.CreateCheckbox or rootDescription.CreateRadio
+            local description = createChoice(rootDescription,
                 choice.label,
                 isSelected,
                 setSelected,
@@ -402,14 +506,44 @@ function dropdownMethods:_BuildMenu(rootDescription)
             )
             description:SetEnabled(choice.enabled ~= false)
 
+            if multiSelect then
+                assert(type(choice.value) == "string" or type(choice.value) == "number" or type(choice.value) == "boolean",
+                    "multi-select choice values must be strings, numbers or booleans")
+                control._libModernSettingsMenuRows = control._libModernSettingsMenuRows or {}
+                description:AddInitializer(function(button)
+                    control._libModernSettingsMenuRows[button] = description
+                    refreshMenuRowFocus(control, button, description)
+                end)
+                description:AddResetter(function(button)
+                    control._libModernSettingsMenuRows[button] = nil
+                    button.highlight:Hide()
+                end)
+            end
+
             if choice.tooltip then
                 description:SetTitleAndTextTooltip(choice.tooltipTitle or choice.label, choice.tooltip)
+            end
+            if multiSelect then
+                description:HookOnLeave(function(button)
+                    refreshMenuRowFocus(control, button, description)
+                end)
             end
         end
     end
 end
 
 function dropdownMethods:_SelectValue(value)
+    if self._libModernSettingsMultiSelect then
+        local selections = copySelections(self.currentValue)
+        local selected = not selections[value]
+        selections[value] = selected or nil
+        self.currentValue = selections
+        self._libModernSettingsMenuFocus = value
+        if self._libModernSettingsOnChanged then
+            self._libModernSettingsOnChanged(copySelections(selections), value, selected)
+        end
+        return
+    end
     self.currentValue = value
 
     if self._libModernSettingsOnChanged then
@@ -429,17 +563,25 @@ function dropdownMethods:_GenerateMenu()
 
     self.dropdown:GenerateMenu()
 
+    if self._libModernSettingsMultiSelect and self.dropdown:IsMenuOpen() then
+        self:_EnsureMenuFocus()
+        self:_RefreshMenuFocus()
+    end
+
     if menu and menu.ScrollBox:HasDataProvider() then
         menu.ScrollBox:SetScrollPercentage(scrollPercentage, ScrollBoxConstants.NoScrollInterpolation)
     end
 end
 
 function dropdownMethods:SetValue(value)
-    self.currentValue = value
+    self.currentValue = self._libModernSettingsMultiSelect and copySelections(value) or value
     self:_GenerateMenu()
 end
 
 function dropdownMethods:GetValue()
+    if self._libModernSettingsMultiSelect then
+        return copySelections(self.currentValue)
+    end
     return self.currentValue
 end
 

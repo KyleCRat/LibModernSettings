@@ -1,5 +1,19 @@
 # In-Game Validation
 
+Grid tests cover exact column breakpoints, partial rows, unequal cell heights,
+nested visibility, hidden-page resizing, late additions, pending edits, scroll
+position, Tab order and retained instances across library upgrades. In game,
+resize a checkbox grid through one/two/three columns and check label wrapping,
+keyboard order and custom headers using `fillWidth`.
+
+Multi-select dropdown tests cover copied sets, mouse/keyboard toggles, disabled
+choices, decorators, scrolling to focus, boundaries, pooled-row highlights,
+consumer normalization during picks, empty menus and live upgrades. In game,
+verify checks stay open, arrows move only focus, Enter/Space toggles once,
+mouse leave retains keyboard focus, and Escape/Tab return input focus normally.
+Check `placeholder` and `selectionText` summaries, resize/rebind/hide controls,
+and compare existing single-select dropdowns in mixed consumers.
+
 Grouped-dropdown tests cover headings/dividers, disabled saved selections,
 tooltips, menu regeneration and keyboard navigation across groups. In game,
 hover enabled/disabled choices, navigate long grouped lists with Up/Down, and

@@ -196,6 +196,9 @@ return function(lib, makeFrame, inputState)
         local previousRows = self.rows or {}
         local rows = {}
         for _, row in ipairs(previousRows) do
+            for _, resetter in ipairs(row.description.resetters or {}) do
+                resetter(row)
+            end
             row:Hide()
         end
         for index, element in description:EnumerateElementDescriptions() do
@@ -206,6 +209,11 @@ return function(lib, makeFrame, inputState)
             function row:GetElementDescription() return self.description end
             row:SetParent(self)
             row:Show()
+            row.highlight = row.highlight or row:CreateTexture(nil, "BACKGROUND")
+            row.highlight:Hide()
+            for _, initializer in ipairs(element.initializers or {}) do
+                initializer(row)
+            end
             rows[index] = row
         end
         self.rows = rows
@@ -217,6 +225,11 @@ return function(lib, makeFrame, inputState)
     end
     function menu:ReinitializeAll()
         self.refreshCount = (self.refreshCount or 0) + 1
+        for _, row in ipairs(self.rows or {}) do
+            for _, initializer in ipairs(row.description.initializers or {}) do
+                initializer(row)
+            end
+        end
     end
     local nativeWheels = 0
     local function nativeWheel(_, delta)
@@ -592,5 +605,6 @@ return function(lib, makeFrame, inputState)
     dofile("tests/tab_navigation.lua")(lib, makeFrame, inputState, openMenu, key)
     dofile("tests/button_navigation.lua")(lib, makeFrame, inputState, openMenu, key)
     dofile("tests/navigation_contract.lua")(lib, makeFrame, inputState, key)
+    dofile("tests/dropdown_multi.lua")(lib, openMenu, key, menu)
     print("LibModernSettings navigation tests passed")
 end

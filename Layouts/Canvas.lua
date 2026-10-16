@@ -28,11 +28,13 @@ local DEFAULT_STYLE = {
 lib._canvasLayoutPrototype = lib._canvasLayoutPrototype or {}
 lib._canvasFlowPrototype = lib._canvasFlowPrototype or {}
 lib._canvasColumnsPrototype = lib._canvasColumnsPrototype or {}
+lib._canvasGridPrototype = lib._canvasGridPrototype or {}
 lib._canvasLayouts = lib._canvasLayouts or setmetatable({}, { __mode = "k" })
 
 local Layout = lib._canvasLayoutPrototype
 local Flow = lib._canvasFlowPrototype
 local Columns = lib._canvasColumnsPrototype
+local Grid = lib._canvasGridPrototype
 
 local function defaultFont(role)
     if role == "title" or role == "titleWithDescription" then
@@ -448,8 +450,8 @@ local function setFlowFramesShown(flow, shown)
     shown = shown and flow.shown ~= false
 
     for _, entry in ipairs(flow.entries) do
-        if entry.columns then
-            for _, child in ipairs(entry.columns.flows) do
+        if entry.columns or entry.grid then
+            for _, child in ipairs((entry.columns or entry.grid).flows) do
                 setFlowFramesShown(child, shown)
             end
         elseif entry.group then
@@ -889,6 +891,89 @@ function Columns:_RefreshLayout()
     end
 end
 
+-- Unlike independent column flows, grid cells wrap in declaration order.
+-- Controls remain in their original flows as the available column count changes.
+function Flow:BeginGrid(options)
+    options = options or {}
+    assert(type(options) == "table", "grid options must be a table")
+    assert(self.entries, "grids require a tracked canvas")
+    assert(type(options.minColumnWidth) == "number"
+        and options.minColumnWidth > 0 and options.minColumnWidth < math.huge,
+        "grid minimum column width must be a positive finite number")
+    assert(options.maxColumns == nil or (type(options.maxColumns) == "number"
+        and options.maxColumns >= 1 and options.maxColumns < math.huge and options.maxColumns % 1 == 0),
+        "grid maximum columns must be a positive integer or nil")
+    for _, key in ipairs({ "columnGap", "rowGap", "marginTop" }) do
+        assert(options[key] == nil or (type(options[key]) == "number"
+            and options[key] >= 0 and options[key] < math.huge),
+            "grid " .. key .. " must be a non-negative finite number or nil")
+    end
+    self:_GetRect(options)
+    local grid = setmetatable({
+        parentFlow = self,
+        flows = {},
+        options = shallowCopy(options),
+    }, { __index = Grid })
+    self.entries[#self.entries + 1] = { grid = grid }
+    return grid
+end
+
+function Grid:AddCell()
+    local parent = self.parentFlow
+    local x, width = parent:_GetRect(self.options)
+    local flow = parent.layout:_CreateFlow(x, width, parent.cursor)
+    flow.parentFlow = parent
+    self.flows[#self.flows + 1] = flow
+    parent.layout:RequestLayout()
+    return flow
+end
+
+function Grid:Finish(options)
+    options = options or {}
+    assert(type(options) == "table", "grid finish options must be a table")
+    local marginBottom = options.marginBottom or 0
+    assert(type(marginBottom) == "number" and marginBottom >= 0 and marginBottom < math.huge,
+        "grid bottom margin must be a non-negative finite number")
+    self.finishOptions = shallowCopy(options)
+    self.parentFlow.layout:RequestLayout()
+end
+
+function Grid:_RefreshLayout()
+    local options = self.options
+    local parent = self.parentFlow
+    local x, width = parent:_GetRect(options)
+    local gap = options.columnGap or parent.layout.style.columnGap
+    local count = 0
+    for _, flow in ipairs(self.flows) do
+        if flow.shown ~= false then
+            count = count + 1
+        end
+    end
+    if count == 0 then
+        return
+    end
+
+    local columns = math.max(1, math.floor((width + gap) / (options.minColumnWidth + gap)))
+    columns = math.min(columns, count, options.maxColumns or columns)
+    local cellWidth = (width - (columns - 1) * gap) / columns
+    local rowStart = parent.cursor + (options.marginTop or 0)
+    local rowBottom = rowStart
+    local column = 0
+    for _, flow in ipairs(self.flows) do
+        if flow.shown ~= false then
+            if column == columns then
+                rowStart = rowBottom + (options.rowGap or 0)
+                column = 0
+            end
+            flow.x, flow.width = x + column * (cellWidth + gap), cellWidth
+            flow:_RefreshLayout(rowStart)
+            rowBottom = math.max(rowBottom, flow.cursor)
+            column = column + 1
+        end
+    end
+    parent.cursor = rowBottom + (self.finishOptions and self.finishOptions.marginBottom or 0)
+end
+
 function Flow:_RefreshLayout(cursor)
     self.cursor = cursor
 
@@ -899,6 +984,8 @@ function Flow:_RefreshLayout(cursor)
     for _, entry in ipairs(self.entries) do
         if entry.columns then
             entry.columns:_RefreshLayout()
+        elseif entry.grid then
+            entry.grid:_RefreshLayout()
         elseif entry.group then
             entry.group:_RefreshGroup()
         elseif entry.spacer then
