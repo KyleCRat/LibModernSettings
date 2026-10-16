@@ -112,6 +112,7 @@ end
 
 local function createColor(parent, options)
     assert(options.onChanged == nil or type(options.onChanged) == "function", "onChanged must be a function or nil")
+    assert(options.onPreview == nil or type(options.onPreview) == "function", "onPreview must be a function or nil")
     for _, key in ipairs({ "classColor", "accentColor" }) do
         local source = options[key]
         assert(source == nil or type(source) == "table" or type(source) == "function"
@@ -126,6 +127,7 @@ local function createColor(parent, options)
         and type(control.palette.Record) == "function" and type(control.palette.ToggleFavorite) == "function",
         "palette must provide GetColors, Record, and ToggleFavorite")
     control.onChanged = options.onChanged
+    control.onPreview = options.onPreview
     control.buttons = {}
     for _, mode in ipairs(MODES) do
         if mode == "custom" or control.sources[mode] then
@@ -234,6 +236,12 @@ end
 function colorMethods:SetOnChanged(callback)
     assert(callback == nil or type(callback) == "function", "onChanged must be a function or nil")
     self.onChanged = callback
+end
+
+function colorMethods:SetOnPreview(callback)
+    assert(callback == nil or type(callback) == "function", "onPreview must be a function or nil")
+    self:ClosePicker()
+    self.onPreview = callback
 end
 
 function colorMethods:SetControlEnabled(enabled, disabledTooltip)

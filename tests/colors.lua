@@ -569,5 +569,6 @@ return function(lib, makeFrame, inputState)
     assert(lib._controlTypes.color.factory == factory, "an older embed must not replace a newer control")
     lib._implementationMinor = currentMinor
     lib._loadedModules["Controls/Color"] = currentMinor
+    dofile("tests/color_preview.lua")(lib, makeFrame)
     print("LibModernSettings color picker tests passed")
 end

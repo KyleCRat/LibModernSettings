@@ -69,10 +69,15 @@ local function makeDragSurface(picker, width, height, x, y, update)
             Color.Clamp((frame:GetTop() - cursorY / scale) / frame:GetHeight()))
     end
     frame:SetScript("OnMouseDown", function(self, button)
-        if button ~= "LeftButton" or not picker:CommitInputs() then
+        local session = picker.session
+        if not session or button ~= "LeftButton" or not picker:CommitInputs()
+            or picker.session ~= session then
             return
         end
         fromCursor()
+        if picker.session ~= session then
+            return
+        end
         self:SetScript("OnUpdate", function(surface)
             if not IsMouseButtonDown("LeftButton") then
                 stopDrag(surface)
@@ -117,6 +122,24 @@ function Picker:Sync()
         self.inputs[channel.key]:SetValue(tostring(math.floor(color[channel.key] * channel.max + 0.5)))
     end
     self.opacity:SetValue(color.a * 100)
+    self:NotifyPreview()
+end
+
+function Picker:NotifyPreview()
+    local session = self.session
+    if not session or not session.onPreview then
+        return
+    end
+    local color = self.color
+    local previous = session.previewColor or session.original
+    if color.r == previous.r and color.g == previous.g
+        and color.b == previous.b and color.a == previous.a then
+        return
+    end
+    session.previewColor = Color.Copy(color, session.owner.hasOpacity)
+    local value = Color.Copy(session.previewColor)
+    value.mode = "custom"
+    session.onPreview(value)
 end
 
 function Picker:SetColor(value)
@@ -134,6 +157,9 @@ function Picker:SetColor(value)
 end
 
 function Picker:SetHSV(hue, saturation, brightness)
+    if not self.session then
+        return
+    end
     self.hue, self.saturation, self.brightness = hue, saturation, brightness
     self.color.r, self.color.g, self.color.b = Color.FromHSV(hue, saturation, brightness)
     self:SetError()
@@ -141,8 +167,12 @@ function Picker:SetHSV(hue, saturation, brightness)
 end
 
 function Picker:CommitInputs()
+    local session = self.session
     local valid = self.hex:CommitAndClearFocus()
     for _, channel in ipairs(CHANNELS) do
+        if self.session ~= session then
+            return false
+        end
         if not self.inputs[channel.key]:CommitAndClearFocus() then
             valid = false
         end
@@ -171,7 +201,15 @@ function Picker:ToggleFavorite(color)
 end
 
 function Picker:Apply()
-    if not self:CommitInputs() or self.inputError then
+    local session = self.session
+    if not session then
+        return
+    end
+    local valid = self:CommitInputs()
+    if self.session ~= session then
+        return
+    end
+    if not valid or self.inputError then
         self.inputError = nil
         local input = self.errorInput
         local focused = GetCurrentKeyBoardFocus()
@@ -479,7 +517,7 @@ function lib:_OpenColorPicker(owner)
     self._colorPicker = self._colorPicker or createPicker()
     local picker = self._colorPicker
     local original = owner:GetValue()
-    picker.session = { owner = owner, original = original }
+    picker.session = { owner = owner, original = original, onPreview = owner.onPreview }
     picker.hue = 0
     picker:SetColor(original)
     picker.previous:SetValue(original)
@@ -508,6 +546,7 @@ function lib:_CloseColorPicker(owner, apply, returnFocus)
     if not picker or not picker.session or picker.session.owner ~= owner then
         return
     end
+    local session = picker.session
     local color = Color.Copy(picker.color, owner.hasOpacity)
     picker.session = nil
     stopDrag(picker.square)
@@ -515,6 +554,9 @@ function lib:_CloseColorPicker(owner, apply, returnFocus)
     picker:DiscardInputs()
     picker.messages:Clear()
     picker.frame:Hide()
+    if session.previewColor then
+        session.onPreview(nil)
+    end
     if apply and owner.enabled and owner:IsVisible() then
         owner.palette:Record(color)
         owner:_AcceptPickerColor(color)

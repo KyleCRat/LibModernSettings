@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- Color inputs support optional `onPreview(value)` callbacks for live drafts,
+  with `onPreview(nil)` cleanup on every close path. Apply still commits once
+  through `onChanged`; saved values and recent colors remain unchanged until then.
+
 ### Fixed
 
 - Scroll-area margins now consume mouse-wheel input and scroll their pane,

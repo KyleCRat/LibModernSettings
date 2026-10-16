@@ -1,5 +1,12 @@
 # In-Game Validation
 
+Color preview tests cover draft callbacks, duplicate suppression, RGB/RGBA,
+Apply ordering, all cancellation paths, owner rebinding and callback replacement.
+In game, enable `onPreview`, drag hue/saturation/opacity, edit hex/channels and
+choose swatches: the consumer must preview without saving. Cancel/X/Escape,
+hide/disable/rebind the input or open another picker: restore the saved color.
+Apply must save once, add one recent color and preserve keyboard navigation.
+
 Scroll-area tests cover legacy canvas spacing, inset/compact presets, independent
 border overrides, header alignment, native lists, resizing, invalid geometry,
 and retained native widgets across library upgrades. Wheel tests cover full-pane

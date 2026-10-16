@@ -365,12 +365,24 @@ adds a recent color; explicit favorite changes survive cancellation.
 The built-in class palette uses playable classes only. Class and item-quality
 swatches change RGB while preserving the draft's opacity; saved palettes retain RGBA.
 
+For live rendering, provide `onPreview(value)`. Color changes send a fresh custom
+RGBA value without changing `GetValue()` or firing `onChanged`. Hue/saturation,
+opacity, swatches and valid committed text edits all preview; unchanged colors
+do not repeat the callback. Keep this draft outside saved settings.
+Once a preview has started, `onPreview(nil)` clears it when the session ends,
+including Cancel, X, Escape, owner hiding/disabling/rebinding, another picker
+opening, and Apply. On Apply, that cleanup runs before the single `onChanged`
+commit. Restore the saved appearance on nil, and render the committed value in
+`onChanged`. Inputs without `onPreview` retain their apply-only behavior.
+
 `GetValue()` returns a fresh RGBA table including mode. Class/accent values also
 include `custom`, an RGBA table holding the remembered Custom color; persist the
 whole value to retain it across input refreshes and reloads. `SetValue(value)`
-cancels any open edit and sets the value without a callback. For class/accent
+cancels any open edit and sets the value without `onChanged`, ending any live
+preview. For class/accent
 values, `custom` seeds the Custom swatch, falling back to the supplied RGBA when
-omitted. `SetOnChanged(callback)`,
+omitted. `SetOnChanged(callback)` and `SetOnPreview(callback)` replace callbacks;
+changing the preview callback first cancels an open picker through its old callback.
 `SetControlEnabled(enabled, tooltip)`, `OpenPicker()`, and `ClosePicker()` are also
 available. Hide, disable, rebind, or close an input when its data owner changes;
 closing discards its draft. Apply/Cancel returns keyboard focus to Custom.
