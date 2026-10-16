@@ -148,6 +148,13 @@ Validate Blizzard-owned templates and interaction behavior in game:
   confirm it caps near three quarters of the UI, scrolls to the final choice,
   remains vertically centered, and remains usable at 4K and common UI scales.
 - Move sliders with the thumb and both steppers.
+- Align dropdowns beside regular/square tertiary buttons and text inputs.
+  Check the 34px recessed body, inset square caret, centered selection text and
+  long-text tooltip. Only the caret presses down. The body uses text-input focus
+  glow while focused/open, with no glow for mouse hover alone; losing focus while
+  hovered must clear it. Check disabled states. Click both text and caret:
+  each must open/close the same menu once and be one Tab stop. Recheck controls
+  created before a compatible library upgrade.
 - Select a slider by clicking its track, a stepper or numeric field. Wheel
   over each part and press Up/Down: each action must change one step, including
   decimal/suffixed values and pending text. Hold Shift while scrolling for ten

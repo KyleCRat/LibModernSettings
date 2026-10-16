@@ -13,6 +13,13 @@
   with `onPreview(nil)` cleanup on every close path. Apply still commits once
   through `onChanged`; saved values and recent colors remain unchanged until then.
 
+### Changed
+
+- Dropdowns use a 34px recessed text-input body and focus glow with an inset
+  square caret. Only the caret presses down; native menus and navigation remain.
+  Review fixed labeled-row heights and old dropdown edge compensations;
+  existing controls adopt the artwork during compatible upgrades.
+
 ### Fixed
 
 - Non-scrolling canvases can set `scrollbarWidth = 0` to remove the right inset

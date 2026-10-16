@@ -7,9 +7,12 @@ if not lib or lib._implementationMinor ~= MINOR
 end
 
 local DEFAULT_WIDTH = 270
--- The native 25px button's border/shadow extends beyond its hitbox. Give it
--- a regular control footprint without stretching Blizzard's child textures.
 local DEFAULT_INPUT_HEIGHT = 34
+local INPUT_ATLAS = "common-button-tertiary-depressed-normal"
+local ARROW_BUTTON_SIZE = 26
+local ARROW_SIZE = 12
+local ARROW_INSET = 4
+local TEXT_INSET = 12
 local DEFAULT_INSET = 0
 local LEGACY_INSET = 8
 local DEFAULT_MENU_HEIGHT_RATIO = 0.75
@@ -39,6 +42,39 @@ local NAVIGATION_ACTIONS = {
     previous = stepSelection,
     next = stepSelection,
 }
+
+local function onButtonStateChanged(dropdown)
+    dropdown._libModernSettingsDropdownControl:_RefreshButtonState()
+end
+
+local function configureDropdownButton(control)
+    local dropdown = control.dropdown
+    dropdown._libModernSettingsDropdownControl = control
+
+    -- Keep the template's menu, selection text, tooltip and input behavior.
+    -- The body shares text-input art; only the inset square presses down.
+    dropdown.OnButtonStateChanged = onButtonStateChanged
+    dropdown:SetHeight(DEFAULT_INPUT_HEIGHT)
+    dropdown.Background:ClearAllPoints()
+    dropdown.Background:SetAllPoints(dropdown)
+    dropdown.Background:SetAtlas(INPUT_ATLAS, false)
+    dropdown.focusTexture = dropdown.focusTexture or lib:_CreateEditBoxFocusTexture(dropdown)
+
+    if not dropdown.arrowBackground then
+        dropdown.arrowBackground = dropdown:CreateTexture(nil, "ARTWORK")
+    end
+    dropdown.arrowBackground:SetSize(ARROW_BUTTON_SIZE, ARROW_BUTTON_SIZE)
+    lib:_SetLayoutPoint(dropdown.arrowBackground, "RIGHT", dropdown, "RIGHT", -ARROW_INSET, 0)
+    dropdown.Arrow:SetSize(ARROW_SIZE, ARROW_SIZE)
+    dropdown.Arrow:SetRotation(math.pi * 1.5)
+    dropdown.Text:ClearAllPoints()
+    dropdown.Text:SetPoint("LEFT", dropdown, "LEFT", TEXT_INSET, 0)
+    dropdown.Text:SetPoint("RIGHT", dropdown.arrowBackground, "LEFT", -ARROW_INSET, 0)
+    dropdown.Text:SetHeight(DEFAULT_INPUT_HEIGHT)
+    dropdown.Text:SetJustifyV("MIDDLE")
+    dropdown.Text:SetWordWrap(false)
+    dropdown.Text:SetMaxLines(1)
+end
 
 local function configureDropdownMenu(control)
     local dropdown = control.dropdown
@@ -88,9 +124,6 @@ end
 
 local function layoutDropdown(control)
     local width = control:GetWidth()
-    local nativeHeight = control.dropdown:GetHeight()
-    local inputHeight = math.max(DEFAULT_INPUT_HEIGHT, nativeHeight)
-    local bottomInset = (inputHeight - nativeHeight) / 2
     local leftInset = control._libModernSettingsLeftInset
     local rightInset = control._libModernSettingsRightInset
     control.label:SetWidth(width)
@@ -103,11 +136,11 @@ local function layoutDropdown(control)
         return lib:_LayoutStackedLabel(
             control, control.label, control.dropdown,
             control._libModernSettingsLabelLayout
-        ) + bottomInset
+        )
     end
 
     lib:_SetLayoutPoint(control.dropdown, "LEFT", control, "LEFT", leftInset, 0)
-    return inputHeight
+    return DEFAULT_INPUT_HEIGHT
 end
 
 local function onDropdownShow(control)
@@ -204,6 +237,7 @@ local function createDropdown(parent, options)
     control.label = label
     control.dropdown = dropdown
     control.currentValue = options.value
+    configureDropdownButton(control)
 
     if not hasLabel then
         label:Hide()
@@ -225,14 +259,39 @@ end
 
 local dropdownMethods = {}
 
+function dropdownMethods:_RefreshButtonState()
+    local dropdown = self.dropdown
+    local enabled = dropdown:IsEnabled()
+    local pressed = dropdown:IsDown() or dropdown:IsMenuOpen()
+    local state = "normal"
+    if not enabled then
+        state = "disabled"
+    elseif pressed then
+        state = "pressed"
+    elseif dropdown:IsOver() then
+        state = "hover"
+    end
+
+    dropdown.focusTexture:SetShown(enabled and
+        (self._libModernSettingsKeyboardFocused == true or dropdown:IsMenuOpen()))
+    dropdown.arrowBackground:SetAtlas("common-button-tertiary-square-" .. state, false)
+    dropdown.Arrow:SetAtlas(enabled and "common-dropdown-icon-next" or "common-dropdown-icon-next-disabled", false)
+    lib:_SetLayoutPoint(dropdown.Arrow, "CENTER", dropdown.arrowBackground, "CENTER",
+        enabled and pressed and 1 or 0, enabled and pressed and 0 or 1)
+    local color = enabled and HIGHLIGHT_FONT_COLOR or GRAY_FONT_COLOR
+    dropdown.Text:SetTextColor(color.r, color.g, color.b)
+end
+
 function dropdownMethods:_OnMenuOpened(menu)
     self._libModernSettingsOpenMenu = menu
     lib:_SetNavigationFocus(self, menu)
     self:_ScrollSelectionIntoView()
+    self:_RefreshButtonState()
 end
 
 function dropdownMethods:_OnMenuClosed()
     self._libModernSettingsOpenMenu = nil
+    self:_RefreshButtonState()
 
     local keyboard = lib._navigationKeyboardFrame
     if keyboard and keyboard.control == self then
@@ -434,6 +493,7 @@ local function initializeDropdown(dropdown, options)
         options.enabled ~= false,
         options.disabledTooltip
     )
+    dropdown:_RefreshButtonState()
     configureDropdownVisibility(dropdown)
 end
 
@@ -445,6 +505,14 @@ local function refreshDropdownAppearance(control, options)
     control._libModernSettingsExplicitHeight = options.height
     lib:_ApplyDefaultFont(control.label, options.fontObject or GameFontHighlight)
     control:RefreshLayout()
+end
+
+-- Existing controls need their regions before prototype replacement can refresh
+-- their appearance or navigation state through an older embed's callbacks.
+for control, controlType in pairs(lib._controlInstances) do
+    if controlType == "dropdown" then
+        configureDropdownButton(control)
+    end
 end
 
 lib:RegisterControlType(
@@ -466,6 +534,7 @@ lib:RegisterControlNavigation("dropdown", {
     hover = function(control, highlighted)
         -- DropdownButton uses ButtonStateBehaviorMixin, not Button highlight textures.
         if highlighted == (control.dropdown:IsOver() == true) then
+            control:_RefreshButtonState()
             return
         end
         if highlighted then
@@ -491,6 +560,8 @@ for control, controlType in pairs(lib._controlInstances) do
         end
         configureDropdownVisibility(control)
         configureDropdownMenu(control)
+        control:RefreshLayout()
+        control:_RefreshButtonState()
     end
 end
 

@@ -40,7 +40,8 @@ return function(lib, makeFrame, inputState, openMenu, key)
     assert(keyboard.control == first and not first.dropdown:IsMenuOpen() and first:GetValue() == 1,
         "Tab must focus the dropdown without opening its menu")
     first.dropdown.scripts.OnLeave(first.dropdown)
-    assert(first.dropdown.renderedHover, "mouse leave must preserve the focused dropdown's hover state")
+    assert(first.dropdown.focusTexture:IsShown(),
+        "mouse leave must preserve the focused dropdown's input glow")
     key("DOWN")
     assert(first:GetValue() == 1 and keyboard.propagateKeyboardInput,
         "closed dropdowns must not change selection on arrow keys")
@@ -52,7 +53,7 @@ return function(lib, makeFrame, inputState, openMenu, key)
     assert(not first.dropdown:IsMenuOpen() and keyboard.control == first)
     key("TAB")
     assert(not first.dropdown:IsMenuOpen() and not second.dropdown:IsMenuOpen() and keyboard.control == second)
-    assert(not first.dropdown.renderedHover and second.dropdown.renderedHover)
+    assert(not first.dropdown.focusTexture:IsShown() and second.dropdown.focusTexture:IsShown())
     assert(not keyboard.propagateKeyboardInput,
         "Tab must remain consumed when focusing the next dropdown resets the keyboard frame")
     key("ENTER")

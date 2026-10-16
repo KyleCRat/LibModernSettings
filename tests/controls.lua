@@ -737,6 +737,7 @@ local function makeFrame(frameType, parent, template)
     end
 
     function frame:Update()
+        self.updateCount = (self.updateCount or 0) + 1
         self.renderedValue = self.parent:GetValue()
     end
 
@@ -755,6 +756,10 @@ local function makeFrame(frameType, parent, template)
 
     function frame:IsOver()
         return self.over
+    end
+
+    function frame:IsDown()
+        return self.down
     end
 
     function frame:OnLeave()
@@ -833,8 +838,19 @@ local function makeFrame(frameType, parent, template)
     end
 
     if frameType == "DropdownButton" then
+        frame.Background = makeRegion()
+        frame.Arrow = makeRegion()
+        frame.Text = makeFontString()
         frame:SetScript("OnEnter", frame.OnEnter)
         frame:SetScript("OnLeave", frame.OnLeave)
+        frame:SetScript("OnEnable", function(self)
+            self:OnButtonStateChanged()
+        end)
+        frame:SetScript("OnDisable", function(self)
+            self.down = nil
+            self.over = nil
+            self:OnButtonStateChanged()
+        end)
     end
 
     return frame
@@ -1047,9 +1063,9 @@ dofile("Controls/Slider.lua")
 dofile("Controls/TextInput.lua")
 dofile("Controls/Dropdown.lua")
 dofile("Layouts/Field.lua")
-local beforeDeferredRefresh = oldDropdown.dropdown.visualRefreshCount or 0
+local beforeDeferredRefresh = oldDropdown.dropdown.updateCount or 0
 runDeferredCallbacks()
-assert(oldDropdown.dropdown.visualRefreshCount == beforeDeferredRefresh + 1)
+assert(oldDropdown.dropdown.updateCount == beforeDeferredRefresh + 1)
 
 oldButton:SetButtonText("Updated")
 assert(oldButton.label.point[1] == "CENTER")
@@ -1316,8 +1332,8 @@ local labeledDropdown = lib:CreateDropdown(nil, {
 })
 
 assert(labeledDropdown.width == 270)
-assert(labeledDropdown.height == 48.5)
-assert(labeledDropdown.dropdown.height == 25, "layout spacing must not stretch dropdown artwork")
+assert(labeledDropdown.height == 53)
+assert(labeledDropdown.dropdown.height == 34, "dropdown artwork must match tertiary button height")
 assert(labeledDropdown.label:IsShown() == true)
 assert(labeledDropdown.label.point[1] == "TOPLEFT")
 assert(labeledDropdown.dropdown.width == 270)
@@ -1409,7 +1425,7 @@ local inlineDropdown = lib:CreateDropdown(nil, {
 
 assert(inlineDropdown.width == 270)
 assert(inlineDropdown.height == 34)
-assert(inlineDropdown.dropdown.height == 25)
+assert(inlineDropdown.dropdown.height == 34)
 assert(inlineDropdown.label:IsShown() == false)
 assert(inlineDropdown.dropdown.width == 270)
 assert(inlineDropdown.dropdown.point[1] == "LEFT")
@@ -1417,7 +1433,7 @@ assert(inlineDropdown.dropdown.point[2] == inlineDropdown)
 assert(inlineDropdown.dropdown.point[3] == "LEFT")
 assert(inlineDropdown.dropdown.point[4] == 0)
 assert(inlineDropdown.dropdown.point[5] == 0)
-assert(inlineDropdown:GetContentTopInset() == 4.5)
+assert(inlineDropdown:GetContentTopInset() == 0)
 
 inlineDropdown:SetControlWidth(180)
 assert(inlineDropdown.width == 180)
@@ -1440,20 +1456,21 @@ do
     canvas.visible = true
     dropdown.scripts.OnShow(dropdown)
     assert(#deferredCallbacks == 1)
-    assert(dropdown.dropdown.visualRefreshCount == nil)
+    assert(dropdown.dropdown.updateCount == nil)
     runDeferredCallbacks()
-    assert(dropdown.dropdown.visualRefreshCount == 1)
+    assert(dropdown.dropdown.updateCount == 1)
     assert(dropdown.dropdown.renderedValue == "latest")
-    assert(dropdown.dropdown.renderedEnabled == false)
+    assert(dropdown.dropdown.Background.atlas == "common-button-tertiary-depressed-normal")
+    assert(dropdown.dropdown.arrowBackground.atlas == "common-button-tertiary-square-disabled")
 
     dropdown.scripts.OnShow(dropdown)
     canvas.visible = false
     runDeferredCallbacks()
-    assert(dropdown.dropdown.visualRefreshCount == 1)
+    assert(dropdown.dropdown.updateCount == 1)
     canvas.visible = true
     dropdown.scripts.OnShow(dropdown)
     runDeferredCallbacks()
-    assert(dropdown.dropdown.visualRefreshCount == 2)
+    assert(dropdown.dropdown.updateCount == 2)
     assert(#deferredCallbacks == 0)
 end
 
@@ -1535,7 +1552,7 @@ do
         })
 
         assert(dropdown.label:IsShown() == case.visible)
-        assert(dropdown.height == (case.visible and 48.5 or 34))
+        assert(dropdown.height == (case.visible and 53 or 34))
         assert(slider.label:IsShown() == case.visible)
         assert(slider.height == (case.visible and 48 or 39))
         assert(slider.slider.height == 19)
@@ -1809,7 +1826,7 @@ local customStackedField = lib:CreateField(nil, {
 local customStackedDropdown = customStackedField:GetControl()
 
 assert(customStackedField.label:GetHeight() == 24)
-assert(customStackedField.height == 67.5)
+assert(customStackedField.height == 72)
 assert(customStackedDropdown.point[5]
     - customStackedDropdown:GetContentTopInset() == -11)
 
@@ -1951,18 +1968,18 @@ do
     assert(labeledDropdown.dropdown.width == 300)
     assert(labeledDropdown.height == 80)
     labeledDropdown:SetControlHeight(nil)
-    assert(labeledDropdown.height == 48.5)
+    assert(labeledDropdown.height == 53)
     labeledDropdown.label.stringHeight = 24
     labeledDropdown:RefreshLayout()
-    assert(labeledDropdown.height == 60.5)
+    assert(labeledDropdown.height == 65)
 
     stackedDropdownField:SetWidth(360)
     assert(stackedDropdownField.label.width == 360)
     assert(stackedDropdown.width == 360 and stackedDropdown.dropdown.width == 360)
     stackedDropdown:SetControlHeight(40)
-    assert(stackedDropdownField.height == 51.5)
+    assert(stackedDropdownField.height == 56)
     stackedDropdown:SetControlHeight(nil)
-    assert(stackedDropdownField.height == 48.5)
+    assert(stackedDropdownField.height == 53)
 
     sliderControl.valueBox:SetFocus()
     sliderControl.valueBox:SetText("1.3")
@@ -2079,6 +2096,7 @@ do
 end
 
 dofile("tests/navigation.lua")(lib, makeFrame, inputState)
+dofile("tests/dropdown_button.lua")(lib, oldDropdown)
 dofile("tests/slider_labels.lua")(lib, inputState)
 dofile("tests/button_selection.lua")(lib, makeFrame)
 dofile("tests/button_icons.lua")(lib, makeFrame)

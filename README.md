@@ -74,8 +74,11 @@ Every control uses an options table:
   Texture, color and UVs remain caller-owned. Keep button state
   artwork below `OVERLAY` sublevel 1. It returns the attached mask and reuses it
   on later calls, including compatible library upgrades.
-- `CreateDropdown(parent, options)` creates a `WowStyle1DropdownTemplate`
-  selector. Use `label`, `width`, `value`, `choices` or `getChoices`,
+- `CreateDropdown(parent, options)` creates a recessed text-input-style selector
+  with an inset tertiary square caret, retaining Blizzard's native menu and selection
+  behavior. The input focus glow appears while keyboard-focused or open, not on
+  mouse hover alone. Only the caret square uses hover, pressed and disabled art.
+  Use `label`, `width`, `value`, `choices` or `getChoices`,
   `tooltip`, and `onChanged`. Choice records use `{ value, label }`, with optional
   `tooltip` text, `tooltipTitle` and `enabled = false`. Add `{ type = "title", label = "Group" }`
   and `{ type = "divider" }` records for native menu headings and separators.
@@ -83,11 +86,17 @@ Every control uses an options table:
   a disabled saved value can remain selected. `SetChoices()` and `getChoices`
   support the same records, including updated tooltip and enabled state.
   A non-empty `label` enables the labeled layout;
-  omitting it or passing `""` creates an unlabeled selector with a 34px footprint
-  around the native 25px button artwork. Both layouts default to zero side
+  omitting it or passing `""` creates an unlabeled 34px selector whose body artwork
+  stays inside its bounds, aligned with regular/square tertiary buttons.
+  The inset caret shares the selector's single mouse and keyboard target.
+  Both layouts default to zero side
   insets; `leftInset` and `rightInset` override either side independently. A built-in label adds its
   natural height and a 7px gap above the input, with no extra row space below.
-  Use `height` only when intentionally reserving a taller or shorter row.
+  Use `height` only to reserve a different row height; the button stays 34px.
+  Stacked labels reserve the full button height, so consumers with fixed labeled
+  row heights should review their spacing. Existing `leftInset`/`rightInset`
+  options remain supported; old adjustments for native artwork overhang can
+  usually be removed.
   Dropdown menus retain their natural height up
   to three quarters of `UIParent`; longer lists use Blizzard's native
   scrolling-menu behavior and are vertically centered on the screen.
@@ -199,9 +208,9 @@ Default controls do not reserve external margins. Gaps reference input frames,
 not visible atlas pixels. Each input type stays consistent between built-in
 labels and Fields without trying to make different input artwork identical.
 
-Dropdowns use a 34px input footprint around Blizzard's unstretched 25px button
-so inline rows leave room for its border and shadow. Stacked Fields and built-in
-labels retain their label gap and include the same lower artwork allowance.
+Dropdown bodies use the full 34px input footprint, aligned with text inputs and
+tertiary square buttons. Their focus glow uses the same small outset as text
+inputs. Stacked Fields and built-in labels retain their normal label gap.
 Canvas flows still default to a 4px `rowGap`, overridable per canvas or through
 individual placement margins; explicit control heights remain supported.
 

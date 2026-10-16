@@ -387,7 +387,8 @@ return function(lib, makeFrame, inputState)
         local value, changes = dropdown:GetValue(), picks
         key(activationKey)
         assert(not dropdown.dropdown:IsMenuOpen() and dropdown:GetValue() == value and picks == changes)
-        assert(keyboard.control == dropdown and keyboard:IsVisible() and dropdown.dropdown.renderedHover)
+        assert(keyboard.control == dropdown and keyboard:IsVisible()
+            and dropdown.dropdown.focusTexture:IsShown())
         assert(not keyboard.propagateKeyboardInput, "activation must not reach chat or jump bindings")
     end
     openMenu()
@@ -405,7 +406,8 @@ return function(lib, makeFrame, inputState)
         if closeFirst then dropdown.dropdown:CloseMenu() end
         keyboard.scripts.OnEvent(keyboard, "GLOBAL_MOUSE_DOWN", "LeftButton")
         if not closeFirst then dropdown.dropdown:CloseMenu() end
-        assert(keyboard.control == nil and not keyboard:IsShown() and not dropdown.dropdown.renderedHover,
+        assert(keyboard.control == nil and not keyboard:IsShown()
+            and not dropdown.dropdown.focusTexture:IsShown(),
             "outside clicks must release focus regardless of menu-close callback order")
     end
     inputState.mouseFoci = {}
@@ -566,8 +568,11 @@ return function(lib, makeFrame, inputState)
     assert(menu.ScrollBox:GetScript("OnMouseWheel") == nativeWheel)
     assert(#dropdown.dropdown.callbacks.OnMenuOpen == 1 and #dropdown.dropdown.callbacks.OnMenuClose == 1)
 
-    -- Existing dropdowns can already have menu navigation but no closed-input focus hooks.
+    -- Older dropdowns can have retained appearance/menu callbacks but lack the
+    -- new regions and closed-input focus hooks. Prepare regions before refresh.
     dropdown.dropdown._libModernSettingsInputNavigationHooked = nil
+    dropdown.dropdown.focusTexture = nil
+    dropdown.dropdown.arrowBackground = nil
     for _, script in ipairs({ "OnEnter", "OnLeave", "OnDisable", "OnHide" }) do
         dropdown.dropdown.scriptHooks[script] = nil
         dropdown.dropdown:SetScript(script, nil)
@@ -577,7 +582,8 @@ return function(lib, makeFrame, inputState)
     dofile("Controls/Dropdown.lua")
     dropdown:_FocusForTab()
     dropdown.dropdown.scripts.OnLeave(dropdown.dropdown)
-    assert(dropdown.dropdown.renderedHover, "upgraded dropdowns must retain their keyboard hover highlight")
+    assert(dropdown.dropdown.focusTexture:IsShown(),
+        "upgraded dropdowns must retain their keyboard focus glow")
     dropdown.dropdown:SetEnabled(false)
     assert(not keyboard:IsShown() and keyboard.control == nil,
         "upgraded dropdowns must release closed-input focus when disabled")
