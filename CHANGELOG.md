@@ -4,6 +4,8 @@
 
 ### Added
 
+- Sliders support `valueLabels` for numeric states such as Auto or Inherit,
+  including case-insensitive input, normal stepping and numeric callbacks.
 - Dropdown choices support native headings, dividers, per-choice tooltips and
   disabled entries. Keyboard navigation skips non-selectable rows while keeping
   a disabled saved selection visible.

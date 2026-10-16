@@ -35,6 +35,44 @@ local function isFiniteNumber(value)
     return type(value) == "number" and value == value and math.abs(value) < math.huge
 end
 
+local function snapValue(value, options)
+    local stepIndex = math.floor(((value - options.minValue) / options.step) + 0.5)
+
+    return options.minValue + (stepIndex * options.step)
+end
+
+local function normalizeValueLabel(text)
+    return text:match("^%s*(.-)%s*$"):lower()
+end
+
+local function prepareValueLabels(options)
+    local maxLetters = options.maxLetters or 5
+    if options.valueLabels == nil then
+        return nil, nil, maxLetters
+    end
+
+    assert(type(options.valueLabels) == "table", "valueLabels must be a table or nil")
+    local labels, values = {}, {}
+
+    for value, label in pairs(options.valueLabels) do
+        assert(isFiniteNumber(value), "valueLabels keys must be finite numbers")
+        assert(type(label) == "string" and label:find("%S"), "valueLabels must contain non-empty labels")
+        local normalizedValue = snapValue(value, options)
+        local normalizedLabel = normalizeValueLabel(label)
+
+        assert(isFiniteNumber(normalizedValue), "valueLabels must snap to finite values")
+        assert(labels[normalizedValue] == nil, "valueLabels must name distinct steps")
+        assert(values[normalizedLabel] == nil, "valueLabels must have distinct labels ignoring case and whitespace")
+        labels[normalizedValue] = label
+        values[normalizedLabel] = normalizedValue
+        if maxLetters > 0 then
+            maxLetters = math.max(maxLetters, #label)
+        end
+    end
+
+    return labels, values, maxLetters
+end
+
 local function updateSliderWheel(control)
     local enabled = control.valueBox:IsEnabled() and control.valueBox:HasFocus()
     control:EnableMouseWheel(enabled)
@@ -155,6 +193,7 @@ end
 
 local function createSlider(parent, options)
     validateOptions(options)
+    local valueLabels, valuesByLabel, maxLetters = prepareValueLabels(options)
 
     local control = CreateFrame("Frame", nil, parent)
     local width = options.width or 270
@@ -177,6 +216,8 @@ local function createSlider(parent, options)
         step = options.step,
         inputFormatter = options.inputFormatter,
         inputParser = options.inputParser,
+        valueLabels = valueLabels,
+        valuesByLabel = valuesByLabel,
         suffix = options.suffix or "",
     }
     control._libModernSettingsOnChanged = options.onChanged
@@ -216,7 +257,7 @@ local function createSlider(parent, options)
     valueBox:SetPoint("LEFT", slider, "RIGHT", inputGap, 0)
     valueBox:SetAutoFocus(false)
     valueBox:SetFontObject(options.inputFontObject or GameFontHighlight)
-    valueBox:SetMaxLetters(options.maxLetters or 5)
+    valueBox:SetMaxLetters(maxLetters)
     valueBox:SetJustifyH("CENTER")
     valueBox:SetJustifyV("MIDDLE")
     valueBox:SetTextInsets(4, 4, 0, 0)
@@ -268,12 +309,7 @@ function sliderMethods:RefreshLayout()
 end
 
 function sliderMethods:_SnapValue(value)
-    local options = self._libModernSettingsSliderOptions
-    local stepIndex = math.floor(
-        ((value - options.minValue) / options.step) + 0.5
-    )
-
-    return options.minValue + (stepIndex * options.step)
+    return snapValue(value, self._libModernSettingsSliderOptions)
 end
 
 function sliderMethods:_GetTrackValue(value)
@@ -287,6 +323,11 @@ end
 
 function sliderMethods:_FormatValue(value)
     local options = self._libModernSettingsSliderOptions
+    local label = options.valueLabels and options.valueLabels[value]
+    if label then
+        return label
+    end
+
     local text
 
     if options.inputFormatter then
@@ -307,6 +348,10 @@ end
 function sliderMethods:_ParseInput()
     local options = self._libModernSettingsSliderOptions
     local text = self.valueBox:GetText()
+    local namedValue = options.valuesByLabel and options.valuesByLabel[normalizeValueLabel(text)]
+    if namedValue ~= nil then
+        return namedValue
+    end
 
     if options.inputParser then
         return options.inputParser(text)

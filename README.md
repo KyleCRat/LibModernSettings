@@ -117,6 +117,18 @@ Every control uses an options table:
   hold Shift for ten steps or Ctrl for fifty steps per wheel event; Ctrl takes
   priority when both are held. Unfocused controls leave the wheel available for
   page scrolling.
+  Optional `valueLabels = { [-1] = "Inherit" }` names numeric steps; use
+  `minValue = -1` to put Inherit at the left endpoint before 0–100, or
+  `minValue = 0, valueLabels = { [0] = "Auto" }` for automatic sizing.
+  These labels display without a suffix and can be typed regardless of case or
+  surrounding spaces. `GetValue`, `SetValue` and `onChanged` still use numbers;
+  named values step normally and do not disable the control or impose new limits.
+  Consumers own what each value means and any hard bounds. The map is copied on
+  construction, with keys snapped to `step`; each must name a distinct step and
+  each label must be non-empty and unique ignoring case/outer spaces.
+  Labels take precedence over `inputFormatter`/`inputParser`, which still handle
+  other values. The input's `maxLetters` expands to fit the longest label unless
+  already unbounded (`0`); use `inputWidth` for longer labels as needed.
 - `CreateTextInput(parent, options)` creates a full-width single-line text
   input with the same single-piece sliced tertiary background used by slider
   value inputs. It defaults to 34px high. Use `value`, `width`, `height`,

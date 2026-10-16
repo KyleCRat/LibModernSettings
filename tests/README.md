@@ -175,6 +175,12 @@ Validate Blizzard-owned templates and interaction behavior in game:
   valid out-of-range values remain in the input and SavedVariables while the
   slider thumb stays at the nearest endpoint.
 - Confirm formatted suffixes and custom parsers round-trip to stored values.
+- Give sliders named values such as `[-1] = "Inherit"` or `[0] = "Auto"`.
+  Check complete label display, typed names/numbers, thumb/stepper changes,
+  Up/Down, Shift/Ctrl-wheel, and Enter/Tab/focus-loss commits. The first numeric
+  step must follow the named endpoint; labels omit numeric suffixes. Invalid
+  input must restore the previous value. Verify old sliders without labels and
+  consumer bounds still behave as before, including out-of-track numeric values.
 - Confirm full-width text inputs use the single tertiary background without
   visible joins, keep text inside both ends, commit on Enter and focus loss,
   restore rejected input, and cancel edits on Escape. While editing, click LMS

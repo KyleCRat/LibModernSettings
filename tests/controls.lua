@@ -2079,6 +2079,7 @@ do
 end
 
 dofile("tests/navigation.lua")(lib, makeFrame, inputState)
+dofile("tests/slider_labels.lua")(lib, inputState)
 dofile("tests/button_selection.lua")(lib, makeFrame)
 dofile("tests/button_icons.lua")(lib, makeFrame)
 
