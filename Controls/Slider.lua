@@ -36,6 +36,10 @@ local function isFiniteNumber(value)
 end
 
 local function snapValue(value, options)
+    if options.snapToStep == false then
+        return value
+    end
+
     local stepIndex = math.floor(((value - options.minValue) / options.step) + 0.5)
 
     return options.minValue + (stepIndex * options.step)
@@ -61,7 +65,7 @@ local function prepareValueLabels(options)
         local normalizedLabel = normalizeValueLabel(label)
 
         assert(isFiniteNumber(normalizedValue), "valueLabels must snap to finite values")
-        assert(labels[normalizedValue] == nil, "valueLabels must name distinct steps")
+        assert(labels[normalizedValue] == nil, "valueLabels must name distinct values")
         assert(values[normalizedLabel] == nil, "valueLabels must have distinct labels ignoring case and whitespace")
         labels[normalizedValue] = label
         values[normalizedLabel] = normalizedValue
@@ -171,6 +175,7 @@ local function validateOptions(options)
     assert(options.value == nil or isFiniteNumber(options.value), "value must be a finite number or nil")
     assert(options.maxValue > options.minValue, "maxValue must exceed minValue")
     assert(options.step > 0, "step must be greater than zero")
+    assert(options.snapToStep == nil or type(options.snapToStep) == "boolean", "snapToStep must be a boolean or nil")
     assert(
         options.inputFormatter == nil
             or type(options.inputFormatter) == "function",
@@ -214,6 +219,7 @@ local function createSlider(parent, options)
         minValue = options.minValue,
         maxValue = options.maxValue,
         step = options.step,
+        snapToStep = options.snapToStep,
         inputFormatter = options.inputFormatter,
         inputParser = options.inputParser,
         valueLabels = valueLabels,

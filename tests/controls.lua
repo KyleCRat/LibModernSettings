@@ -2149,6 +2149,7 @@ end
 dofile("tests/navigation.lua")(lib, makeFrame, inputState)
 dofile("tests/dropdown_button.lua")(lib, oldDropdown)
 dofile("tests/slider_labels.lua")(lib, inputState)
+dofile("tests/slider_precision.lua")(lib)
 dofile("tests/button_selection.lua")(lib, makeFrame)
 dofile("tests/button_icons.lua")(lib, makeFrame)
 

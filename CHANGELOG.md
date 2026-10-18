@@ -4,6 +4,8 @@
 
 ### Added
 
+- Sliders accept `snapToStep = false` to retain fractional typed/programmatic
+  values while keeping stepped track and keyboard/wheel controls.
 - Add `CreateValueList` / `valueList`: compact value pills wrapping within one
   input, with Enter-to-advance, add/remove buttons, parsing/formatting, copied arrays
   and standard keyboard navigation. Blank fields are not saved; growing rows

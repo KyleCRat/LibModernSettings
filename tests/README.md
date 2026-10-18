@@ -1,5 +1,12 @@
 # In-Game Validation
 
+Slider precision tests cover `snapToStep = false`, typed/programmatic fractions,
+out-of-range values, keyboard/wheel increments, named values, invalid options
+and unchanged default snapping. In game, retain a fractional position captured
+by dragging, then focus/blur its slider and use arrows/wheel. The fraction must
+survive; the native track and steppers still use their configured step. Compare
+ordinary sliders in other consumers to confirm their existing snapping remains.
+
 Value-list tests cover numeric/text parsing, formatting, copied arrays, blank
 drafts, Enter/add/remove, field limits, invalid edits, deferred commits, rebinding,
 hide/disable cleanup, wrapped Tab order, row breakpoints and compatible upgrades.

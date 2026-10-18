@@ -139,8 +139,12 @@ Every control uses an options table:
   changes the numeric input's height.
   `minValue` and `maxValue` bound the slider track and
   steppers, while typed values and `SetValue` may remain outside that range.
-  Out-of-range values still snap to `step`; the thumb stays at the nearest
-  track endpoint without replacing the entered value. The editable value field
+  Values snap to `step` by default. Set `snapToStep = false` to retain exact
+  typed/programmatic values, such as fractional positions captured by dragging.
+  The native track still uses `step`; keyboard/wheel increments add `step` to the
+  current value without removing its fractional part. Outside the track range,
+  the thumb stays at the nearest endpoint without replacing the entered value.
+  The editable value field
   shows Blizzard's neutral depressed tertiary glow while focused.
   Selecting the track, a stepper or the value field focuses numeric editing.
   While focused, the wheel over the control and Up/Down arrows change that
@@ -155,7 +159,7 @@ Every control uses an options table:
   surrounding spaces. `GetValue`, `SetValue` and `onChanged` still use numbers;
   named values step normally and do not disable the control or impose new limits.
   Consumers own what each value means and any hard bounds. The map is copied on
-  construction, with keys snapped to `step`; each must name a distinct step and
+  construction, with keys following `snapToStep`; each must name a distinct value and
   each label must be non-empty and unique ignoring case/outer spaces.
   Labels take precedence over `inputFormatter`/`inputParser`, which still handle
   other values. The input's `maxLetters` expands to fit the longest label unless
@@ -792,7 +796,7 @@ library.
 Sliders require finite `minValue`, `maxValue`, and a positive `step`, with
 `maxValue` greater than `minValue`. Typed and programmatic values must also be
 finite; consumers enforce any domain limits in `onChanged`. Common optional fields are
-`value`, `width`, `inputWidth`, `inputFormatter`, `inputParser`, `suffix`,
+`value`, `width`, `inputWidth`, `snapToStep`, `inputFormatter`, `inputParser`, `suffix`,
 `tooltip`, and `onChanged`. Format suffixes into the displayed value, such as
 `20s` or `100%`. Supply `inputParser` when displayed values use a different
 scale from stored values.
