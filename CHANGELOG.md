@@ -4,6 +4,13 @@
 
 ### Added
 
+- Canvas layouts support registered sections and capture/restore bookmarks across
+  forms, choosing the visible expanded section and matching stable keys or nearby
+  fallbacks. Section-relative anchors survive deferred reflows and yield to scrolling
+  or keyboard focus. Support retained/replaced sections and explicit unregistration.
+- Canvas placements accept `onLayout` callbacks to resolve nested custom content
+  before measuring its height. Synchronous page refreshes can restore bookmarks
+  without showing intermediate positions or blanking the controls.
 - Sliders accept `snapToStep = false` to retain fractional typed/programmatic
   values while keeping stepped track and keyboard/wheel controls.
 - Add `CreateValueList` / `valueList`: compact value pills wrapping within one

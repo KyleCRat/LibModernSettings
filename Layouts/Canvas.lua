@@ -372,6 +372,7 @@ function Layout:RefreshLayout()
 
         self.content:SetHeight(contentHeight)
         self.scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately)
+        self:_RestoreScrollAnchor()
     else
         self.content:SetHeight(math.max(self.canvasHeight, bottom))
     end
@@ -421,6 +422,7 @@ function Layout:_ScrollControlIntoView(control)
         return
     end
 
+    self:SetScrollAnchor(nil)
     local contentTop = self.content:GetTop()
     local frameTop = frame:GetTop()
     if not contentTop or not frameTop then
@@ -528,6 +530,8 @@ function Flow:_PlaceFrame(frame, options, role)
     assert(frame, "layout frame is required")
 
     options = options or {}
+    assert(options.onLayout == nil or type(options.onLayout) == "function",
+        "frame onLayout must be a function")
 
     local x, width = self:_GetRect(options)
     local marginTop = options.marginTop
@@ -570,6 +574,12 @@ function Flow:_PlaceFrame(frame, options, role)
         x,
         -self.cursor
     )
+
+    if options.onLayout and self.layout.refreshing then
+        -- Resolve nested content after assigning its width and before measuring
+        -- its height. Native size notifications may arrive after this pass.
+        options.onLayout(frame)
+    end
 
     self.cursor = self.cursor
         + getFrameHeight(frame, options.height)

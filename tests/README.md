@@ -1,5 +1,34 @@
 # In-Game Validation
 
+Nested canvas tests cover `onLayout` timing, copied placement options, responsive
+columns, multi-level sections, wrapping Fields, hidden flows, delayed native size
+notifications, immediate bookmark restoration and both library load orders.
+In game, use the callback to size nested sections, then rebind/show the page and
+call `RefreshLayout()` after restoring a bookmark. The content must update in place
+without blanking or moving through intermediate positions. Try rapid selections,
+narrow/wide widths, hidden-page updates, tab changes and closure. Retain draft text,
+keyboard focus and normal wheel/scrollbar input.
+
+Canvas bookmark tests cover matching between independent forms, live expansion
+priority, visual-order fallbacks, missing/hidden/reparented sections, page-top
+preservation, hidden destinations, rapid captures before reflow, replaced/pooled
+frames, unregistration, copied options, frame-free bookmarks, invalid inputs and
+both library load orders. In game, register equivalent sections on two forms with
+different content heights. Capture/restore while swapping records and show/hide
+sections above the current one: keep the current section in view. Replace a
+section's frame under its key and remove/re-register it. Repeat through narrow/wide
+layouts and different UI scales; opening/closing headings and manual scrolling
+must remain consumer-controlled. Use AirAuras's Display navigation checklist for
+the integrated example, including icons, bars and group defaults.
+
+Canvas scroll-anchor tests cover deferred height changes above a section, collapsed
+anchors, negative offsets, rapid replacement, native clamping, manual scrolling,
+focus reveals, hidden pages, scaled children, invalid arguments and retained
+instances across compatible upgrades. In game, anchor an open section while
+rebinding shorter/taller content above it, including nested canvases. Its viewport
+position must remain stable; wheel/scrollbar navigation and Tab focus must take
+over immediately without a later reflow pulling the page back.
+
 Slider precision tests cover `snapToStep = false`, typed/programmatic fractions,
 out-of-range values, keyboard/wheel increments, named values, invalid options
 and unchanged default snapping. In game, retain a fractional position captured

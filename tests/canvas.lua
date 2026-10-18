@@ -6,7 +6,7 @@ local scripts = {
     "Elements/Text.lua", "Layouts/Control.lua", "Controls/Button.lua", "Controls/Checkbox.lua",
     "Controls/ExpandableHeader.lua", "Controls/Dropdown.lua",
     "Controls/Slider.lua", "Controls/TextInput.lua", "Controls/ValueList.lua", "Layouts/Field.lua",
-    "Layouts/ScrollArea.lua", "Layouts/Canvas.lua",
+    "Layouts/ScrollArea.lua", "Layouts/CanvasNavigation.lua", "Layouts/Canvas.lua",
 }
 local sources = {}
 for _, path in ipairs(scripts) do
@@ -47,6 +47,7 @@ local function newEnvironment()
     environment.GameFontNormalLarge = { height = 16 }
     environment.GameFontNormalHuge = { height = 20 }
     environment.ScrollBoxConstants = { UpdateImmediately = 1, NoScrollInterpolation = 0 }
+    environment.BaseScrollBoxEvents = { OnScroll = "OnScroll" }
     function environment.CreateScrollBoxLinearView()
         local view = { frames = {}, SetPanExtent = function() end }
         function view:GetFrames() return self.frames end
@@ -91,6 +92,7 @@ local function newEnvironment()
             local content = self.nativeView:GetFrames()[1]
             self.scrollOffset = math.max(0, math.min(offset, content:GetHeight() - self:GetVisibleExtent()))
             self.scrollTarget:SetPoint("TOPLEFT", self, "TOPLEFT", 0, self.scrollOffset)
+            self:TriggerEvent(environment.BaseScrollBoxEvents.OnScroll)
         end
     end }
     environment.ScrollUtil.InitScrollBoxListWithScrollBar = environment.ScrollUtil.InitScrollBoxWithScrollBar
@@ -915,5 +917,9 @@ print("LibModernSettings canvas upgrade and responsive layout tests passed")
 dofile("tests/scroll_area.lua")(newEnvironment, loadVersion)
 dofile("tests/scroll_area_wheel.lua")(newEnvironment, loadVersion)
 dofile("tests/canvas_resize.lua")(newEnvironment, loadVersion)
+dofile("tests/canvas_scroll_anchor.lua")(newEnvironment, loadVersion)
+dofile("tests/canvas_scroll_bookmark.lua")(newEnvironment, loadVersion)
+
+dofile("tests/canvas_nested.lua")(newEnvironment, loadVersion)
 dofile("tests/canvas_grid.lua")(newEnvironment, loadVersion)
 dofile("tests/canvas_value_list.lua")(newEnvironment, loadVersion)

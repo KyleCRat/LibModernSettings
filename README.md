@@ -663,6 +663,106 @@ same coalesced pass after changes such as editing a FontString directly.
 `layout:RefreshLayout()` performs it synchronously. Both reuse existing controls
 and recalculate content height without replaying consumer construction code.
 
+For custom frames containing another canvas, pass an `onLayout(frame)` callback
+in the placement options for `AddFrame` or `AddCustom`. It runs during reflow,
+after width and position are assigned and before the outer flow measures height.
+It does not run during initial insertion, so the child can be built before the
+outer canvas is finalized:
+
+```lua
+local childLayout
+local container = root:AddCustom(1, {
+    fillWidth = true,
+    onLayout = function(frame)
+        childLayout:SetSize(frame:GetWidth(), 1)
+        childLayout:RefreshLayout()
+        frame:SetHeight(childLayout:GetContent():GetHeight())
+    end,
+})
+childLayout = LMS:CreateCanvasLayout(container, { width = container:GetWidth(), height = 1 })
+-- Build and finalize the child, then finalize the outer canvas.
+```
+
+This keeps nested sizes and final scroll positioning in the same pass instead
+of waiting for native size notifications. Callbacks must only refresh geometry;
+do not rebuild controls, edit values or re-enter the owning canvas. Keep them
+idempotent: column alignment can measure a frame more than once. Hidden flow
+groups skip their callbacks. Existing placement height overrides still apply.
+
+To preserve the section being edited across different records or forms, register
+each section once with a stable key, then capture and restore a bookmark:
+
+```lua
+-- Register every relevant section on each scrollable canvas when building it.
+layout:RegisterScrollSection("appearance", appearanceFrame, {
+    isExpanded = function()
+        return appearanceHeader:IsExpanded()
+    end,
+})
+
+-- Around a selection change; these may also be the same canvas.
+local bookmark = previousLayout:CaptureScrollBookmark()
+-- Update the destination's controls and visibility here.
+nextLayout:RestoreScrollBookmark(bookmark)
+nextLayout:RefreshLayout()
+```
+
+Keys are non-empty strings scoped to each canvas. Use the same key for equivalent
+sections on different forms, regardless of their labels. Frames must be descendants
+of that canvas's content. `isExpanded` is an optional, read-only callback returning
+a boolean; omit it for a section that is always expanded. LMS copies registration
+options and reads expansion when capturing, so toggling a header needs no
+registration update. Header expansion, tab selection and persistence stay with
+the consumer.
+
+`CaptureScrollBookmark()` prefers the expanded section with the most visible area,
+or the most visible heading when all visible sections are collapsed. It retains
+the section's offset from the viewport top, including negative offsets when its
+heading is below that top. The beginning of the page stays at the beginning.
+An anchor waiting for reflow takes precedence, so rapid selections do not capture
+an intermediate position. Hidden canvases return nil; away from the page beginning,
+so do views with no registered section in view. Treat bookmarks as opaque, read-only, temporary values;
+they contain no frame or callback references and are not a SavedVariables format.
+
+`RestoreScrollBookmark(bookmark)` matches a shown section with the same key.
+If absent or hidden, it uses the nearest surviving section in the source's visual
+order, preferring the following section on a tie, and shows its heading. With no
+match it returns to the top. The request survives deferred layouts; native scroll
+limits still apply. A hidden destination can accept a bookmark before showing.
+Passing nil clears a pending anchor without moving the current scroll position.
+
+Registering an existing key replaces its frame/options and transfers any active
+anchor to the replacement. A frame cannot have two keys in one canvas.
+`UnregisterScrollSection(key)` releases the registration and its active anchor,
+returning true if found or false if already absent. Unregister sections before
+returning their frames to a pool. Hidden or reparented sections are excluded from
+matching. Capture uses visual order, so rearranging retained sections does not
+require registering them again.
+
+For direct control of an anchor without section registration, use
+`layout:SetScrollAnchor(frame, offset)` on a scrollable canvas. The frame must
+belong to `layout:GetContent()` (the content itself is also allowed). `offset`
+defaults to zero and measures down from the frame's top to the viewport's top,
+in canvas units; a negative offset leaves the heading below the viewport's top.
+The request applies on the next layout and survives subsequent deferred reflows.
+If the frame shrinks past the requested offset, its top is shown instead. Native
+scroll limits still apply. Hidden anchors wait until visible; reparenting outside
+the content clears the request.
+
+`layout:GetScrollAnchor()` returns the requested frame and offset, or nil when
+inactive. Scroll notifications outside the canvas's own reflow (including the
+start of an interpolated wheel gesture) and keyboard focus reveals release the
+anchor. Use
+`layout:SetScrollAnchor(nil)` to clear it explicitly before rebinding or hiding a
+page, or when a new interaction should own the position, such as manually expanding
+a different section. Canvases without an anchor keep their existing absolute-scroll
+behavior. Bookmark matching uses this same anchoring path without rebuilding controls.
+
+After rebinding and showing a destination, call `RefreshLayout()` in the same
+selection handler to apply its bookmark before the next rendered frame. Nested
+custom sections should use `onLayout` as above so their final heights are measured
+in that pass. This does not alter page alpha, visibility, focus or input enablement.
+
 Use `layout:SetSize(width, height)` when a containing viewport changes size.
 It updates the canvas parent, content width and viewport height, and requests
 the same coalesced reflow. Dimensions must be finite, positive and leave room
