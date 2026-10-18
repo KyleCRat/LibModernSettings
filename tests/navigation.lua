@@ -192,6 +192,33 @@ return function(lib, makeFrame, inputState)
             end
         end
     end
+    local function attachMenuTexture(row)
+        local texture = row:CreateTexture(nil, "ARTWORK")
+        row.attachedTextures[#row.attachedTextures + 1] = texture
+        return texture
+    end
+    local function initializeMenuRow(row)
+        -- Model compositor cleanup before native radio/checkbox regions and custom attachments.
+        for _, texture in ipairs(row.attachedTextures or {}) do
+            texture:Hide()
+        end
+        row.attachedTextures = {}
+        row.AttachTexture = attachMenuTexture
+        row.leftTexture1 = row.leftTexture1 or row:CreateTexture(nil, "ARTWORK")
+        row.leftTexture1:SetSize(16, 16)
+        row.fontString = row.fontString or row:CreateFontString(nil, "ARTWORK", GameFontHighlight)
+        row.fontString:ClearAllPoints()
+        row.fontString:SetFontObject(GameFontHighlight)
+        row.fontString:SetPoint("LEFT", row, "LEFT", 20, 0)
+        row.fontString:SetHeight(20)
+        row.fontString:SetText(row.description[1] or row.description.label or "")
+        for _, initializer in ipairs(row.description.initializers or {}) do
+            local width, height = initializer(row)
+            if width and height then
+                row:SetSize(width, height)
+            end
+        end
+    end
     function menu:SetMenuDescription(description)
         local previousRows = self.rows or {}
         local rows = {}
@@ -211,9 +238,7 @@ return function(lib, makeFrame, inputState)
             row:Show()
             row.highlight = row.highlight or row:CreateTexture(nil, "BACKGROUND")
             row.highlight:Hide()
-            for _, initializer in ipairs(element.initializers or {}) do
-                initializer(row)
-            end
+            initializeMenuRow(row)
             rows[index] = row
         end
         self.rows = rows
@@ -226,9 +251,7 @@ return function(lib, makeFrame, inputState)
     function menu:ReinitializeAll()
         self.refreshCount = (self.refreshCount or 0) + 1
         for _, row in ipairs(self.rows or {}) do
-            for _, initializer in ipairs(row.description.initializers or {}) do
-                initializer(row)
-            end
+            initializeMenuRow(row)
         end
     end
     local nativeWheels = 0
@@ -606,5 +629,7 @@ return function(lib, makeFrame, inputState)
     dofile("tests/button_navigation.lua")(lib, makeFrame, inputState, openMenu, key)
     dofile("tests/navigation_contract.lua")(lib, makeFrame, inputState, key)
     dofile("tests/dropdown_multi.lua")(lib, openMenu, key, menu)
+    dofile("tests/dropdown_previews.lua")(lib, openMenu, key, menu)
+    dofile("tests/value_list.lua")(lib, makeFrame, inputState, key)
     print("LibModernSettings navigation tests passed")
 end

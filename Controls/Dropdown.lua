@@ -16,6 +16,10 @@ local TEXT_INSET = 12
 local DEFAULT_INSET = 0
 local LEGACY_INSET = 8
 local DEFAULT_MENU_HEIGHT_RATIO = 0.75
+local PREVIEW_HEIGHT = 22
+local SELECTION_PREVIEW_OFFSET_Y = 1
+local PREVIEW_GAP = 8
+local PREVIEW_ROW_HEIGHT = 24
 
 local function stepSelection(control, context)
     return control:_StepSelection(context.direction)
@@ -76,6 +80,53 @@ local function refreshMenuRowFocus(control, button, description)
     end
 end
 
+local function layoutSelectionPreview(control)
+    local dropdown = control.dropdown
+    local preview = dropdown.selectionPreview
+    if not preview then
+        return
+    end
+
+    local leftInset = TEXT_INSET - ARROW_INSET
+    local available = dropdown:GetWidth() - leftInset - ARROW_BUTTON_SIZE - ARROW_INSET * 2
+    local shown = control._libModernSettingsSelectionTexture ~= nil and available > 0
+    preview:SetShown(shown)
+    preview:SetSize(math.max(1, available), PREVIEW_HEIGHT)
+    -- The recessed atlas has more transparent padding below its visible border.
+    lib:_SetLayoutPoint(preview, "LEFT", dropdown, "LEFT", leftInset, SELECTION_PREVIEW_OFFSET_Y)
+    dropdown.Text:SetPoint("RIGHT", dropdown.arrowBackground, "LEFT", -ARROW_INSET, 0)
+    if shown then
+        dropdown.Text:SetFontObject(GameFontHighlightOutline)
+    else
+        dropdown.Text:SetFontObject(control._libModernSettingsSelectionFont)
+    end
+end
+
+local function addTexturePreview(description, choice)
+    description:AddInitializer(function(button)
+        -- The native menu compositor releases attachments when rows are refreshed or pooled.
+        local preview = button:AttachTexture()
+        preview:SetTexture(choice.previewTexture)
+        preview:SetDrawLayer("BACKGROUND", -1)
+        preview:SetHeight(PREVIEW_HEIGHT)
+        preview:SetPoint("LEFT", button.leftTexture1, "RIGHT", PREVIEW_GAP, 0)
+        preview:SetPoint("RIGHT", button, "RIGHT", -ARROW_INSET, 0)
+        preview:SetAlpha(choice.enabled == false and 0.4 or 1)
+
+        local label = button.fontString
+        label:ClearAllPoints()
+        label:SetPoint("LEFT", preview, "LEFT", ARROW_INSET, 0)
+        label:SetPoint("RIGHT", preview, "RIGHT", -ARROW_INSET, 0)
+        label:SetFontObject(GameFontHighlightOutline)
+        label:SetDrawLayer("OVERLAY")
+        label:SetWordWrap(false)
+        label:SetMaxLines(1)
+        local width = button.leftTexture1:GetWidth() + PREVIEW_GAP + label:GetUnboundedStringWidth()
+            + ARROW_INSET * 3
+        return width, math.max(PREVIEW_ROW_HEIGHT, label:GetHeight())
+    end)
+end
+
 local function configureDropdownButton(control)
     local dropdown = control.dropdown
     dropdown._libModernSettingsDropdownControl = control
@@ -103,6 +154,9 @@ local function configureDropdownButton(control)
     dropdown.Text:SetJustifyV("MIDDLE")
     dropdown.Text:SetWordWrap(false)
     dropdown.Text:SetMaxLines(1)
+    dropdown.Text:SetDrawLayer("OVERLAY")
+    control._libModernSettingsSelectionFont = control._libModernSettingsSelectionFont
+        or dropdown.Text:GetFontObject()
 end
 
 local function configureDropdownMenu(control)
@@ -160,6 +214,7 @@ local function layoutDropdown(control)
         1,
         width - leftInset - rightInset
     ))
+    layoutSelectionPreview(control)
 
     if control.label:IsShown() then
         return lib:_LayoutStackedLabel(
@@ -205,6 +260,8 @@ local function configureDropdownVisibility(control)
 end
 
 local function createDropdown(parent, options)
+    assert(options.menuWidth == nil or (type(options.menuWidth) == "number"
+        and options.menuWidth > 0 and options.menuWidth < math.huge), "menuWidth must be a positive finite number or nil")
     assert(options.multiSelect == nil or type(options.multiSelect) == "boolean", "multiSelect must be a boolean or nil")
     assert(options.selectionText == nil or type(options.selectionText) == "function", "selectionText must be a function or nil")
     assert(options.placeholder == nil or type(options.placeholder) == "string", "placeholder must be a string or nil")
@@ -248,6 +305,7 @@ local function createDropdown(parent, options)
     control._libModernSettingsExplicitHeight = options.height
     control._libModernSettingsChoices = options.choices or {}
     control._libModernSettingsGetChoices = options.getChoices
+    control._libModernSettingsMenuWidth = options.menuWidth
     control._libModernSettingsOnChanged = options.onChanged
     control._libModernSettingsMultiSelect = options.multiSelect == true
     control._libModernSettingsLeftInset = leftInset
@@ -321,6 +379,32 @@ function dropdownMethods:_RefreshButtonState()
         enabled and pressed and 1 or 0, enabled and pressed and 0 or 1)
     local color = enabled and HIGHLIGHT_FONT_COLOR or GRAY_FONT_COLOR
     dropdown.Text:SetTextColor(color.r, color.g, color.b)
+    if dropdown.selectionPreview then
+        dropdown.selectionPreview:SetAlpha(enabled and 1 or 0.4)
+    end
+end
+
+function dropdownMethods:_RefreshSelectionPreview()
+    local texture
+    if not self._libModernSettingsMultiSelect then
+        for _, choice in ipairs(self._libModernSettingsResolvedChoices or {}) do
+            if (choice.type == nil or choice.type == "choice") and choice.value == self.currentValue then
+                texture = choice.previewTexture
+                break
+            end
+        end
+    end
+
+    self._libModernSettingsSelectionTexture = texture
+    local dropdown = self.dropdown
+    if texture and not dropdown.selectionPreview then
+        dropdown.selectionPreview = dropdown:CreateTexture(nil, "ARTWORK")
+    end
+    if dropdown.selectionPreview then
+        dropdown.selectionPreview:SetTexture(texture)
+        dropdown.selectionPreview:SetAlpha(dropdown:IsEnabled() and 1 or 0.4)
+        layoutSelectionPreview(self)
+    end
 end
 
 function dropdownMethods:_OnMenuOpened(menu)
@@ -469,8 +553,14 @@ end
 function dropdownMethods:_BuildMenu(rootDescription)
     local choices = self:_GetChoices()
     local control = self
+    self._libModernSettingsResolvedChoices = choices
 
     rootDescription:SetScrollMode(getMaxMenuHeight())
+    if self._libModernSettingsMenuWidth then
+        local width = math.min(self._libModernSettingsMenuWidth, UIParent:GetWidth())
+        rootDescription:SetMinimumWidth(width)
+        rootDescription:SetMaximumWidth(width)
+    end
     rootDescription:AddMenuAcquiredCallback(centerScrollableMenuOnShow)
 
     local function isSelected(value)
@@ -496,6 +586,8 @@ function dropdownMethods:_BuildMenu(rootDescription)
             rootDescription:CreateDivider()
         else
             assert(choice.type == nil or choice.type == "choice", "unknown dropdown choice type")
+            assert(choice.previewTexture == nil or type(choice.previewTexture) == "string"
+                or type(choice.previewTexture) == "number", "previewTexture must be a texture path, file ID, or nil")
             local multiSelect = control._libModernSettingsMultiSelect
             local createChoice = multiSelect and rootDescription.CreateCheckbox or rootDescription.CreateRadio
             local description = createChoice(rootDescription,
@@ -505,6 +597,10 @@ function dropdownMethods:_BuildMenu(rootDescription)
                 choice.value
             )
             description:SetEnabled(choice.enabled ~= false)
+
+            if choice.previewTexture then
+                addTexturePreview(description, choice)
+            end
 
             if multiSelect then
                 assert(type(choice.value) == "string" or type(choice.value) == "number" or type(choice.value) == "boolean",
@@ -530,6 +626,7 @@ function dropdownMethods:_BuildMenu(rootDescription)
             end
         end
     end
+    self:_RefreshSelectionPreview()
 end
 
 function dropdownMethods:_SelectValue(value)
@@ -545,6 +642,7 @@ function dropdownMethods:_SelectValue(value)
         return
     end
     self.currentValue = value
+    self:_RefreshSelectionPreview()
 
     if self._libModernSettingsOnChanged then
         self._libModernSettingsOnChanged(value)
@@ -640,6 +738,7 @@ local function initializeDropdown(dropdown, options)
 end
 
 local function refreshDropdownAppearance(control, options)
+    control._libModernSettingsMenuWidth = options.menuWidth
     lib:_ApplyInputWidth(control, options.width or DEFAULT_WIDTH)
     control._libModernSettingsLeftInset = options.leftInset or DEFAULT_INSET
     control._libModernSettingsRightInset = options.rightInset or DEFAULT_INSET

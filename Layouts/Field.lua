@@ -17,6 +17,8 @@ local VALID_LABEL_POSITIONS = {
     left = true,
 }
 
+lib._pendingFieldLayouts = lib._pendingFieldLayouts or setmetatable({}, { __mode = "k" })
+
 local function shallowCopy(source)
     local copy = {}
 
@@ -173,13 +175,47 @@ local function layoutField(field)
     return height + gap + description:GetStringHeight()
 end
 
+local function refreshPendingField(field)
+    if not lib._pendingFieldLayouts[field] then
+        return
+    end
+
+    -- Measurement can dispatch OnSizeChanged. Keep the request marked pending
+    -- until the child and its parent have both finished resolving their size.
+    if not lib:_LayoutSizeMatches(field.control:GetHeight(), field._libModernSettingsFieldLayout.controlHeight) then
+        field:RefreshLayout()
+    end
+    lib._pendingFieldLayouts[field] = nil
+end
+
+-- Navigation can settle queued Fields before sorting inputs or scrolling to one.
+function lib:_RefreshPendingFields(root)
+    for field in pairs(self._pendingFieldLayouts) do
+        if not root or DoesAncestryInclude(root, field) then
+            refreshPendingField(field)
+        end
+    end
+end
+
+local function requestFieldLayout(field)
+    if field._libModernSettingsUpdatingLayout or lib._pendingFieldLayouts[field] then
+        return
+    end
+
+    lib._pendingFieldLayouts[field] = true
+    C_Timer.After(0, function()
+        refreshPendingField(field)
+    end)
+end
+
 local function watchFieldSize(field)
     lib:_WatchControlSize(field)
-    field.control:HookScript("OnSizeChanged", function(control)
-        -- The Field owns width; only a changed child height needs parent layout.
-        -- Re-anchoring on its own settled-size notification invalidates edit text.
-        if not lib:_LayoutSizeMatches(control:GetHeight(), field._libModernSettingsFieldLayout.controlHeight) then
-            field:RefreshLayout()
+    field.control:HookScript("OnSizeChanged", function(_, _, height)
+        -- Do not resize/re-anchor a parent from its child's native size callback:
+        -- that invalidates the geometry currently being resolved, including the
+        -- label. Width-driven Field layout already measures the child itself.
+        if not lib:_LayoutSizeMatches(height, field._libModernSettingsFieldLayout.controlHeight) then
+            requestFieldLayout(field)
         end
     end)
 end

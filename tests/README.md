@@ -1,5 +1,34 @@
 # In-Game Validation
 
+Value-list tests cover numeric/text parsing, formatting, copied arrays, blank
+drafts, Enter/add/remove, field limits, invalid edits, deferred commits, rebinding,
+hide/disable cleanup, wrapped Tab order, row breakpoints and compatible upgrades.
+Canvas tests cover growing/shrinking Fields, following controls, hidden-page
+resizing, retained drafts and deferred size notifications through nested sections.
+Measurement-triggered notifications must not resize the parent Field inside its
+child's callback. Repeated row-count changes, rapid add/remove and rebinding must
+retain label anchors and settle at the latest height without a window resize.
+Focus reveals coalesce and cancel after rebinding or hiding. In game, use Enter
+and + to wrap onto a second and third row without resizing first, including in
+fields taller than the viewport. Remove values back to one row: the label and
+pills must remain visible. Then resize through one/two/three rows: keep
+the pills together as one input, with actions after the last pill and no overlap
+below. Enter/Tab must reveal each focused pill; the mouse wheel must scroll the
+page. Invalid input must retain Enter/Tab focus; switching consumers or closing
+must not save a stale draft.
+
+Texture-preview tests cover paths/file IDs, live choice updates, absent previews,
+disabled choices, narrow inputs, explicit menu widths, mouse/keyboard picks,
+consumer normalization, recycled rows, multi-select summaries and compatible
+upgrades. In game, open a long bar-texture list and compare previews with the
+chosen texture. Scroll, change selection, resize and reopen: outlined names must
+remain readable over full-width previews, with selection marks and caret clear.
+The closed selection must stay centered within the visible recessed border,
+including the atlas's uneven transparent padding.
+Check explicit menu widths on wide inputs. Plain choices must restore normal
+fonts and never inherit another row's preview.
+Native attachment cleanup follows Retail 12.1.5.70391's Blizzard_Menu compositor.
+
 Grid tests cover exact column breakpoints, partial rows, unequal cell heights,
 nested visibility, hidden-page resizing, late additions, pending edits, scroll
 position, Tab order and retained instances across library upgrades. In game,

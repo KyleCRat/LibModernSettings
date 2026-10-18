@@ -85,6 +85,17 @@ Every control uses an options table:
   Headings, dividers and disabled choices are skipped by arrow navigation;
   a disabled saved value can remain selected. `SetChoices()` and `getChoices`
   support the same records, including updated tooltip and enabled state.
+  Add `previewTexture = texturePathOrFileID` to a choice to show its texture
+  across the row behind an outlined name, leaving selection marks clear.
+  Single-select inputs also show the selected texture behind their label;
+  checkbox menus retain their text summary in the closed input.
+  Previews update with `SetValue()`, `SetChoices()` and regenerated `getChoices`
+  results. Supply the texture directly, for example `media:Fetch("statusbar", name)`
+  when using LibSharedMedia; LMS has no media-library dependency.
+  Optional `menuWidth` sets a fixed menu width in UI units independently of the
+  input width, capped to the screen width. It must be a finite positive number.
+  Omit it to retain native sizing. For example, use `menuWidth = 300` for a
+  compact texture picker even when its input fills a wide settings page.
   Set `multiSelect = true` for native checkboxes. `value`, `SetValue()` and
   `GetValue()` then use a set such as `{ combat = true, mounted = true }`,
   with string, number or boolean choice keys. Nil means an empty set; false
@@ -155,6 +166,31 @@ Every control uses an options table:
   `maxLetters`, `textInset`, `onCommit`, and `onError`. Omitting `maxLetters`
   leaves the input unbounded. Focus shows Blizzard's neutral depressed
   tertiary glow without changing the consumer API.
+- `CreateValueList(parent, options)` edits an ordered array of small value fields
+  that wrap to fit the available width. Use `controlType = "valueList"` in a Field
+  or canvas. Pills remain part of one input, with 34px rows and 6px gaps; the control
+  grows and shrinks automatically so following content stays below it.
+  `value` is a dense array of non-empty strings or finite numbers, defaulting to
+  `{}`. `SetValue()` and `GetValue()` copy the array. Blank fields are omitted from
+  the saved value, and at least one field remains available.
+  Enter commits and advances, adding a field after the last non-empty value.
+  **+** adds a field or focuses the existing final blank; **trash** removes the
+  last field while more than one is present. Tab/Shift+Tab navigates fields and
+  buttons in row order. Actions follow the last pill, sharing its row when they
+  fit. Enter and Tab reveal the focused pill in a scrolling canvas; the mouse wheel
+  scrolls the page. `width` defaults to 270; `entryWidth` defaults to 64.
+  Optional `maxValues` limits the number of fields; there is no limit by default.
+  `parseValue(text)` accepts one value, returning a string/number, or `nil, error`
+  to reject it. `formatValue(value)` returns its displayed string. Without these,
+  values are trimmed text and formatting uses `tostring`. `onChanged(values)`
+  receives a copied array only when committed values change. `onError(error)`
+  reports rejected edits, which restore the previous value and retain keyboard
+  focus on Enter/Tab. Consumer `SetValue()` calls during `onChanged` may echo or
+  normalize the accepted list; rebinding cancels old drafts and advancement.
+  Use `CommitAndClearFocus()`, `CancelAndClearFocus()`, `FocusValue(index)`
+  (default first), `AddEntry()` and `RemoveLastEntry()` for consumer interactions.
+  Disabling or hiding discards drafts; call `CommitAndClearFocus()` before hiding
+  when those edits should apply. `SetOnChanged()`/`SetOnError()` replace callbacks.
 - `CreateField(parent, options)` composes a semantic label with a registered
   control without changing the underlying control primitive. Use `label`,
   `controlType`, and `controlOptions`. The default `labelPosition = "top"`
@@ -231,6 +267,9 @@ outer width or height changes, including native `SetWidth`, `SetHeight`, and
 `SetControlHeight(height)`; passing `nil` to the latter restores content-sized
 height. Explicit heights survive width changes. `RefreshLayout()` remeasures
 labels and descriptions after direct font edits. A Field also tracks its child's height.
+Child-driven height changes are coalesced after native size callbacks finish.
+For immediate measurements outside those callbacks, call the Field's
+`RefreshLayout()` first. Keyboard navigation settles pending Field sizes before moving focus.
 Values, pending text, focus, and callbacks are not reset by layout changes.
 LMS canvas flows handle sibling reflow automatically. A manually positioned
 consumer still owns its surrounding layout.

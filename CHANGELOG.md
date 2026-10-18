@@ -4,6 +4,13 @@
 
 ### Added
 
+- Add `CreateValueList` / `valueList`: compact value pills wrapping within one
+  input, with Enter-to-advance, add/remove buttons, parsing/formatting, copied arrays
+  and standard keyboard navigation. Blank fields are not saved; growing rows
+  reflow following content and keep keyboard-focused pills visible without resizing.
+- Dropdown choices accept `previewTexture` paths/file IDs as full-width texture
+  previews behind outlined names, including a selection centered in the recessed border and live
+  choice updates. Optional `menuWidth` sizes menus independently of their inputs.
 - Canvas grids wrap retained cells across a configurable number of columns,
   with minimum widths, measured row heights and independent cell visibility.
 - Dropdowns support optional checkbox multi-selection, copied value sets,
@@ -34,6 +41,8 @@
 - Retain canvas and input anchors during resize/reflow, including scrolling
   content and header controls. Preserve measured section heights when only
   their width changes, without rebuilding controls or discarding pending edits.
+  Defer child-driven Field resizing until native size callbacks finish, keeping
+  wrapped inputs and labels measurable when adding or removing rows.
 
 ## [1.10.0] - 2026-10-12
 

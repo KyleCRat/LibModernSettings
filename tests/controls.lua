@@ -1,7 +1,12 @@
 local lib = LibStub("LibModernSettings-1.0")
 
+function strtrim(text)
+    return text:match("^%s*(.-)%s*$")
+end
+
 GameFontNormal = {}
 GameFontHighlight = {}
+GameFontHighlightOutline = {}
 GameFontDisable = {}
 GameFontNormalSmall = {}
 GameFontHighlightSmall = {}
@@ -85,6 +90,12 @@ local function createMenuDescription(dropdown)
     local root = { menuAcquiredCallbacks = {}, radioButtons = {}, elements = {} }
     function root:SetScrollMode(height)
         self.maxScrollExtent = height
+    end
+    function root:SetMinimumWidth(width)
+        self.minimumWidth = width
+    end
+    function root:SetMaximumWidth(width)
+        self.maximumWidth = width
     end
     function root:AddMenuAcquiredCallback(callback)
         self.menuAcquiredCallbacks[#self.menuAcquiredCallbacks + 1] = callback
@@ -363,6 +374,10 @@ local function makeFontString()
 
     function fontString:GetStringWidth()
         return #(self.text or "") * 6
+    end
+
+    function fontString:GetUnboundedStringWidth()
+        return self:GetStringWidth()
     end
 
     return fontString
@@ -941,7 +956,7 @@ function EditBox_OnTabPressed(editBox)
 end
 
 function IsMouseButtonDown()
-    return mouseButtonDown
+    return mouseButtonDown or inputState.mouseDown == true
 end
 
 C_Texture = {}
@@ -1091,6 +1106,7 @@ dofile("Controls/ExpandableHeader.lua")
 dofile("Controls/Checkbox.lua")
 dofile("Controls/Slider.lua")
 dofile("Controls/TextInput.lua")
+dofile("Controls/ValueList.lua")
 dofile("Controls/Dropdown.lua")
 dofile("Layouts/Field.lua")
 local beforeDeferredRefresh = oldDropdown.dropdown.updateCount or 0
@@ -2007,8 +2023,10 @@ do
     assert(stackedDropdownField.label.width == 360)
     assert(stackedDropdown.width == 360 and stackedDropdown.dropdown.width == 360)
     stackedDropdown:SetControlHeight(40)
+    runDeferredCallbacks()
     assert(stackedDropdownField.height == 56)
     stackedDropdown:SetControlHeight(nil)
+    runDeferredCallbacks()
     assert(stackedDropdownField.height == 53)
 
     sliderControl.valueBox:SetFocus()
@@ -2027,6 +2045,7 @@ do
     assert(inlineField:GetControl() == inlineInput and inlineInput.width == 294)
     assert(inlineInput:GetValue() == "Inline")
     inlineInput:SetHeight(42)
+    runDeferredCallbacks()
     assert(inlineField.height == 42 and inlineField.label.height == 42)
 
     stackedInput:FocusValue()
@@ -2039,6 +2058,7 @@ do
     stackedField:RefreshLayout()
     assert(stackedField.height == 65)
     stackedInput:SetHeight(40)
+    runDeferredCallbacks()
     assert(stackedField.height == 71)
     stackedField:SetControlHeight(90)
     stackedField:SetControlWidth(340)
@@ -2074,6 +2094,7 @@ do
         assert(field._libModernSettingsAppearanceOptions.height == nil)
 
         input:SetHeight(40)
+        runDeferredCallbacks()
         assert(field:GetHeight() == height + 6, "real child height changes must still reflow the field")
         assert(input:HasFocus() and input:GetText() == "Draft" and input:GetValue() == "Saved")
     end

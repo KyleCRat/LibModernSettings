@@ -12,19 +12,20 @@ local function findRoot(control)
     local canvasRoot
     local frame = control
     while frame do
-        if lib._tabNavigationRoots[frame] then
-            return frame
-        end
         local layout = frame._libModernSettingsCanvasLayout
         if layout and not canvasRoot then
             canvasRoot = layout.parent
         end
+        if lib._tabNavigationRoots[frame] then
+            return frame, canvasRoot
+        end
         frame = frame:GetParent()
     end
-    return canvasRoot
+    return canvasRoot, canvasRoot
 end
 
 local function refreshLayouts(root)
+    lib:_RefreshPendingFields(root)
     for layout in pairs(lib._canvasLayouts or {}) do
         if layout.dirty and layout.parent:IsVisible() and DoesAncestryInclude(root, layout.parent) then
             layout:RefreshLayout()
@@ -82,6 +83,10 @@ local function scrollIntoView(control, root)
     while frame do
         local layout = frame._libModernSettingsCanvasLayout
         if layout then
+            -- A nested canvas can resize its section and dirty the outer canvas.
+            if layout.dirty then
+                layout:RefreshLayout()
+            end
             layout:_ScrollControlIntoView(control)
         end
         if frame == root then
@@ -94,6 +99,35 @@ end
 function lib:EnableTabNavigation(parent)
     assert(parent, "tab navigation parent is required")
     self._tabNavigationRoots[parent] = true
+end
+
+local function revealPendingControl()
+    local control = lib._pendingControlReveal
+    lib._pendingControlReveal = nil
+    lib._controlRevealQueued = nil
+    if not control or GetCurrentKeyBoardFocus() ~= control or not control:IsVisible() then
+        return
+    end
+    local root = findRoot(control)
+    if root and root:IsVisible() then
+        refreshLayouts(root)
+        scrollIntoView(control, root)
+    end
+end
+
+function lib:_RequestControlReveal(control)
+    local root, canvasRoot = findRoot(control)
+    if not canvasRoot or not root:IsVisible() then
+        return
+    end
+    self._pendingControlReveal = control
+    if self._controlRevealQueued then
+        return
+    end
+    -- Appending a row can resize several nested sections. Let native size
+    -- notifications reach their owners before measuring the focused input.
+    self._controlRevealQueued = true
+    C_Timer.After(0, revealPendingControl)
 end
 
 function lib:_NavigateTab(control, context)

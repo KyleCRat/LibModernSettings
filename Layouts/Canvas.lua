@@ -403,11 +403,17 @@ function Layout:_ScrollControlIntoView(control)
         return
     end
 
+    local extent = self.scrollBox:GetVisibleExtent()
     local frame = control
     local ancestor = control:GetParent()
     while ancestor and ancestor ~= self.content do
         if ancestor._libModernSettingsControlType == "field" then
-            frame = ancestor
+            local height = ancestor:GetHeight() * ancestor:GetEffectiveScale() / self.content:GetEffectiveScale()
+            -- Keep the label visible when it fits, but reveal the focused child
+            -- when a wrapping composite field is taller than the viewport.
+            if height <= extent then
+                frame = ancestor
+            end
         end
         ancestor = ancestor:GetParent()
     end
@@ -426,7 +432,6 @@ function Layout:_ScrollControlIntoView(control)
     local height = frame:GetHeight() * scale
     local bottom = top + height
     local offset = self.scrollBox:GetDerivedScrollOffset()
-    local extent = self.scrollBox:GetVisibleExtent()
     if top < offset or height > extent then
         self.scrollBox:ScrollToOffset(top, ScrollBoxConstants.NoScrollInterpolation)
     elseif bottom > offset + extent then

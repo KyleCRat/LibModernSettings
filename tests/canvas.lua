@@ -5,7 +5,7 @@ local scripts = {
     "Utilities/KeyboardNavigation.lua", "Utilities/ControlNavigation.lua", "Utilities/TabNavigation.lua",
     "Elements/Text.lua", "Layouts/Control.lua", "Controls/Button.lua", "Controls/Checkbox.lua",
     "Controls/ExpandableHeader.lua", "Controls/Dropdown.lua",
-    "Controls/Slider.lua", "Controls/TextInput.lua", "Layouts/Field.lua",
+    "Controls/Slider.lua", "Controls/TextInput.lua", "Controls/ValueList.lua", "Layouts/Field.lua",
     "Layouts/ScrollArea.lua", "Layouts/Canvas.lua",
 }
 local sources = {}
@@ -29,10 +29,13 @@ local function newEnvironment()
         return libraries[major]
     end })
     environment.C_Timer = { After = function(_, callback) queue[#queue + 1] = callback end }
-    function environment.Flush()
-        local pending = queue
-        queue = {}
-        for _, callback in ipairs(pending) do callback() end
+    function environment.Flush(maxPasses)
+        for pass = 1, maxPasses or 1 do
+            local pending = queue
+            queue = {}
+            for _, callback in ipairs(pending) do callback() end
+            if #queue == 0 then break end
+        end
         assert(#queue == 0, "layout must settle without a repeating timer")
     end
     function environment.QueueSize() return #queue end
@@ -117,6 +120,7 @@ local function loadVersion(environment, old)
         if path == scripts[1] then
             local lib = environment.LibStub(MAJOR)
             -- Tooltip behavior has its own suite; no game tooltip is needed here.
+            lib.SetTooltip = function() end
             lib.AddTooltipTarget = function() end
             lib.SetControlTooltipEnabled = function() end
         end
@@ -883,6 +887,7 @@ do
         parent:Hide()
         local oldWidth, oldHeight = field:GetWidth(), field:GetHeight()
         control:SetHeight(height)
+        dynamicEnvironment.Flush()
         local expected = field:GetHeight()
         assert(expected > height)
 
@@ -911,3 +916,4 @@ dofile("tests/scroll_area.lua")(newEnvironment, loadVersion)
 dofile("tests/scroll_area_wheel.lua")(newEnvironment, loadVersion)
 dofile("tests/canvas_resize.lua")(newEnvironment, loadVersion)
 dofile("tests/canvas_grid.lua")(newEnvironment, loadVersion)
+dofile("tests/canvas_value_list.lua")(newEnvironment, loadVersion)

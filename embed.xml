@@ -17,6 +17,7 @@
     <Script file="Controls\Dropdown.lua"/>
     <Script file="Controls\Slider.lua"/>
     <Script file="Controls\TextInput.lua"/>
+    <Script file="Controls\ValueList.lua"/>
     <Script file="Controls\Color.lua"/>
     <Script file="Utilities\ColorPicker.lua"/>
     <Script file="Layouts\Field.lua"/>
