@@ -590,6 +590,14 @@ is an error: use the scroll area's border/content options instead. Other style
 options, such as column gaps and row spacing, remain independent. Omitting
 `scrollArea` preserves all existing canvas defaults and overrides.
 
+For backgrounds or borders extending beyond the controls, a canvas can opt into
+`contentOverflow = { left = 8, right = 8 }`. This widens horizontal clipping into
+the existing margins without changing control widths, content insets or scrollbar
+placement. Each side is capped at the available margin, preserving border clearance
+and the scrollbar column. Omitted sides default to zero; values must be finite and
+non-negative. The options are copied. Vertical clipping and scrolling are unchanged;
+non-scrolling canvases keep their existing placement.
+
 The root flow is full width. `BeginColumns()` creates independent half-width
 flows, allowing one column to contain more controls without inserting empty
 rows into the other:
@@ -680,6 +688,9 @@ local container = root:AddCustom(1, {
     end,
 })
 childLayout = LMS:CreateCanvasLayout(container, { width = container:GetWidth(), height = 1 })
+childLayout:GetContent():HookScript("OnSizeChanged", function()
+    root.layout:RequestLayout()
+end)
 -- Build and finalize the child, then finalize the outer canvas.
 ```
 
@@ -688,6 +699,9 @@ of waiting for native size notifications. Callbacks must only refresh geometry;
 do not rebuild controls, edit values or re-enter the owning canvas. Keep them
 idempotent: column alignment can measure a frame more than once. Hidden flow
 groups skip their callbacks. Existing placement height overrides still apply.
+Child size callbacks should only request the outer layout, as above. Resizing or
+re-anchoring ancestors from a child's native size callback can invalidate the
+geometry being measured and leave controls invisible until a later resize.
 
 To preserve the section being edited across different records or forms, register
 each section once with a stable key, then capture and restore a bookmark:

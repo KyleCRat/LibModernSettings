@@ -71,6 +71,7 @@ function lib:_ResolveScrollAreaGeometry(options)
     local width = dimension(options.scrollbarWidth, SCROLLBAR_WIDTH, "scrollbar width", true)
 
     return {
+        borderLeft = left,
         left = math.max(left, dimension(padding.left, spacing.left, "left content padding")),
         right = right + width + gap,
         top = top,
@@ -156,8 +157,8 @@ function Area:_ApplyGeometry(geometry)
     end
 
     self.scrollBox:ClearAllPoints()
-    self.scrollBox:SetPoint("TOPLEFT", self.parent, "TOPLEFT", geometry.left, -top)
-    self.scrollBox:SetPoint("BOTTOMRIGHT", self.parent, "BOTTOMRIGHT", -geometry.right, bottom)
+    self.scrollBox:SetPoint("TOPLEFT", self.parent, "TOPLEFT", geometry.left - (geometry.overflowLeft or 0), -top)
+    self.scrollBox:SetPoint("BOTTOMRIGHT", self.parent, "BOTTOMRIGHT", -geometry.right + (geometry.overflowRight or 0), bottom)
 
     self.scrollBar:ClearAllPoints()
     self.scrollBar:SetWidth(geometry.scrollbarWidth)

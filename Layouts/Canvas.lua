@@ -75,6 +75,24 @@ local function createStyle(options)
     return style
 end
 
+local function applyContentOverflow(geometry, options)
+    local overflow = options.contentOverflow or {}
+    assert(options.contentOverflow == nil or type(options.contentOverflow) == "table",
+        "canvas contentOverflow must be a table")
+
+    for _, edge in ipairs({ "left", "right" }) do
+        local value = overflow[edge]
+        assert(value == nil or (type(value) == "number" and value >= 0 and value < math.huge),
+            "canvas content overflow must be finite and non-negative")
+    end
+
+    -- Permit artwork in the existing margins without crossing a border or the
+    -- scrollbar column. Control widths and their reported insets stay unchanged.
+    geometry.overflowLeft = math.min(overflow.left or 0, geometry.left - (geometry.borderLeft or 0))
+    geometry.overflowRight = math.min(overflow.right or 0, geometry.scrollbarGap)
+    return geometry
+end
+
 local function createGeometry(style, options)
     if options.scrollArea ~= nil then
         assert(options.viewportMarginTop == nil and options.viewportMarginBottom == nil,
@@ -102,7 +120,7 @@ local function createGeometry(style, options)
             geometry.paddingTop, geometry.paddingBottom = style.paddingTop, style.paddingBottom
         end
 
-        return geometry
+        return applyContentOverflow(geometry, options)
     end
 
     local top = options.scrollable and (options.viewportMarginTop or 0) or 0
@@ -112,7 +130,7 @@ local function createGeometry(style, options)
     assert(type(bottom) == "number" and bottom >= 0 and bottom < math.huge,
         "scroll viewport bottom margin must be finite and non-negative")
 
-    return {
+    return applyContentOverflow({
         left = style.paddingLeft,
         right = style.scrollbarGap + style.scrollbarWidth,
         top = top,
@@ -122,7 +140,7 @@ local function createGeometry(style, options)
         scrollbarRight = 0,
         scrollbarWidth = style.scrollbarWidth,
         scrollbarGap = style.scrollbarGap,
-    }
+    }, options)
 end
 
 local function getMeasuredDimension(frame, methodName)
@@ -163,7 +181,8 @@ end
 local function layoutScrollContent(view, scrollBox)
     local content = view:GetFrames()[1]
     if content then
-        lib:_SetLayoutPoint(content, "TOPLEFT", scrollBox:GetScrollTarget(), "TOPLEFT", 0, 0)
+        local geometry = content._libModernSettingsCanvasLayout.geometry
+        lib:_SetLayoutPoint(content, "TOPLEFT", scrollBox:GetScrollTarget(), "TOPLEFT", geometry.overflowLeft, 0)
     end
 end
 
@@ -191,6 +210,7 @@ local function createContent(layout, options)
     local content = CreateFrame("Frame", nil, scrollBox)
 
     content.scrollable = true
+    content._libModernSettingsCanvasLayout = layout
     content:SetSize(
         layout.contentWidth,
         options.contentHeight or layout.canvasHeight
@@ -1139,6 +1159,7 @@ function lib:CreateCanvasLayout(parent, options)
         parent = parent,
         style = style,
         geometry = geometry,
+        contentOverflow = options.contentOverflow and shallowCopy(options.contentOverflow),
         scrollAreaOptions = options.scrollArea and lib:_CopyScrollAreaOptions(options.scrollArea),
         canvasWidth = canvasWidth,
         canvasHeight = canvasHeight,
@@ -1180,6 +1201,7 @@ for layout in pairs(lib._canvasLayouts) do
         style = layout.styleOverrides,
         scrollable = layout.scrollBox ~= nil,
         scrollArea = layout.scrollAreaOptions,
+        contentOverflow = layout.contentOverflow,
     }
 
     if not options.scrollArea then

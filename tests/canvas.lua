@@ -915,6 +915,7 @@ end
 
 print("LibModernSettings canvas upgrade and responsive layout tests passed")
 dofile("tests/scroll_area.lua")(newEnvironment, loadVersion)
+dofile("tests/canvas_overflow.lua")(newEnvironment, loadVersion)
 dofile("tests/scroll_area_wheel.lua")(newEnvironment, loadVersion)
 dofile("tests/canvas_resize.lua")(newEnvironment, loadVersion)
 dofile("tests/canvas_scroll_anchor.lua")(newEnvironment, loadVersion)

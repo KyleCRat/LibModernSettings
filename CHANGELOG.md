@@ -4,6 +4,9 @@
 
 ### Added
 
+- Canvas layouts accept `contentOverflow` to show backgrounds and borders in
+  existing side margins while retaining control alignment, border clearance and
+  the scrollbar column.
 - Canvas layouts support registered sections and capture/restore bookmarks across
   forms, choosing the visible expanded section and matching stable keys or nearby
   fallbacks. Section-relative anchors survive deferred reflows and yield to scrolling

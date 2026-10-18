@@ -1,5 +1,11 @@
 # In-Game Validation
 
+Canvas artwork overflow tests cover preserved control widths/insets, asymmetric
+and bounded margins, zero margins, resizing, hidden pages, copied options and
+compatible upgrades. In game, extend a row background beyond its control bounds
+with `contentOverflow` enabled: both edges must remain visible while vertical
+scroll clipping, wheel input and scrollbar clearance stay correct.
+
 Nested canvas tests cover `onLayout` timing, copied placement options, responsive
 columns, multi-level sections, wrapping Fields, hidden flows, delayed native size
 notifications, immediate bookmark restoration and both library load orders.
@@ -8,6 +14,9 @@ call `RefreshLayout()` after restoring a bookmark. The content must update in pl
 without blanking or moving through intermediate positions. Try rapid selections,
 narrow/wide widths, hidden-page updates, tab changes and closure. Retain draft text,
 keyboard focus and normal wheel/scrollbar input.
+Child size notifications must request the parent layout, never resize ancestors
+inside the callback. Cold-open expanded nested sections with sliders and labels;
+all controls must render before any manual resize.
 
 Canvas bookmark tests cover matching between independent forms, live expansion
 priority, visual-order fallbacks, missing/hidden/reparented sections, page-top
