@@ -9,8 +9,8 @@ end
 local Color = lib._colorUtils
 local SIZE = 34
 local GAP = 4
-local MODES = { "class", "accent", "custom" }
-local MODE_LABELS = { class = "Class color", accent = "Accent color", custom = "Custom color" }
+local MODES = { "default", "class", "accent", "custom" }
+local MODE_LABELS = { default = "Default color", class = "Class color", accent = "Accent color", custom = "Custom color" }
 
 local function createSwatch(parent, options)
     local button = CreateFrame("Button", nil, parent)
@@ -113,7 +113,7 @@ end
 local function createColor(parent, options)
     assert(options.onChanged == nil or type(options.onChanged) == "function", "onChanged must be a function or nil")
     assert(options.onPreview == nil or type(options.onPreview) == "function", "onPreview must be a function or nil")
-    for _, key in ipairs({ "classColor", "accentColor" }) do
+    for _, key in ipairs({ "defaultColor", "classColor", "accentColor" }) do
         local source = options[key]
         assert(source == nil or type(source) == "table" or type(source) == "function"
             or (key == "classColor" and source == true), key .. " must be a color or resolver function")
@@ -121,7 +121,7 @@ local function createColor(parent, options)
     local control = CreateFrame("Frame", nil, parent)
     control:SetSize(options.width or 270, SIZE)
     control.hasOpacity = options.hasOpacity == true
-    control.sources = { class = options.classColor, accent = options.accentColor }
+    control.sources = { default = options.defaultColor, class = options.classColor, accent = options.accentColor }
     control.palette = options.palette or lib._defaultColorPalette
     assert(type(control.palette) == "table" and type(control.palette.GetColors) == "function"
         and type(control.palette.Record) == "function" and type(control.palette.ToggleFavorite) == "function",
@@ -257,7 +257,12 @@ function colorMethods:SetControlEnabled(enabled, disabledTooltip)
 end
 
 local function initializeColor(control, options)
-    control:SetValue(options.value or { r = 1, g = 1, b = 1 })
+    control:SetValue(options.value or {
+        r = 1,
+        g = 1,
+        b = 1,
+        mode = options.defaultColor and "default" or "custom",
+    })
     control:SetControlEnabled(options.enabled ~= false, options.disabledTooltip)
 end
 

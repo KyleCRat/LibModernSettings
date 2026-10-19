@@ -570,5 +570,6 @@ return function(lib, makeFrame, inputState)
     lib._implementationMinor = currentMinor
     lib._loadedModules["Controls/Color"] = currentMinor
     dofile("tests/color_preview.lua")(lib, makeFrame)
+    dofile("tests/color_default.lua")(lib, makeFrame)
     print("LibModernSettings color picker tests passed")
 end

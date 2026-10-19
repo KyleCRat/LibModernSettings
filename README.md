@@ -435,10 +435,12 @@ other digit counts are rejected. RGB-only inputs discard imported alpha.
 Swatches render their color and opacity
 over the button background without a checkerboard.
 
-Optional `classColor` and `accentColor` accept an RGB(A) table or a function
+Optional `defaultColor`, `classColor` and `accentColor` accept an RGB(A) table or a function
 returning one. `classColor = true` uses Blizzard's current player-class color.
-Enabled shortcuts precede Custom in class/accent/custom order. `value.mode`
-is `"custom"` by default, or `"class"` / `"accent"` when that shortcut is enabled.
+Enabled shortcuts precede Custom in default/class/accent/custom order. `value.mode`
+accepts `"custom"`, or `"default"` / `"class"` / `"accent"` when that shortcut is enabled.
+An explicit value without a mode selects Custom. With no initial `value`, the
+input selects Default if `defaultColor` is provided, otherwise Custom.
 Mode is explicit: choosing the same RGB manually still selects Custom. Quick
 choices apply immediately through `onChanged(value)` without replacing the saved
 Custom color or its swatch. Opening Custom restores that color and selects its
@@ -447,6 +449,13 @@ Cancel/X restores the opening color while keeping Custom selected. Only Apply
 adds a recent color; explicit favorite changes survive cancellation.
 The built-in class palette uses playable classes only. Class and item-quality
 swatches change RGB while preserving the draft's opacity; saved palettes retain RGBA.
+
+Default is consumer-defined. Its RGB(A) source supplies the swatch and callback
+color; LMS does not apply it to another widget. Consumers can use `mode == "default"`
+to restore native artwork without a tint, or resolve their own baseline color.
+For example, `defaultColor = { r = 1, g = 0.85, b = 0.2 }` can represent golden
+artwork while the consumer removes its tint when Default is selected. Inputs
+that omit `defaultColor` retain their existing choices and behavior.
 
 For live rendering, provide `onPreview(value)`. Color changes send a fresh custom
 RGBA value without changing `GetValue()` or firing `onChanged`. Hue/saturation,
@@ -458,18 +467,18 @@ opening, and Apply. On Apply, that cleanup runs before the single `onChanged`
 commit. Restore the saved appearance on nil, and render the committed value in
 `onChanged`. Inputs without `onPreview` retain their apply-only behavior.
 
-`GetValue()` returns a fresh RGBA table including mode. Class/accent values also
+`GetValue()` returns a fresh RGBA table including mode. Default/class/accent values also
 include `custom`, an RGBA table holding the remembered Custom color; persist the
 whole value to retain it across input refreshes and reloads. `SetValue(value)`
 cancels any open edit and sets the value without `onChanged`, ending any live
-preview. For class/accent
+preview. For default/class/accent
 values, `custom` seeds the Custom swatch, falling back to the supplied RGBA when
 omitted. `SetOnChanged(callback)` and `SetOnPreview(callback)` replace callbacks;
 changing the preview callback first cancels an open picker through its old callback.
 `SetControlEnabled(enabled, tooltip)`, `OpenPicker()`, and `ClosePicker()` are also
 available. Hide, disable, rebind, or close an input when its data owner changes;
 closing discards its draft. Apply/Cancel returns keyboard focus to Custom.
-`RefreshColors()` refreshes dynamic class/accent swatches without a callback;
+`RefreshColors()` refreshes dynamic default/class/accent swatches without a callback;
 `GetValue()` resolves their current colors. Consumers own runtime theming and
 should persist the mode and resolve its source when rendering outside the UI.
 

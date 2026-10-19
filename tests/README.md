@@ -1,5 +1,14 @@
 # In-Game Validation
 
+Default-color tests cover optional sources, explicit initial values, remembered
+Custom RGBA, dynamic swatches, preview cancellation, Apply, keyboard selection,
+disabled inputs and compatible upgrades. In game, compare an input with Default,
+Class and Custom against existing inputs without Default. Switch modes, change
+the default source, reopen and rebind: preserve the Custom color and selected
+mode. Only Custom opens the picker; switching away discards its draft. Check
+tooltips, masked swatches and narrow/wide layouts. For untinted artwork, the
+consumer must use the mode rather than tinting with the swatch's sample color.
+
 Input-alignment tests cover side-labeled checkboxes/colors, titled and untitled
 dropdowns/sliders, top/left Fields, wrapped titles and descriptions, multi-row
 value lists, nested flows, custom alignment points, column breakpoints, visibility,

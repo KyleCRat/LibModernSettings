@@ -4,6 +4,9 @@
 
 ### Added
 
+- Color inputs accept an optional `defaultColor` source and explicit Default
+  mode alongside Class, Accent and Custom. Preserve the remembered Custom color;
+  consumers decide whether Default restores native artwork or a baseline color.
 - Canvas columns accept `verticalAlign = "input"` to align checkboxes and color
   controls with neighboring input rows rather than their titles. Fields and
   compound inputs expose `GetInputAlignmentOffset()` for custom layouts. Wrapped
