@@ -46,6 +46,10 @@
 
 ### Fixed
 
+- Keep regular and small button bodies aligned when selected by allowing room
+  for the selected atlas's glow, without changing layout or hit areas.
+- Keep button labels centered when click callbacks update their text or
+  selection, without a second text shift on mouse release.
 - Non-scrolling canvases can set `scrollbarWidth = 0` to remove the right inset
   from nested sections. Scrolling canvases still require a positive width.
 - Scroll-area margins now consume mouse-wheel input and scroll their pane,

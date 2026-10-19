@@ -1,5 +1,12 @@
 # In-Game Validation
 
+Compare selected and unselected text buttons at narrow and wide widths: the
+button body must keep its size and alignment, with only the glow extending
+beyond it. Repeat hover, press, focus, disable/re-enable and UI-scale changes.
+Toggle a narrow button between a blank label and NOT from its click callback.
+The label must remain centered after mouse release and keyboard activation,
+including repeated toggles and a consumer refresh during the click.
+
 Canvas artwork overflow tests cover preserved control widths/insets, asymmetric
 and bounded margins, zero margins, resizing, hidden pages, copied options and
 compatible upgrades. In game, extend a row background beyond its control bounds

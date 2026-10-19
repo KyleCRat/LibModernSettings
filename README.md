@@ -52,6 +52,8 @@ Every control uses an options table:
   tertiary selected artwork and survives hover, focus, disable/re-enable, and
   appearance refreshes. Clicking does not toggle it automatically or fire a
   separate selection callback. This API requires release 1.9.0 or newer.
+  Selected text-button glow artwork extends beyond the control to keep its
+  visible body aligned; selection does not change the layout or hit area.
 - `CreateExpandableHeader(parent, options)` creates a full-width tertiary
   section header with a right-aligned yellow arrow that points down while
   collapsed and up while expanded. Use `text`, `width`, `height`, and

@@ -16,6 +16,7 @@ local BUTTON_STYLES = {
         pressed = "common-button-tertiary-pressed",
         disabled = "common-button-tertiary-disabled",
         selected = "common-button-tertiary-selected",
+        selectedOutset = 3,
         normalFont = GameFontNormal,
         highlightFont = GameFontHighlight,
         disabledFont = GameFontDisable,
@@ -30,6 +31,7 @@ local BUTTON_STYLES = {
         pressed = "common-button-tertiary-pressed-small",
         disabled = "common-button-tertiary-disabled-small",
         selected = "common-button-tertiary-selected-small",
+        selectedOutset = 2.5,
         normalFont = GameFontNormalSmall,
         highlightFont = GameFontHighlightSmall,
         disabledFont = GameFontDisableSmall,
@@ -143,6 +145,10 @@ local function layoutButtonContent(button)
         return
     end
 
+    -- SetButtonText can reanchor this label inside OnClick. Native push/pop
+    -- displacement would then offset the new anchor again on mouse release.
+    -- Keep label placement here; the pressed texture supplies click feedback.
+    button:SetPushedTextOffset(0, 0)
     button.label = label
     button._libModernSettingsMinWidth =
         button._libModernSettingsMinWidth or style.minWidth
@@ -452,14 +458,24 @@ lib:RegisterControlNavigation("button", {
 
         if texture then
             local atlas = style.normal
+            local outset = 0
 
             if control:IsSelected() then
                 atlas = style.selected
+                outset = style.selectedOutset or 0
             elseif highlighted and style.hover then
                 atlas = style.hover
             end
 
             texture:SetAtlas(atlas, false)
+            -- Selected text-button atlases include extra glow margins. Keep
+            -- their visible body aligned without enlarging the button's hit area.
+            if texture._libModernSettingsButtonOutset ~= outset then
+                texture:ClearAllPoints()
+                texture:SetPoint("TOPLEFT", control, "TOPLEFT", -outset, outset)
+                texture:SetPoint("BOTTOMRIGHT", control, "BOTTOMRIGHT", outset, -outset)
+                texture._libModernSettingsButtonOutset = outset
+            end
         end
     end,
 })

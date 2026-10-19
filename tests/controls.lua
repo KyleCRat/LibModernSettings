@@ -544,6 +544,14 @@ local function makeFrame(frameType, parent, template)
         return self.fontString
     end
 
+    function frame:SetPushedTextOffset(x, y)
+        self.pushedTextOffsetX, self.pushedTextOffsetY = x, y
+    end
+
+    function frame:GetPushedTextOffset()
+        return self.pushedTextOffsetX or 1, self.pushedTextOffsetY or -1
+    end
+
     function frame:SetText(text)
         self.text = text
 
