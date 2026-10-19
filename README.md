@@ -822,6 +822,24 @@ beside the tallest column; `"bottom"` aligns their bottoms. The default is
 `"top"`. Alignment follows measured content, including wrapping and nested
 groups, and does not add space when responsive columns stack.
 
+Use `BeginColumns({ verticalAlign = "input", minColumnWidth = 260 })` for
+form rows mixing titled inputs with side-labeled checkboxes or color controls.
+It aligns the vertical centers of the first input in each visible flow after
+measuring at the final column widths. Titles and descriptions retain their
+normal spacing; descriptions do not move the alignment point. Stacking or hiding
+the neighboring input removes the alignment offset automatically. Nested flows
+participate through their first visible input; standalone text and decorations
+do not participate. Controls and pending edits are retained during reflow.
+
+Fields, dropdowns and sliders expose `GetInputAlignmentOffset()`, the distance
+down from the control's top to its interactive row's center, excluding its title
+and description. Value lists align their first row even when their pills wrap.
+Other registered controls default to their frame's vertical center. A custom
+control or frame can implement this method to participate with a different
+alignment point; return a non-negative finite number in local layout units.
+Alignment is opt-in per column region and leaves existing top/center/bottom
+layouts unchanged.
+
 `flow:SetShown(false)` hides that flow's frames and removes its space, including
 column gaps. Remaining columns fill the available width; an entirely hidden
 column region occupies no space. `SetShown(true)` restores its controls without

@@ -96,7 +96,22 @@ function lib:_LayoutStackedLabel(owner, label, input, options)
         topInset - gap
     )
 
-    return label:GetHeight() + gap + input:GetHeight() - topInset
+    options.inputTop = label:GetHeight() + gap - topInset
+    return options.inputTop + input:GetHeight()
+end
+
+-- Alignment measures the interactive row, excluding titles and descriptions.
+-- Simple controls use their center; compound controls can expose their own.
+function lib:_GetInputAlignmentOffset(control)
+    local offset
+    if type(control.GetInputAlignmentOffset) == "function" then
+        offset = control:GetInputAlignmentOffset()
+    else
+        offset = control:GetHeight() / 2
+    end
+    assert(type(offset) == "number" and offset >= 0 and offset < math.huge,
+        "input alignment offset must be a non-negative finite number")
+    return offset
 end
 
 function lib:_RefreshControlLayout(control, layout)

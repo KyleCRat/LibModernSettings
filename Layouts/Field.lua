@@ -141,6 +141,7 @@ local function layoutField(field)
         label:SetJustifyV("MIDDLE")
         if hasDescription then
             -- Center the input and label within their row, not the description.
+            layout.inputTop = (height - layout.controlHeight) / 2
             label:SetHeight(height)
             lib:_SetLayoutPoint(label, "TOPLEFT", field, "TOPLEFT", 0, 0)
             lib:_SetLayoutPoint(control,
@@ -148,6 +149,7 @@ local function layoutField(field)
                 -(height - layout.controlHeight) / 2
             )
         else
+            layout.inputTop = ((field._libModernSettingsExplicitHeight or height) - layout.controlHeight) / 2
             label:SetHeight(field._libModernSettingsExplicitHeight or height)
             lib:_SetLayoutPoint(label, "LEFT", field, "LEFT", 0, 0)
             lib:_SetLayoutPoint(control, "LEFT", field, "LEFT", layout.labelWidth + layout.gap, 0)
@@ -337,6 +339,10 @@ end
 
 function fieldMethods:GetControl()
     return self.control
+end
+
+function fieldMethods:GetInputAlignmentOffset()
+    return self._libModernSettingsFieldLayout.inputTop + lib:_GetInputAlignmentOffset(self.control)
 end
 
 function fieldMethods:GetDescription()

@@ -4,6 +4,10 @@
 
 ### Added
 
+- Canvas columns accept `verticalAlign = "input"` to align checkboxes and color
+  controls with neighboring input rows rather than their titles. Fields and
+  compound inputs expose `GetInputAlignmentOffset()` for custom layouts. Wrapped
+  labels, descriptions, hidden flows and stacked columns retain normal spacing.
 - Canvas layouts accept `contentOverflow` to show backgrounds and borders in
   existing side margins while retaining control alignment, border clearance and
   the scrollbar column.

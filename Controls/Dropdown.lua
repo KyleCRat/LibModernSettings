@@ -705,6 +705,14 @@ function dropdownMethods:RefreshLayout()
     lib:_RefreshControlLayout(self, layoutDropdown)
 end
 
+function dropdownMethods:GetInputAlignmentOffset()
+    if self.label:IsShown() then
+        return self._libModernSettingsLabelLayout.inputTop + self.dropdown:GetHeight() / 2
+    end
+
+    return self:GetHeight() / 2
+end
+
 function dropdownMethods:GetContentTopInset()
     if self.label:IsShown() then
         return 0

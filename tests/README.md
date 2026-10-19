@@ -1,5 +1,16 @@
 # In-Game Validation
 
+Input-alignment tests cover side-labeled checkboxes/colors, titled and untitled
+dropdowns/sliders, top/left Fields, wrapped titles and descriptions, multi-row
+value lists, nested flows, custom alignment points, column breakpoints, visibility,
+pending edits and both library load orders. In game, mix these controls with
+`verticalAlign = "input"`, then resize and hide/show their neighbors. Centers
+must follow the input row; stacked or lone controls must have no extra top gap.
+Keep the existing right-side captions and verify clicks, tooltips and Tab focus.
+Repeat on hidden pages, at different UI scales and with long descriptions;
+controls must not flicker, disappear or lose draft values. Existing top, center
+and bottom alignment must retain its behavior.
+
 Compare selected and unselected text buttons at narrow and wide widths: the
 button body must keep its size and alignment, with only the glow extending
 beyond it. Repeat hover, press, focus, disable/re-enable and UI-scale changes.

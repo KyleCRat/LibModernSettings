@@ -436,6 +436,14 @@ function sliderMethods:SetOnChanged(onChanged)
     self._libModernSettingsOnChanged = onChanged
 end
 
+function sliderMethods:GetInputAlignmentOffset()
+    if self.label:IsShown() then
+        return self._libModernSettingsLabelLayout.inputTop + self.inputRow:GetHeight() / 2
+    end
+
+    return self:GetHeight() / 2
+end
+
 function sliderMethods:GetContentTopInset()
     if self.label:IsShown() then
         return 0

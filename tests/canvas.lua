@@ -6,6 +6,7 @@ local scripts = {
     "Elements/Text.lua", "Layouts/Control.lua", "Controls/Button.lua", "Controls/Checkbox.lua",
     "Controls/ExpandableHeader.lua", "Controls/Dropdown.lua",
     "Controls/Slider.lua", "Controls/TextInput.lua", "Controls/ValueList.lua", "Layouts/Field.lua",
+    "Utilities/Color.lua", "Controls/Color.lua", "Utilities/ColorPicker.lua",
     "Layouts/ScrollArea.lua", "Layouts/CanvasNavigation.lua", "Layouts/Canvas.lua",
 }
 local sources = {}
@@ -924,3 +925,4 @@ dofile("tests/canvas_scroll_bookmark.lua")(newEnvironment, loadVersion)
 dofile("tests/canvas_nested.lua")(newEnvironment, loadVersion)
 dofile("tests/canvas_grid.lua")(newEnvironment, loadVersion)
 dofile("tests/canvas_value_list.lua")(newEnvironment, loadVersion)
+dofile("tests/canvas_input_alignment.lua")(newEnvironment, loadVersion)

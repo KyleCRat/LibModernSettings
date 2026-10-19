@@ -199,6 +199,10 @@ function valueListMethods:RefreshLayout()
     lib:_RefreshControlLayout(self, layoutValueList)
 end
 
+function valueListMethods:GetInputAlignmentOffset()
+    return HEIGHT / 2
+end
+
 function valueListMethods:GetValue()
     local values = {}
     for _, value in ipairs(self.slots) do

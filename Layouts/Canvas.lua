@@ -546,7 +546,7 @@ function Flow:_GetRect(options)
     return x, width
 end
 
-function Flow:_PlaceFrame(frame, options, role)
+function Flow:_PlaceFrame(frame, options, role, entry)
     assert(frame, "layout frame is required")
 
     options = options or {}
@@ -582,6 +582,9 @@ function Flow:_PlaceFrame(frame, options, role)
     )
 
     self.cursor = self.cursor + marginTop
+    if entry then
+        entry.layoutTop = self.cursor
+    end
 
     if options.fillWidth then
         frame:SetWidth(width)
@@ -635,7 +638,7 @@ function Flow:_AddFrame(frame, options, role)
     end
     local entry = { frame = frame, placement = shallowCopy(options), role = role }
     self.entries[#self.entries + 1] = entry
-    self:_PlaceFrame(frame, entry.placement, role)
+    self:_PlaceFrame(frame, entry.placement, role, entry)
     entry.width, entry.height = frame:GetWidth(), frame:GetHeight()
     entry.allocatedWidth = entry.width
     watchEntrySize(entry, self.layout)
@@ -801,8 +804,9 @@ function Flow:BeginColumns(options)
             and options.minColumnWidth > 0 and options.minColumnWidth < math.huge),
         "minimum column width must be a positive finite number or nil")
     assert(options.verticalAlign == nil or options.verticalAlign == "top"
-        or options.verticalAlign == "center" or options.verticalAlign == "bottom",
-        "column vertical alignment must be 'top', 'center', or 'bottom'")
+        or options.verticalAlign == "center" or options.verticalAlign == "bottom"
+        or options.verticalAlign == "input",
+        "column vertical alignment must be 'top', 'center', 'bottom', or 'input'")
 
     self.cursor = self.cursor + marginTop
 
@@ -863,6 +867,33 @@ function Columns:Finish(options)
     return self.parentFlow.cursor
 end
 
+local function getFlowInputAlignment(flow)
+    if flow.shown == false then
+        return nil
+    end
+
+    for _, entry in ipairs(flow.entries) do
+        local alignment
+        if entry.group then
+            alignment = getFlowInputAlignment(entry.group)
+        elseif entry.columns or entry.grid then
+            for _, child in ipairs((entry.columns or entry.grid).flows) do
+                alignment = getFlowInputAlignment(child)
+                if alignment then
+                    break
+                end
+            end
+        elseif entry.frame and (entry.frame._libModernSettingsControlType
+            or type(entry.frame.GetInputAlignmentOffset) == "function") then
+            alignment = entry.layoutTop + lib:_GetInputAlignmentOffset(entry.frame)
+        end
+
+        if alignment then
+            return alignment
+        end
+    end
+end
+
 function Columns:_RefreshLayout()
     local options = self.options
     local parentFlow = self.parentFlow
@@ -903,14 +934,28 @@ function Columns:_RefreshLayout()
         end
     end
 
-    -- Measure at the final column widths first, then align shorter columns.
+    -- Measure at the final column widths first, then align the input centers or
+    -- shorter columns. Input measurements include labels but exclude descriptions.
     -- Stacked flows keep their normal sequential placement.
     if not stacked and options.verticalAlign and options.verticalAlign ~= "top" then
+        local inputAlignment
+        if options.verticalAlign == "input" then
+            for _, flow in ipairs(self.flows) do
+                local alignment = getFlowInputAlignment(flow)
+                if alignment then
+                    inputAlignment = math.max(inputAlignment or alignment, alignment)
+                end
+            end
+        end
+
         for _, flow in ipairs(self.flows) do
             if flow.shown ~= false then
                 local offset = bottom - flow.cursor
 
-                if options.verticalAlign == "center" then
+                if options.verticalAlign == "input" then
+                    local alignment = getFlowInputAlignment(flow)
+                    offset = alignment and inputAlignment - alignment or 0
+                elseif options.verticalAlign == "center" then
                     offset = offset / 2
                 end
 
@@ -1051,7 +1096,7 @@ function Flow:_RefreshLayout(cursor)
             if frame._libModernSettingsControlType and frame.RefreshLayout then
                 frame:RefreshLayout()
             end
-            self:_PlaceFrame(frame, entry.placement, entry.role)
+            self:_PlaceFrame(frame, entry.placement, entry.role, entry)
             entry.width, entry.height = frame:GetWidth(), frame:GetHeight()
             entry.allocatedWidth = entry.width
         end
