@@ -9,9 +9,7 @@ end
 local DEFAULT_WIDTH = 270
 local DEFAULT_INPUT_HEIGHT = 34
 local INPUT_ATLAS = "common-button-tertiary-depressed-normal"
-local ARROW_BUTTON_SIZE = 26
-local ARROW_SIZE = 12
-local ARROW_INSET = 4
+local ACTION_STYLE = lib._inputActionSquareStyle
 local TEXT_INSET = 12
 local DEFAULT_INSET = 0
 local LEGACY_INSET = 8
@@ -87,14 +85,14 @@ local function layoutSelectionPreview(control)
         return
     end
 
-    local leftInset = TEXT_INSET - ARROW_INSET
-    local available = dropdown:GetWidth() - leftInset - ARROW_BUTTON_SIZE - ARROW_INSET * 2
+    local leftInset = TEXT_INSET - ACTION_STYLE.inset
+    local available = dropdown:GetWidth() - leftInset - ACTION_STYLE.size - ACTION_STYLE.inset * 2
     local shown = control._libModernSettingsSelectionTexture ~= nil and available > 0
     preview:SetShown(shown)
     preview:SetSize(math.max(1, available), PREVIEW_HEIGHT)
     -- The recessed atlas has more transparent padding below its visible border.
     lib:_SetLayoutPoint(preview, "LEFT", dropdown, "LEFT", leftInset, SELECTION_PREVIEW_OFFSET_Y)
-    dropdown.Text:SetPoint("RIGHT", dropdown.arrowBackground, "LEFT", -ARROW_INSET, 0)
+    dropdown.Text:SetPoint("RIGHT", dropdown.arrowBackground, "LEFT", -ACTION_STYLE.inset, 0)
     if shown then
         dropdown.Text:SetFontObject(GameFontHighlightOutline)
     else
@@ -110,19 +108,19 @@ local function addTexturePreview(description, choice)
         preview:SetDrawLayer("BACKGROUND", -1)
         preview:SetHeight(PREVIEW_HEIGHT)
         preview:SetPoint("LEFT", button.leftTexture1, "RIGHT", PREVIEW_GAP, 0)
-        preview:SetPoint("RIGHT", button, "RIGHT", -ARROW_INSET, 0)
+        preview:SetPoint("RIGHT", button, "RIGHT", -ACTION_STYLE.inset, 0)
         preview:SetAlpha(choice.enabled == false and 0.4 or 1)
 
         local label = button.fontString
         label:ClearAllPoints()
-        label:SetPoint("LEFT", preview, "LEFT", ARROW_INSET, 0)
-        label:SetPoint("RIGHT", preview, "RIGHT", -ARROW_INSET, 0)
+        label:SetPoint("LEFT", preview, "LEFT", ACTION_STYLE.inset, 0)
+        label:SetPoint("RIGHT", preview, "RIGHT", -ACTION_STYLE.inset, 0)
         label:SetFontObject(GameFontHighlightOutline)
         label:SetDrawLayer("OVERLAY")
         label:SetWordWrap(false)
         label:SetMaxLines(1)
         local width = button.leftTexture1:GetWidth() + PREVIEW_GAP + label:GetUnboundedStringWidth()
-            + ARROW_INSET * 3
+            + ACTION_STYLE.inset * 3
         return width, math.max(PREVIEW_ROW_HEIGHT, label:GetHeight())
     end)
 end
@@ -143,13 +141,13 @@ local function configureDropdownButton(control)
     if not dropdown.arrowBackground then
         dropdown.arrowBackground = dropdown:CreateTexture(nil, "ARTWORK")
     end
-    dropdown.arrowBackground:SetSize(ARROW_BUTTON_SIZE, ARROW_BUTTON_SIZE)
-    lib:_SetLayoutPoint(dropdown.arrowBackground, "RIGHT", dropdown, "RIGHT", -ARROW_INSET, 0)
-    dropdown.Arrow:SetSize(ARROW_SIZE, ARROW_SIZE)
+    dropdown.arrowBackground:SetSize(ACTION_STYLE.size, ACTION_STYLE.size)
+    lib:_SetLayoutPoint(dropdown.arrowBackground, "RIGHT", dropdown, "RIGHT", -ACTION_STYLE.inset, 0)
+    dropdown.Arrow:SetSize(ACTION_STYLE.iconSize, ACTION_STYLE.iconSize)
     dropdown.Arrow:SetRotation(math.pi * 1.5)
     dropdown.Text:ClearAllPoints()
     dropdown.Text:SetPoint("LEFT", dropdown, "LEFT", TEXT_INSET, 0)
-    dropdown.Text:SetPoint("RIGHT", dropdown.arrowBackground, "LEFT", -ARROW_INSET, 0)
+    dropdown.Text:SetPoint("RIGHT", dropdown.arrowBackground, "LEFT", -ACTION_STYLE.inset, 0)
     dropdown.Text:SetHeight(DEFAULT_INPUT_HEIGHT)
     dropdown.Text:SetJustifyV("MIDDLE")
     dropdown.Text:SetWordWrap(false)
@@ -553,13 +551,14 @@ end
 function dropdownMethods:_BuildMenu(rootDescription)
     local choices = self:_GetChoices()
     local control = self
+    local menuWidth = self._libModernSettingsMenuWidth
     self._libModernSettingsResolvedChoices = choices
 
     rootDescription:SetScrollMode(getMaxMenuHeight())
-    if self._libModernSettingsMenuWidth then
-        local width = math.min(self._libModernSettingsMenuWidth, UIParent:GetWidth())
-        rootDescription:SetMinimumWidth(width)
-        rootDescription:SetMaximumWidth(width)
+    if menuWidth then
+        menuWidth = math.min(menuWidth, UIParent:GetWidth())
+        rootDescription:SetMinimumWidth(menuWidth)
+        rootDescription:SetMaximumWidth(menuWidth)
     end
     rootDescription:AddMenuAcquiredCallback(centerScrollableMenuOnShow)
 
@@ -600,6 +599,16 @@ function dropdownMethods:_BuildMenu(rootDescription)
 
             if choice.previewTexture then
                 addTexturePreview(description, choice)
+            end
+
+            if menuWidth then
+                -- With both width limits set, native layout can shrink hit targets
+                -- back to the longest label. Supply the intended row extent after
+                -- the compositor has measured text and optional preview artwork.
+                description:SetFinalInitializer(function(button, _, menu)
+                    local inset = menu:GetInset()
+                    button:SetWidth(math.max(1, menuWidth - inset.left - inset.right))
+                end)
             end
 
             if multiSelect then

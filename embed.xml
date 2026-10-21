@@ -17,6 +17,7 @@
     <Script file="Controls\Dropdown.lua"/>
     <Script file="Controls\Slider.lua"/>
     <Script file="Controls\TextInput.lua"/>
+    <Script file="Controls\SearchBox.lua"/>
     <Script file="Controls\ValueList.lua"/>
     <Script file="Controls\Color.lua"/>
     <Script file="Utilities\ColorPicker.lua"/>
@@ -25,4 +26,11 @@
     <Script file="Layouts\CanvasNavigation.lua"/>
     <Script file="Layouts\Canvas.lua"/>
     <Script file="Layouts\Table.lua"/>
+    <Script file="IconPicker\Model.lua"/>
+    <Script file="IconPicker\NameData.lua"/>
+    <Script file="IconPicker\Names.lua"/>
+    <Script file="IconPicker\Sources.lua"/>
+    <Script file="IconPicker\Filters.lua"/>
+    <Script file="IconPicker\Browser.lua"/>
+    <Script file="IconPicker\Picker.lua"/>
 </Ui>

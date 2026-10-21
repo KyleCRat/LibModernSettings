@@ -68,40 +68,44 @@ local function validateButtonIcon(options, style)
 end
 
 local function sizeButtonIcon(icon, style, options)
+    local width, height = DEFAULT_TEXTURE_ICON_SIZE, DEFAULT_TEXTURE_ICON_SIZE
+
     if options.iconSize then
-        icon:SetSize(options.iconSize, options.iconSize)
-        return
+        width, height = options.iconSize, options.iconSize
+    else
+        if options.iconAtlas then
+            width, height = icon:GetWidth(), icon:GetHeight()
+        end
+
+        local maxIconSize = options.maxIconSize or style.maxIconSize
+        local largestDimension = math.max(width, height)
+
+        if maxIconSize and largestDimension > maxIconSize then
+            local scale = maxIconSize / largestDimension
+            width = math.floor((width * scale) + 0.5)
+            height = math.floor((height * scale) + 0.5)
+        end
     end
 
-    local maxIconSize = options.maxIconSize or style.maxIconSize
-
-    if not maxIconSize then
-        return
+    if not lib:_LayoutSizeMatches(icon:GetWidth(), width)
+        or not lib:_LayoutSizeMatches(icon:GetHeight(), height) then
+        icon:SetSize(width, height)
     end
-
-    local width = icon:GetWidth()
-    local height = icon:GetHeight()
-    local largestDimension = math.max(width, height)
-
-    if largestDimension <= maxIconSize then
-        return
-    end
-
-    local scale = maxIconSize / largestDimension
-
-    icon:SetSize(
-        math.floor((width * scale) + 0.5),
-        math.floor((height * scale) + 0.5)
-    )
 end
 
 local function applyButtonIcon(button, style, options)
+    local icon = button.icon
+    local wasShown = icon and icon:IsShown()
+
     if not options.iconAtlas and not options.iconTexture then
-        if button.icon then button.icon:Hide() end
-        return
+        if icon then
+            icon:Hide()
+        end
+        return wasShown
     end
 
-    local icon = button.icon
+    local previousWidth = icon and icon:GetWidth() or 0
+    local previousHeight = icon and icon:GetHeight() or 0
 
     if not icon then
         icon = button:CreateTexture(nil, "OVERLAY", nil, 1)
@@ -113,13 +117,16 @@ local function applyButtonIcon(button, style, options)
     else
         icon:SetTexture(options.iconTexture)
         icon:SetTexCoord(0, 1, 0, 1)
-        icon:SetSize(DEFAULT_TEXTURE_ICON_SIZE, DEFAULT_TEXTURE_ICON_SIZE)
     end
 
     sizeButtonIcon(icon, style, options)
     icon:SetDesaturated(not button:IsEnabled())
     icon:SetAlpha(button:IsEnabled() and 1 or 0.5)
     icon:Show()
+
+    return not wasShown
+        or not lib:_LayoutSizeMatches(icon:GetWidth(), previousWidth)
+        or not lib:_LayoutSizeMatches(icon:GetHeight(), previousHeight)
 end
 
 local function getButtonStyle(button)
@@ -165,7 +172,8 @@ local function layoutButtonContent(button)
 
     if icon then
         if style.iconOnly then
-            local mask = lib:_ApplyTertiarySquareMask(button, icon, button:GetWidth())
+            local mask = lib:_ApplyTertiarySquareMask(button, icon, button:GetWidth(),
+                button._libModernSettingsIconMaskInset)
             lib:_SetLayoutPoint(icon, "CENTER", mask, "CENTER", 0, 0)
         else
             lib:_SetLayoutPoint(icon,
@@ -221,6 +229,10 @@ local function createButton(parent, options)
         "selected must be a boolean or nil"
     )
     validateButtonIcon(options, style)
+    assert(options.iconMaskInset == nil or (style.iconOnly
+        and type(options.iconMaskInset) == "number"
+        and options.iconMaskInset >= 0 and options.iconMaskInset < math.huge),
+        "iconMaskInset must be finite and non-negative, and requires a square button")
     assert(
         options.iconSize == nil
             or (type(options.iconSize) == "number"
@@ -263,6 +275,7 @@ local function createButton(parent, options)
 
     button:SetSize(initialWidth, initialHeight)
     button._libModernSettingsButtonStyle = style
+    button._libModernSettingsIconMaskInset = options.iconMaskInset
     button._libModernSettingsSelected = options.selected == true
     button._libModernSettingsFitToContent = options.fitToContent == true
     button._libModernSettingsMinWidth = options.minWidth
@@ -380,12 +393,18 @@ end
 
 function buttonMethods:SetButtonIcon(options)
     assert(type(options) == "table", "button icon options must be a table")
-    validateButtonIcon(options, getButtonStyle(self))
+    local style = getButtonStyle(self)
+    validateButtonIcon(options, style)
 
     local appearance = self._libModernSettingsAppearanceOptions
     appearance.iconAtlas = options.iconAtlas
     appearance.iconTexture = options.iconTexture
-    lib:_RefreshControlAppearance(self)
+
+    -- Pooled icons change artwork without rebuilding fonts, button geometry or
+    -- masks. Adding/removing an icon or changing its dimensions still reflows.
+    if applyButtonIcon(self, style, appearance) then
+        layoutButtonContent(self)
+    end
 end
 
 function buttonMethods:FitToContents()
@@ -420,6 +439,7 @@ local function refreshButtonAppearance(button, options)
         width = options.width or options.height or style.defaultWidth
         height = width
     end
+    button._libModernSettingsIconMaskInset = options.iconMaskInset
     lib:_ApplyFixedControlSize(button, width, height)
     button._libModernSettingsButtonStyle = style
     button._libModernSettingsMinWidth = options.minWidth
@@ -436,7 +456,8 @@ local function refreshButtonAppearance(button, options)
     if style.iconOnly and not button._libModernSettingsIconMaskSizeHooked then
         button._libModernSettingsIconMaskSizeHooked = true
         button:HookScript("OnSizeChanged", function(self)
-            lib:_ApplyTertiarySquareMask(self, self.icon, self:GetWidth())
+            lib:_ApplyTertiarySquareMask(self, self.icon, self:GetWidth(),
+                self._libModernSettingsIconMaskInset)
         end)
     end
 end

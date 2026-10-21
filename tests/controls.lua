@@ -16,7 +16,9 @@ GameFontNormalHuge = {}
 GameFontHighlightLarge = {}
 GameFontDisableLarge = {}
 HIGHLIGHT_FONT_COLOR = { r = 1, g = 1, b = 1 }
+NORMAL_FONT_COLOR = { r = 1, g = 0.82, b = 0 }
 GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
+SEARCH = "Search"
 UIParent = { width = 1600, height = 1000 }
 function UIParent:GetParent() return nil end
 function UIParent:GetWidth() return self.width end
@@ -112,6 +114,9 @@ local function createMenuDescription(dropdown)
             self.initializers = self.initializers or {}
             self.initializers[#self.initializers + 1] = callback
         end
+        function description:SetFinalInitializer(callback)
+            self.finalInitializer = callback
+        end
         function description:AddResetter(callback)
             self.resetters = self.resetters or {}
             self.resetters[#self.resetters + 1] = callback
@@ -149,6 +154,10 @@ local function createMenuDescription(dropdown)
         return ipairs(self.elements)
     end
     dropdown.menuCallback(dropdown, root)
+    -- DropdownButtonMixin:RegisterMenu supplies this default after generation.
+    if not root.minimumWidth or root.minimumWidth == 0 then
+        root:SetMinimumWidth(dropdown:GetWidth())
+    end
     return root
 end
 
@@ -553,10 +562,14 @@ local function makeFrame(frameType, parent, template)
     end
 
     function frame:SetText(text)
+        local changed = self.text ~= text
         self.text = text
 
         if self.fontString then
             self.fontString:SetText(text)
+        end
+        if changed and self.frameType == "EditBox" and self.scripts.OnTextChanged then
+            self.scripts.OnTextChanged(self, false)
         end
     end
 
@@ -696,17 +709,21 @@ local function makeFrame(frameType, parent, template)
         end
     end
 
-    function frame:SetEnabled(enabled)
-        local wasEnabled = self:IsEnabled()
-        self.enabled = enabled
-        local script = enabled and "OnEnable" or "OnDisable"
-        if wasEnabled ~= enabled and self.scripts[script] then
-            self.scripts[script](self)
+    -- Plain Frames have no enabled-state API. Interactive widgets and template
+    -- mixins may provide it; LMS composite wrappers expose SetControlEnabled.
+    if frameType ~= "Frame" or template then
+        function frame:SetEnabled(enabled)
+            local wasEnabled = self:IsEnabled()
+            self.enabled = enabled
+            local script = enabled and "OnEnable" or "OnDisable"
+            if wasEnabled ~= enabled and self.scripts[script] then
+                self.scripts[script](self)
+            end
         end
-    end
 
-    function frame:IsEnabled()
-        return self.enabled ~= false
+        function frame:IsEnabled()
+            return self.enabled ~= false
+        end
     end
 
     function frame:RegisterCallback(event, callback, owner)
@@ -929,6 +946,40 @@ function CreateFrame(frameType, _, parent, template)
         frame.Inset = makeFrame("Frame", frame)
         frame.Bg = makeRegion()
         frame.TopTileStreaks = makeRegion()
+    elseif template == "SearchBoxNineSliceTemplate" then
+        frame.Background = makeRegion()
+        frame.Instructions = makeFontString()
+        frame.Instructions:SetFontObject(GameFontDisableSmall)
+        frame.searchIcon = makeRegion()
+        frame.searchIcon:SetAtlas("common-searchbar-icon-a")
+        frame.clearButton = makeFrame("Button", frame)
+        frame.clearButton:SetSize(17, 17)
+        frame.clearButton.Icon = makeRegion()
+        frame.clearButton.Icon:SetAtlas("common-search-clearbutton")
+        frame.clearButton:Hide()
+        frame:SetScript("OnTextChanged", function(self)
+            local empty = self:GetText() == ""
+            self.clearButton:SetShown(self:HasFocus() or not empty)
+            self.Instructions:SetShown(empty)
+        end)
+        frame:SetScript("OnEditFocusGained", function(self)
+            self.clearButton:Show()
+        end)
+        frame:SetScript("OnEditFocusLost", function(self)
+            if self:GetText() == "" then
+                self.clearButton:Hide()
+            end
+        end)
+        for _, script in ipairs({ "OnEscapePressed", "OnEnterPressed" }) do
+            frame:SetScript(script, function(self)
+                self:ClearFocus()
+            end)
+        end
+        frame.clearButton:SetScript("OnClick", function(self)
+            local input = self:GetParent()
+            input:SetText("")
+            input:ClearFocus()
+        end)
     elseif template == "MinimalSliderWithSteppersTemplate" then
         frame:SetSize(250, 40)
         frame.Slider = makeFrame("Slider", frame)
@@ -2176,3 +2227,5 @@ print("LibModernSettings control tests passed")
 
 dofile("tests/flash_messages.lua")(lib, makeFrame, inputState)
 dofile("tests/colors.lua")(lib, makeFrame, inputState)
+dofile("tests/search_box.lua")(lib, makeFrame, inputState)
+dofile("tests/icon_picker.lua")(lib, makeFrame, inputState)

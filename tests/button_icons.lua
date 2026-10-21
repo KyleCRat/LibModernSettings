@@ -83,6 +83,27 @@ return function(lib, makeFrame)
     assert(oversized.icon:GetWidth() == 48 and oversized.icon._libModernSettingsSquareMask:GetWidth() == 24,
         "oversized artwork is clipped at the button border rather than expanding the mask")
 
+    local insetButton = lib:CreateButton(makeFrame("Frame"), {
+        variant = "square",
+        width = 42,
+        iconTexture = "large.tga",
+        iconSize = 32,
+        iconMaskInset = 6,
+    })
+    local insetMask = insetButton.icon._libModernSettingsSquareMask
+    assert(insetMask:GetWidth() == 30 and insetMask:GetHeight() == 30 and insetButton.icon:GetWidth() == 32,
+        "a fixed mask inset reveals more artwork without changing the texture size")
+    insetButton.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    insetButton.icon:SetVertexColor(1, 0.8, 0, 1)
+    insetButton:SetButtonIcon({ iconTexture = "replacement.tga" })
+    assert(insetButton.icon.texCoord[1] == 0 and insetButton.icon.texCoord[2] == 1
+        and insetButton.icon.texCoord[3] == 0 and insetButton.icon.texCoord[4] == 1
+        and insetButton.icon.vertexColor[2] == 0.8,
+        "texture swaps reset the previous crop while preserving consumer tint")
+    insetButton:SetSize(44, 44)
+    assert(insetMask:GetWidth() == 32 and #insetButton.icon.masks == 1,
+        "icon rebinding and resize retain the fixed inset without accumulating masks")
+
     local atlasButton = lib:CreateButton(makeFrame("Frame"), {
         variant = "square", iconAtlas = "wide-icon", width = 40,
     })
@@ -94,6 +115,11 @@ return function(lib, makeFrame)
     local plainWidth = textButton:GetWidth()
     textButton:SetButtonIcon({ iconTexture = "example.tga" })
     assert(textButton:GetWidth() > plainWidth, "adding an icon relayouts fit-to-content commands")
+    local textureWidth = textButton:GetWidth()
+    textButton:SetButtonIcon({ iconAtlas = "wide-icon" })
+    assert(textButton:GetWidth() > textureWidth, "a wider atlas reflows an existing text/icon pair")
+    textButton:SetButtonIcon({ iconTexture = "example.tga" })
+    assert(textButton:GetWidth() == textureWidth, "returning to a texture restores the original content width")
     textButton:SetButtonIcon({})
     assert(textButton:GetWidth() == plainWidth, "removed icons leave no width or gap behind")
 
@@ -101,6 +127,10 @@ return function(lib, makeFrame)
         { iconAtlas = "common-icon-plus", iconTexture = "example.tga" },
         { iconTexture = {} },
         { variant = "square" },
+        { variant = "square", iconTexture = "test.tga", iconMaskInset = -1 },
+        { variant = "square", iconTexture = "test.tga", iconMaskInset = math.huge },
+        { variant = "square", iconTexture = "test.tga", iconMaskInset = false },
+        { iconTexture = "test.tga", iconMaskInset = 6 },
     }) do
         assert(not pcall(lib.CreateButton, lib, makeFrame("Frame"), options),
             "constructors reject invalid icon sources")
@@ -128,6 +158,10 @@ return function(lib, makeFrame)
     assert(squareMask.allPoints == nil and squareMask.point[2] == square
         and square.icon._libModernSettingsSquareMask == squareMask,
         "upgrades re-anchor legacy artwork-relative masks without replacing them")
+    assert(insetButton.icon._libModernSettingsSquareMask == insetMask and insetMask:GetWidth() == 32)
+    insetButton:SetSize(42, 42)
+    assert(insetMask:GetWidth() == 30 and insetButton.icon:GetWidth() == 32,
+        "fixed mask insets survive compatible library upgrades")
     square:SetSize(50, 50)
     assert(squareMask:GetWidth() == 35, "retained square buttons keep updating their masks after an upgrade")
     lib._tertiarySquareMask = originalMaskPath

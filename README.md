@@ -20,6 +20,18 @@ Embed the library at `Libs/LibModernSettings-1.0`, including its `Media` directo
 Bundled textures resolve from the copy selected by LibStub, so every consumer
 uses that copy's media.
 
+## Icon picker
+
+`CreateIconPicker(parent, options)` provides a reusable resizable browser with
+search, source/category/type filters, native cursor drops and Apply/Reset/Cancel. Pair it with
+`CreateIconHistory` to persist recent/favorite icons in the consumer's storage.
+The library supplies no SavedVariables or native-picker interception.
+See [the icon-picker contract](docs/ICON_PICKER.md) for ownership, metadata
+extension, performance and an integration example.
+The bundled icon-name index is generated from wowdev's current listfile.
+[Update it with the standalone PowerShell script](docs/ICON_DATA.md); no media
+database addon or in-game network access is needed.
+
 ## Controls
 
 Every control uses an options table:
@@ -37,7 +49,10 @@ Every control uses an options table:
   defaults to 34px square with an icon no larger than 16px; custom `width` or
   `height` keeps both dimensions equal. Square buttons automatically mask both
   atlas and texture icons to the inner border without changing their sizing or
-  aspect ratio. Regular and small buttons do not mask their icons.
+  aspect ratio. Optional `iconMaskInset` uses a fixed, finite, non-negative inset
+  on each edge instead of the proportional default; it requires a square button
+  and survives icon changes, resizing and library upgrades.
+  Regular and small buttons do not mask their icons.
   Buttons retain Blizzard's normal
   mouse-up activation timing and finalize a pending text edit before invoking
   their consumer callback.
@@ -172,6 +187,17 @@ Every control uses an options table:
   `maxLetters`, `textInset`, `onCommit`, and `onError`. Omitting `maxLetters`
   leaves the input unbounded. Focus shows Blizzard's neutral depressed
   tertiary glow without changing the consumer API.
+- `CreateSearchBox(parent, options)` / `searchBox` uses Blizzard's native search
+  text/placeholder behavior with an LMS tertiary-square clear button.
+  Optional `searchIconTexture` and `clearIconTexture` accept texture paths or file
+  IDs; omitted artwork uses native glyphs. Use `value`, `placeholder`, `width`, `height`,
+  `fontObject`, `maxLetters`, `tooltip`, `enabled` and `onChanged(text, userInput)`.
+  `GetValue()` returns the current query immediately; `SetValue(text)` updates it
+  silently. `SetOnChanged(callback)` replaces the callback. Native typing and
+  clearing notify once per text change; direct `SetText()` also notifies.
+  `userInput` is Blizzard's typing flag, so clearing reports false.
+  Enter/Escape clear focus without reverting the query; Tab follows LMS navigation,
+  including the clear button when visible.
 - `CreateValueList(parent, options)` edits an ordered array of small value fields
   that wrap to fit the available width. Use `controlType = "valueList"` in a Field
   or canvas. Pills remain part of one input, with 34px rows and 6px gaps; the control

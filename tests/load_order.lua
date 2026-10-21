@@ -201,4 +201,75 @@ do
         .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga")
 end
 
+-- Picker models survive compatible embed upgrades; duplicate/older modules
+-- cannot replace methods or discard histories and their catalogue metadata.
+do
+    local environment = createEnvironment()
+    local function loadIconModule(path, minor)
+        local file = assert(io.open(path, "rb"))
+        local source = file:read("*a")
+        file:close()
+        source = source:gsub('(local MAJOR, MINOR = "LibModernSettings%-1%.0", )%d+',
+            "%1" .. tostring(minor), 1)
+        local chunk = assert(loadstring(source, "@" .. path))
+        setfenv(chunk, environment)
+        chunk()
+    end
+    loadLibraryMinor(environment, PREVIOUS_MINOR)
+    loadIconModule("IconPicker/Model.lua", PREVIOUS_MINOR)
+    local lib = environment.LibStub(MAJOR)
+    local history = lib:CreateIconHistory()
+    history:Record(10)
+    local catalogue = lib:CreateIconCatalogue({ icons = { { texture = 10, name = "Retained" } } })
+    loadIconModule("IconPicker/NameData.lua", PREVIOUS_MINOR)
+    loadIconModule("IconPicker/Names.lua", PREVIOUS_MINOR)
+    loadIconModule("IconPicker/Filters.lua", PREVIOUS_MINOR)
+    local oldIndex = lib._iconNameIndex
+    local namedCatalogue = lib:CreateIconCatalogue({
+        getFilename = function()
+            return "Outdated_INV_Knife_Blue"
+        end,
+        icons = { { texture = 6997112 }, { texture = 137008 } },
+    })
+    local namedEntry = namedCatalogue.entries[1]
+    local markerEntry = namedCatalogue.entries[2]
+    assert(namedCatalogue:Describe(namedEntry):find("outdated", 1, true))
+    namedCatalogue:Describe(markerEntry)
+    assert(lib._iconUtils.GetArtworkFilter("equipment", "daggers")(namedEntry, namedCatalogue))
+    lib._defaultIconCatalogue = namedCatalogue
+    loadLibraryMinor(environment, CURRENT_MINOR)
+    loadIconModule("IconPicker/Model.lua", CURRENT_MINOR)
+    loadIconModule("IconPicker/NameData.lua", CURRENT_MINOR)
+    loadIconModule("IconPicker/Names.lua", CURRENT_MINOR)
+    loadIconModule("IconPicker/Sources.lua", CURRENT_MINOR)
+    loadIconModule("IconPicker/Filters.lua", CURRENT_MINOR)
+    local selectedIndex = lib._iconNameIndex
+    local selectedCategories = lib._iconUtils.ArtworkCategories
+    assert(selectedIndex ~= oldIndex)
+    assert(lib:GetIconCatalogue() == namedCatalogue and namedCatalogue.entries[1] == namedEntry)
+    assert(namedCatalogue.byTexture[137008] == markerEntry and markerEntry.name == "Raid target: Skull")
+    assert(lib._iconUtils.GetArtworkFilter("symbols", "markers")(markerEntry, namedCatalogue),
+        "retained native markers must acquire current metadata without replacing their entry")
+    assert(namedCatalogue:Describe(namedEntry):find("manaforgeomega", 1, true),
+        "a retained catalogue must invalidate filenames after a provider upgrade")
+    assert(not lib._iconUtils.GetArtworkFilter("equipment", "daggers")(namedEntry, namedCatalogue))
+    assert(lib._iconUtils.GetArtworkFilter("achievements", "raids")(namedEntry, namedCatalogue),
+        "a provider upgrade must refresh cached artwork classifications")
+    local record = lib._iconHistoryPrototype.Record
+    history:Record(20)
+    assert(history:GetIcons("recent")[2] == 10)
+    local search = catalogue:BeginSearch("retained")
+    assert(search:Step(1) and #search.results == 1)
+    loadIconModule("IconPicker/Model.lua", PREVIOUS_MINOR)
+    loadIconModule("IconPicker/Model.lua", CURRENT_MINOR)
+    loadIconModule("IconPicker/NameData.lua", PREVIOUS_MINOR)
+    loadIconModule("IconPicker/NameData.lua", CURRENT_MINOR)
+    loadIconModule("IconPicker/Filters.lua", PREVIOUS_MINOR)
+    loadIconModule("IconPicker/Filters.lua", CURRENT_MINOR)
+    assert(lib._iconNameIndex == selectedIndex,
+        "older and duplicate embeds must not replace the selected name snapshot")
+    assert(lib._iconHistoryPrototype.Record == record and #catalogue.entries == 1)
+    assert(lib._iconUtils.ArtworkCategories == selectedCategories)
+end
+
 print("LibModernSettings mixed load-order tests passed")

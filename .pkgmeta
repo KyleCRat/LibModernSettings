@@ -8,5 +8,6 @@ ignore:
     - AGENTS.md
     - FIXME.md
     - tests
+    - tools
     - TODO.md
     - Media/Textures/common-button-tertiary-square-mask.afphoto

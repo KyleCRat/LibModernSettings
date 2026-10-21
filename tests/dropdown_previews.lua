@@ -64,6 +64,10 @@ return function(lib, openMenu, key, menu)
     assert(firstRow.description.tooltipText == "Smooth bar")
     assert(#menu.rows[3].attachedTextures == 0, "ordinary choices must not create preview textures")
     assert(menu.rows[5].attachedTextures[1].alpha == 0.4)
+    for _, row in ipairs(menu.rows) do
+        assert(row:GetWidth() == 280,
+            "fixed-width menus must keep full-width hit targets for plain and preview choices")
+    end
 
     key("DOWN")
     assert(control:GetValue() == "none" and not preview:IsShown() and changes == 1)
@@ -111,6 +115,7 @@ return function(lib, openMenu, key, menu)
     openMenu(control)
     for _, row in ipairs(menu.rows) do
         assert(#row.attachedTextures == 0, "recycled rows must not leak preview art into plain choices")
+        assert(row:GetWidth() == 280, "short plain labels must still fill the fixed-width menu")
     end
     assert(not preview:IsShown() and preview.texture == nil)
     assert(button.Text:GetFontObject() == control._libModernSettingsSelectionFont)
@@ -119,16 +124,34 @@ return function(lib, openMenu, key, menu)
 
     local multi = lib:CreateDropdown(nil, {
         multiSelect = true,
+        menuWidth = 300,
         value = { one = true },
         choices = { { value = "one", label = "One", previewTexture = 444 } },
     })
     openMenu(multi)
     assert(menu.rows[1].attachedTextures[1].texture == 444)
+    assert(menu.rows[1]:GetWidth() == 280, "fixed-width checkbox hit targets must fill the menu too")
     assert(not multi.dropdown.selectionPreview, "a multi-select summary must not imply one selected texture")
     key("SPACE")
     assert(not multi:GetValue().one and multi.dropdown:IsMenuOpen())
     multi.dropdown:CloseMenu()
     lib:_ClearNavigationFocus(multi)
+    local plain = lib:CreateDropdown(nil, {
+        choices = { { value = "plain", label = "Plain" } },
+    })
+    openMenu(plain)
+    assert(menu.rows[1]:GetWidth() < 280,
+        "pooled rows must return to native sizing when the next menu has no explicit width")
+    plain.dropdown:CloseMenu()
+    for _, width in ipairs({ 420, 190 }) do
+        plain:SetControlWidth(width)
+        openMenu(plain)
+        assert(plain.dropdown:GetMenuDescription().minimumWidth == plain.dropdown:GetWidth())
+        assert(not plain.dropdown:GetMenuDescription().maximumWidth)
+        assert(menu.rows[1]:GetWidth() == plain.dropdown:GetWidth() - 20,
+            "responsive dropdowns must follow their input width with full-width hit targets")
+        plain.dropdown:CloseMenu()
+    end
 
     assert(not pcall(lib.CreateDropdown, lib, nil, {
         choices = { { value = "invalid", label = "Invalid", previewTexture = {} } },

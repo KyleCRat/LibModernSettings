@@ -5,7 +5,7 @@ local scripts = {
     "Utilities/KeyboardNavigation.lua", "Utilities/ControlNavigation.lua", "Utilities/TabNavigation.lua",
     "Elements/Text.lua", "Layouts/Control.lua", "Controls/Button.lua", "Controls/Checkbox.lua",
     "Controls/ExpandableHeader.lua", "Controls/Dropdown.lua",
-    "Controls/Slider.lua", "Controls/TextInput.lua", "Controls/ValueList.lua", "Layouts/Field.lua",
+    "Controls/Slider.lua", "Controls/TextInput.lua", "Controls/SearchBox.lua", "Controls/ValueList.lua", "Layouts/Field.lua",
     "Utilities/Color.lua", "Controls/Color.lua", "Utilities/ColorPicker.lua",
     "Layouts/ScrollArea.lua", "Layouts/CanvasNavigation.lua", "Layouts/Canvas.lua",
 }
@@ -912,6 +912,35 @@ do
     field.scripts.OnSizeChanged(field, oldWidth, oldHeight)
     assert(root.entries[1].autoWidth, "stale dimensions must preserve the canvas's width ownership")
     assert(dynamicEnvironment.QueueSize() == 0, "stale dimensions must not repeat settled layout work")
+end
+
+-- Native search regions and live queries survive either embed load order.
+for _, olderFirst in ipairs({ true, false }) do
+    local searchEnvironment = newEnvironment()
+    loadVersion(searchEnvironment, olderFirst)
+    local searchLibrary = searchEnvironment.LibStub(MAJOR)
+    local changes = 0
+    local search = searchLibrary:CreateSearchBox(UIParent, {
+        value = "saved",
+        searchIconTexture = "Test\\Search.tga",
+        clearIconTexture = "Test\\Close.tga",
+        onChanged = function()
+            changes = changes + 1
+        end,
+    })
+    search:SetText("draft")
+    search:SetFocus()
+    local clearButton = search.clearButton
+    local textChanged = search.baseScripts.OnTextChanged
+    local hookCount = #search.scriptHooks.OnTextChanged
+    loadVersion(searchEnvironment, not olderFirst)
+    assert(searchEnvironment.LibStub(MAJOR) == searchLibrary)
+    assert(search:GetValue() == "draft" and search:HasFocus() and changes == 1)
+    assert(search.clearButton == clearButton and search.baseScripts.OnTextChanged == textChanged)
+    assert(search.searchIcon.texture == "Test\\Search.tga" and clearButton.icon.texture == "Test\\Close.tga")
+    assert(#search.scriptHooks.OnTextChanged == hookCount)
+    clearButton:Click()
+    assert(search:GetValue() == "" and changes == 2 and not search:HasFocus())
 end
 
 print("LibModernSettings canvas upgrade and responsive layout tests passed")

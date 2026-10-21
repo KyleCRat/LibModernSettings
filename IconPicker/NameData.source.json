@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/wowdev/wow-listfile",
+  "release": "202610200222",
+  "publishedAt": "2026-10-20T02:23:11Z",
+  "commit": "041822f2ed2efcc866eb728296e190038897539f",
+  "path": "parts/interface.csv",
+  "gitBlob": "dfda2c603fd66b0d807205308b1d2b02086bf2fb",
+  "sourceBytes": 11463864,
+  "sha256": "91b9b089c682ba96ae7c4a814c28d466b0693a86bdab24ea65126cc818f4e863",
+  "iconCount": 33763,
+  "filter": "Interface/Icons/*.blp; FileDataID -> basename without extension"
+}

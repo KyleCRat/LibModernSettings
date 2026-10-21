@@ -1,5 +1,96 @@
 # In-Game Validation
 
+Search-box tests cover native placeholder behavior, custom search/clear textures,
+live callbacks, silent values, consumer normalization, disable/re-enable,
+keyboard focus and both embed load orders. In game, type, clear with the
+tertiary-square X, Tab/Shift+Tab and use Enter/Escape. Check focused empty queries,
+disabled controls and current query retention after a compatible library upgrade.
+With custom glyphs, verify their centering and text clearance at narrow widths.
+Search clear and dropdown action squares must have identical size, inset and
+glyph sizing, including after library upgrades and with taller search inputs.
+
+Icon-name extraction tests run with `pwsh -NoProfile -File tests/icon_names.ps1`.
+They cover deterministic filtering/order/casing, bounded blocks, invalid inputs,
+hash checks, freshness rejection and non-writing verification. The Lua suite
+round-trips every generated filename and checks cold searches, fallback labels,
+lazy decoding and metadata refresh after a compatible embed upgrade.
+Use the [update/check commands](../docs/ICON_DATA.md) to verify the real snapshot.
+In game, search for artwork outside the current spellbook, bags and equipment
+immediately after reload, including filename keywords and artwork-family filters.
+
+Artwork-filter tests exercise every type against the bundled filename index,
+word/compound boundaries, aliases versus filenames, overlapping categories and
+compatible metadata upgrades. Picker tests combine source/category/type/search,
+preserve history order, reset dependent choices, cancel superseded work and
+recover from empty results. Plain Frame mocks omit native enabled-state methods;
+picker checks verify the dropdown button and tooltip enable together.
+In game, combine Favorites with Equipment and a
+weapon type, then search a color. Try Class artwork, Magic themes and Named color
+variants. Resize to minimum width/height: both filter rows must align and retain
+a usable icon grid. Check keyboard navigation and choice/disabled tooltips.
+Click the far right of short choices in both artwork menus: rows must span the
+whole interior width and follow the resized input. Dropdown tests model native
+input-width defaults, min/max-width layout and
+pooled rows for radio, checkbox and texture-preview choices.
+
+Icon-picker tests cover copied history, deduplication, lazy metadata, typo ranking,
+cancelled searches, cursor identities, Apply/Reset/Cancel, owner invalidation,
+combat closure, simultaneous sessions, retained viewport texture requests and
+compatible model upgrades. In game, cold-open near the end of the catalogue,
+scroll/resize quickly, and search while changing filters. Real textures must load
+for the settled viewport without travelling through earlier rows. Check title,
+Close, borders, masked icon art, tooltips, favorite stars and window raising.
+Picker checks cover larger button/mask dimensions with unchanged grid centers,
+window-width snaps and scrollable height. Fixed button-mask insets also cover
+rebinds, resizing and compatible upgrades. In game, compare grid/shelf/preview
+artwork and check the first/last rows and columns for clipping.
+Use spellbook/action-bar/item/macro/mount/pet drops; unsupported cursors must stay
+intact. Accepted drops must clear every filter/search and reveal their artwork,
+including new catalogue entries and unfinished searches. The search X must clear
+text while retaining other filters. Test history persistence, rejected Apply, pending invalid input, Reset
+then Cancel, keyboard focus versus selection, and two consumers at once.
+Resize tests cover whole columns, fractional effective scales, continuous height,
+minimum dimensions and closure during a drag. In game, resize through column
+boundaries at different UI scales, after moving the window, and at minimum size.
+Keep the top-left corner fixed and the scrollbar gap consistent. Check normal-size,
+right-aligned shelf captions and the count beside the compact footer buttons.
+Use the development copy first in load order until preparing a release.
+
+Picker performance checks use a 32,768-icon synthetic native catalogue to verify
+deferred opening, bounded batches, shared loading, interruption/resumption,
+pending filters/drops and the synchronous catalogue API. History shelf checks cover
+placeholders during preparation, empty guidance after loading, stable one-row
+heights and reuse across reopening or removing favorites. Instrumented pooled
+buttons verify zero texture/metadata/tooltip rewrites for unchanged visible
+entries, retained bindings on reacquisition and cached metadata on revisits.
+Alternating viewports replace artwork without resizing icons or masks, rebinding
+mask textures or setting button fonts. Button tests also cover atlas/texture
+size changes, crop reset, consumer tint and fit-to-content relayout.
+Reported mock timings are not in-game/GPU measurements. In game, cold-open and
+close during loading, then drag the scrollbar back and forth across seen artwork.
+Check that chrome appears promptly, the spinner stops, and no stale artwork,
+selection or tooltip leaks between pooled rows or editing owners.
+Refresh checks count source scans, search starts, history reads and shelf layouts.
+Unrelated/already-resolved item completions leave searches running; real changes,
+pending names, removals and two concurrent pickers update the correct sources.
+Selection and height-only resizing reuse history without relayout; width changes
+reuse history while updating shelves. Explicit refresh rereads external storage.
+The ScrollBox mock performs the native immediate update on provider replacement,
+so extra grid layout passes fail the regression check. In game, move/split bag
+stacks while searching, swap equipment, learn/change spells, and check cold item
+names, history selection and resizing before closing/reopening the picker.
+
+Native-marker tests cover all eight file IDs, names, `rt1`–`rt8`, color aliases,
+symbol filtering, deduplication with macro entries and retained catalogue upgrades.
+In game, find exactly Star through Skull under Symbols and interface → Raid markers;
+search `raid marker`, `red x`, `rt8` and `137008` with other browser addons disabled.
+Apply/favorite Skull, reopen and reload: its name and artwork must stay correct.
+Interface icons must exclude `INV_Icon_Feather01e` and
+`INV_12PH_Folk_801_Parttion_Pillar_Icon` while retaining `UI_Chat` and faction symbols.
+Numbered-symbol tests cover 0–9, exact file-ID ranking, word aliases and Numbers
+filter membership. In game, browse Symbols and interface → Numbers, then search
+`digit nine` or `6033354` and apply/favorite/reopen.
+
 Default-color tests cover optional sources, explicit initial values, remembered
 Custom RGBA, dynamic swatches, preview cancellation, Apply, keyboard selection,
 disabled inputs and compatible upgrades. In game, compare an input with Default,

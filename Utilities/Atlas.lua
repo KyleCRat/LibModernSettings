@@ -13,6 +13,13 @@ local EDIT_BOX_FOCUS_TOP_OFFSET = 3
 local EDIT_BOX_FOCUS_RIGHT_OFFSET = 2
 local EDIT_BOX_FOCUS_BOTTOM_OFFSET = -1
 
+-- Inset action squares share the same footprint inside recessed inputs.
+lib._inputActionSquareStyle = {
+    size = 26,
+    inset = 4,
+    iconSize = 12,
+}
+
 function lib:_CreateAtlasTexture(owner, layer, atlas)
     local texture = owner:CreateTexture(nil, layer)
 
@@ -22,9 +29,11 @@ function lib:_CreateAtlasTexture(owner, layer, atlas)
     return texture
 end
 
-function lib:_ApplyTertiarySquareMask(button, artwork, buttonSize)
+function lib:_ApplyTertiarySquareMask(button, artwork, buttonSize, inset)
     assert(type(buttonSize) == "number" and buttonSize > 0 and buttonSize < math.huge,
         "tertiary-square button size must be a positive finite number")
+    assert(inset == nil or (type(inset) == "number" and inset >= 0 and inset < math.huge),
+        "tertiary-square mask inset must be finite and non-negative")
 
     local mask = artwork._libModernSettingsSquareMask
 
@@ -36,10 +45,17 @@ function lib:_ApplyTertiarySquareMask(button, artwork, buttonSize)
 
     -- Clip at the button's inner bevel, not at the icon's own corners. Small
     -- glyphs keep their shape; larger artwork cannot cover the frame's border.
-    local size = math.max(1, math.floor(buttonSize * 0.7 + 0.5))
-    mask:SetSize(size, size)
+    local size = inset and (buttonSize - inset * 2) or (buttonSize * 0.7)
+    size = math.max(1, math.floor(size + 0.5))
+    if not self:_LayoutSizeMatches(mask:GetWidth(), size)
+        or not self:_LayoutSizeMatches(mask:GetHeight(), size) then
+        mask:SetSize(size, size)
+    end
     self:_SetLayoutPoint(mask, "CENTER", button, "CENTER", 0, 1)
-    mask:SetTexture(self._tertiarySquareMask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+    if mask._libModernSettingsMaskPath ~= self._tertiarySquareMask then
+        mask:SetTexture(self._tertiarySquareMask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+        mask._libModernSettingsMaskPath = self._tertiarySquareMask
+    end
 
     return mask
 end

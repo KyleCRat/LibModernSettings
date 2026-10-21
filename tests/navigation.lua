@@ -167,6 +167,9 @@ return function(lib, makeFrame, inputState)
     menu.ScrollBox = makeFrame("Frame", menu)
     menu.ScrollBox:EnableMouseWheel(true)
     function menu:GetLeft() return 100 end
+    function menu:GetInset()
+        return { left = 10, right = 10, top = 10, bottom = 10 }
+    end
     function menu.ScrollBox:HasDataProvider() return self.dataProvider ~= nil end
     function menu.ScrollBox:RemoveDataProvider()
         for _, row in ipairs(self.dataProvider or {}) do
@@ -212,11 +215,36 @@ return function(lib, makeFrame, inputState)
         row.fontString:SetPoint("LEFT", row, "LEFT", 20, 0)
         row.fontString:SetHeight(20)
         row.fontString:SetText(row.description[1] or row.description.label or "")
+        row:SetSize(row.fontString:GetUnboundedStringWidth() + 24, 20)
         for _, initializer in ipairs(row.description.initializers or {}) do
-            local width, height = initializer(row)
+            local width, height = initializer(row, row.description, menu)
             if width and height then
                 row:SetSize(width, height)
             end
+        end
+        if row.description.finalInitializer then
+            row.description.finalInitializer(row, row.description, menu)
+        end
+    end
+    local function layoutMenuRows(description, rows)
+        -- Match native PerformLayout's min/max width passes, including its
+        -- fallback to measured child width when both limits are the same.
+        local childMaxWidth = 0
+        for _, row in ipairs(rows) do
+            childMaxWidth = math.max(childMaxWidth, row:GetWidth())
+        end
+        local inset = menu:GetInset()
+        local margins = inset.left + inset.right
+        local width = childMaxWidth
+        if description.minimumWidth and width < description.minimumWidth - margins then
+            width = description.minimumWidth - margins
+        end
+        if description.maximumWidth then
+            local interior = description.maximumWidth - margins
+            width = width > interior and interior or math.min(childMaxWidth, interior)
+        end
+        for _, row in ipairs(rows) do
+            row:SetWidth(width)
         end
     end
     function menu:SetMenuDescription(description)
@@ -241,6 +269,8 @@ return function(lib, makeFrame, inputState)
             initializeMenuRow(row)
             rows[index] = row
         end
+        self.description = description
+        layoutMenuRows(description, rows)
         self.rows = rows
         self.ScrollBox:SetShown(#rows > 3)
         if self.ScrollBox:IsShown() and not self.ScrollBox:HasDataProvider() then
@@ -253,6 +283,7 @@ return function(lib, makeFrame, inputState)
         for _, row in ipairs(self.rows or {}) do
             initializeMenuRow(row)
         end
+        layoutMenuRows(self.description, self.rows)
     end
     local nativeWheels = 0
     local function nativeWheel(_, delta)
