@@ -35,6 +35,8 @@
   markers include readable names, color aliases and `rt1`–`rt8` search terms.
   Raid markers matches only those eight IDs; Interface icons requires a UI
   filename prefix. Symbols also includes a Numbers type with the 0–9 artwork.
+  Pickers can opt into `rememberFilters` to retain filters and search between
+  openings in memory; separate instances stay independent and drops still clear them.
 - Generate the compact icon-name index from wowdev's latest listfile with a
   standalone PowerShell updater, pinned provenance, verified input and
   reproducible output. Decode names on demand without a media-library dependency.

@@ -505,6 +505,7 @@ return function(lib, makeFrame, inputState)
     assert(droppedSearch.cancelled and not picker.searchJob
         and picker.scrollBox.first == 99, "a drop must replace an unfinished search with the selected artwork")
     picker:Close()
+    dofile("tests/icon_picker_filters.lua")(lib, setCursor)
     dofile("tests/icon_picker_refresh.lua")(lib, inputState)
     dofile("tests/icon_picker_performance.lua")(lib, picker, inputState, options, setCursor)
     CreateFrame, ScrollUtil = originalCreateFrame, originalScrollUtil

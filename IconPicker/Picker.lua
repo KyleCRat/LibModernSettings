@@ -570,7 +570,9 @@ function Picker:Open(options)
     end
     self.status:SetText("Loading icons…")
     self.loading:Show()
-    self:ResetBrowseFilters()
+    if not self.rememberFilters then
+        self:ResetBrowseFilters()
+    end
     self.frame:SetTitle("Choose icon for " .. options.addonName .. " / " .. options.sourceName)
     self.frame:SetScale(math.min(1, (UIParent:GetHeight() - 32) / self.frame:GetHeight(),
         (UIParent:GetWidth() - 32) / self.frame:GetWidth()))
@@ -618,10 +620,11 @@ function lib:CreateIconPicker(parent, options)
         filters = filters,
         searchIconTexture = options.searchIconTexture,
         clearIconTexture = options.clearIconTexture,
+        rememberFilters = options.rememberFilters == true,
         categoryValue = "all",
         typeValue = "all",
     }, Picker)
     Icons.CreateBrowser(picker, parent or UIParent)
-    picker:RefreshArtworkControls()
+    picker:ResetBrowseFilters()
     return picker
 end

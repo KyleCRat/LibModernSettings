@@ -150,8 +150,12 @@ Equipment and Daggers and knives, then search `red`. A category includes all its
 types until narrowed. Filter menus use ordinary responsive LMS dropdown sizing.
 Search uses `CreateSearchBox` with its tertiary-square clear button.
 Changing category resets only the type. The search X clears
-only search text, keeping source/category/type choices. Reopening or accepting a
-cursor drop resets all filters and search; a drop reveals its selected artwork,
+only search text, keeping source/category/type choices. Reopening resets all
+filters and search by default. Pass `rememberFilters = true` to `CreateIconPicker`
+to retain them between openings of that instance, including after Apply or Cancel.
+This is memory-only, independent of icon history, and ends on reload/logout.
+Each opening still uses the current owner's icon, suggestions and metadata.
+Accepting a cursor drop always clears all filters and search and reveals its selected artwork,
 adding it to the catalogue when necessary. History order is retained when no
 search text is entered.
 Interface icons requires a `UI` filename prefix; the generic word `Icon` in

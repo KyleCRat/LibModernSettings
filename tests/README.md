@@ -24,6 +24,10 @@ compatible metadata upgrades. Picker tests combine source/category/type/search,
 preserve history order, reset dependent choices, cancel superseded work and
 recover from empty results. Plain Frame mocks omit native enabled-state methods;
 picker checks verify the dropdown button and tooltip enable together.
+Remembered-filter checks cover reopening after Cancel/Apply, pending searches,
+new editing owners and suggestions, independent instances and drop resets.
+In game, reopen a picker with `rememberFilters = true` after changing filters and
+search text; retain them until reload/logout, without retaining the previous draft.
 In game, combine Favorites with Equipment and a
 weapon type, then search a color. Try Class artwork, Magic themes and Named color
 variants. Resize to minimum width/height: both filter rows must align and retain
