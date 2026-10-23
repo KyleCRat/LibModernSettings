@@ -139,6 +139,10 @@ Every control uses an options table:
   Dropdown menus retain their natural height up
   to three quarters of `UIParent`; longer lists use Blizzard's native
   scrolling-menu behavior and are vertically centered on the screen.
+  Set `menuDirection = "up"` or `"down"` to prefer opening short menus above or
+  below the input. Omit it to keep the native anchor. Blizzard still flips menus
+  that would leave the screen; long scrolling menus retain their full height
+  allowance and screen centering regardless of this preference.
   In single-select menus, Up/Down arrows select the previous/next available choice
   without wrapping or closing the menu. The selected row is scrolled into view;
   the mouse wheel scrolls the list without changing selection. Enter or Space

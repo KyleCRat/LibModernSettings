@@ -175,6 +175,16 @@ local function configureDropdownMenu(control)
     end
 end
 
+local function configureMenuDirection(control, direction)
+    if direction == nil then
+        return
+    end
+
+    local point = direction == "up" and "BOTTOMLEFT" or "TOPLEFT"
+    local relativePoint = direction == "up" and "TOPLEFT" or "BOTTOMLEFT"
+    control.dropdown:SetMenuAnchor(AnchorUtil.CreateAnchor(point, control.dropdown, relativePoint, 0, 0))
+end
+
 local function getMaxMenuHeight()
     return math.max(
         1,
@@ -260,6 +270,8 @@ end
 local function createDropdown(parent, options)
     assert(options.menuWidth == nil or (type(options.menuWidth) == "number"
         and options.menuWidth > 0 and options.menuWidth < math.huge), "menuWidth must be a positive finite number or nil")
+    assert(options.menuDirection == nil or options.menuDirection == "up" or options.menuDirection == "down",
+        "menuDirection must be up, down, or nil")
     assert(options.multiSelect == nil or type(options.multiSelect) == "boolean", "multiSelect must be a boolean or nil")
     assert(options.selectionText == nil or type(options.selectionText) == "function", "selectionText must be a function or nil")
     assert(options.placeholder == nil or type(options.placeholder) == "string", "placeholder must be a string or nil")
@@ -327,6 +339,7 @@ local function createDropdown(parent, options)
     control.dropdown = dropdown
     control.currentValue = options.multiSelect and copySelections(options.value) or options.value
     configureDropdownButton(control)
+    configureMenuDirection(control, options.menuDirection)
     if options.placeholder then
         dropdown:SetDefaultText(options.placeholder)
     end
@@ -756,6 +769,7 @@ end
 
 local function refreshDropdownAppearance(control, options)
     control._libModernSettingsMenuWidth = options.menuWidth
+    configureMenuDirection(control, options.menuDirection)
     lib:_ApplyInputWidth(control, options.width or DEFAULT_WIDTH)
     control._libModernSettingsLeftInset = options.leftInset or DEFAULT_INSET
     control._libModernSettingsRightInset = options.rightInset or DEFAULT_INSET

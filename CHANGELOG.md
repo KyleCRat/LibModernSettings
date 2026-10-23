@@ -4,6 +4,8 @@
 
 ### Added
 
+- Dropdowns accept `menuDirection = "up"` or `"down"` for their preferred opening
+  direction. Long menus retain the normal height limit and screen centering.
 - Reusable resizable icon picker with masked tertiary-square icons, recent and
   favorite history adapters, native cursor drops, Apply/Reset/Cancel and explicit
   consumer ownership. Share a deduplicated catalogue, search a bundled icon-name

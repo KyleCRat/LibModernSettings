@@ -88,6 +88,17 @@ MenuInputContext = { None = 1, MouseButton = 2, MouseWheel = 3 }
 MenuResponse = { Refresh = 2, CloseAll = 4 }
 ScrollBoxConstants = { AlignNearest = "nearest", NoScrollInterpolation = 0 }
 
+AnchorUtil = {}
+function AnchorUtil.CreateAnchor(point, relativeTo, relativePoint, x, y)
+    return {
+        point = point,
+        relativeTo = relativeTo,
+        relativePoint = relativePoint,
+        x = x,
+        y = y,
+    }
+end
+
 local function createMenuDescription(dropdown)
     local root = { menuAcquiredCallbacks = {}, radioButtons = {}, elements = {} }
     function root:SetScrollMode(height)
@@ -740,6 +751,9 @@ local function makeFrame(frameType, parent, template)
 
     function frame:SetupMenu(callback)
         self.menuCallback = callback
+    end
+    function frame:SetMenuAnchor(anchor)
+        self.menuAnchor = anchor
     end
     function frame:SetDefaultText(text)
         self.defaultText = text
@@ -1523,6 +1537,8 @@ shortMenuFrame.scripts.OnShow(shortMenuFrame)
 assert(shortMenuFrame.scripts.OnShow == nil)
 assert(shortMenuFrame.clearedPoints == nil)
 assert(shortMenuFrame.point == nil)
+
+dofile("tests/dropdown_direction.lua")(lib, buildDropdownMenu, createMenuFrame)
 
 local inlineDropdown = lib:CreateDropdown(nil, {
     choices = {},

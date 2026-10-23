@@ -357,6 +357,9 @@ Validate Blizzard-owned templates and interaction behavior in game:
   canvas. Open a dropdown with enough choices to exceed the screen height and
   confirm it caps near three quarters of the UI, scrolls to the final choice,
   remains vertically centered, and remains usable at 4K and common UI scales.
+  Repeat with `menuDirection = "up"` and `"down"`, for radio and checkbox lists:
+  short menus prefer the requested side and can flip at screen edges; long menus
+  keep the same scrolling height and centering. Reopen after resizing and selections.
 - Move sliders with the thumb and both steppers.
 - Align dropdowns beside regular/square tertiary buttons and text inputs.
   Check the 34px recessed body, inset square caret, centered selection text and
