@@ -1,8 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Controls/Checkbox", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/Checkbox", MINOR)
+then
     return
 end
 
@@ -54,26 +57,26 @@ local function createCheckbox(parent, options)
     local checkbox = CreateFrame("CheckButton", nil, parent)
 
     checkbox:SetSize(CHECKBOX_SIZE, CHECKBOX_SIZE)
-    checkbox:SetNormalTexture(lib:_CreateAtlasTexture(
-        checkbox,
-        "BACKGROUND",
-        CHECKBOX_ATLASES.normal
-    ))
-    checkbox:SetPushedTexture(lib:_CreateAtlasTexture(
-        checkbox,
-        "BACKGROUND",
-        CHECKBOX_ATLASES.pressed
-    ))
-    checkbox:SetHighlightTexture(lib:_CreateAtlasTexture(
-        checkbox,
-        "HIGHLIGHT",
-        CHECKBOX_ATLASES.hover
-    ))
-    checkbox:SetDisabledTexture(lib:_CreateAtlasTexture(
-        checkbox,
-        "BACKGROUND",
-        CHECKBOX_ATLASES.disabled
-    ))
+    checkbox:SetNormalTexture(
+        lib:_CreateAtlasTexture(checkbox, "BACKGROUND", CHECKBOX_ATLASES.normal)
+    )
+    checkbox:SetPushedTexture(
+        lib:_CreateAtlasTexture(
+            checkbox,
+            "BACKGROUND",
+            CHECKBOX_ATLASES.pressed
+        )
+    )
+    checkbox:SetHighlightTexture(
+        lib:_CreateAtlasTexture(checkbox, "HIGHLIGHT", CHECKBOX_ATLASES.hover)
+    )
+    checkbox:SetDisabledTexture(
+        lib:_CreateAtlasTexture(
+            checkbox,
+            "BACKGROUND",
+            CHECKBOX_ATLASES.disabled
+        )
+    )
     checkbox:SetCheckedTexture(createCheckmark(checkbox, false))
     checkbox:SetDisabledCheckedTexture(createCheckmark(checkbox, true))
     checkbox._libModernSettingsOnChanged = options.onChanged
@@ -117,14 +120,11 @@ function checkboxMethods:_HandleClick()
     lib:_FlushPendingEditBoxCommits()
 
     PlaySound(
-        checked
-            and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON
+        checked and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON
             or SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF
     )
 
-    if onChanged then
-        onChanged(checked)
-    end
+    if onChanged then onChanged(checked) end
 end
 
 function checkboxMethods:SetValue(value)
@@ -165,12 +165,30 @@ end
 
 local function refreshCheckboxAppearance(checkbox, options)
     lib:_ApplyFixedControlSize(checkbox, CHECKBOX_SIZE, CHECKBOX_SIZE)
+
     if checkbox.label then
         local width = options.width or 220
-        lib:_ApplyDefaultFont(checkbox.label, options.fontObject or GameFontHighlight)
-        checkbox.label:SetWidth(math.max(width - checkbox:GetWidth() - LABEL_GAP, 1))
-        lib:_SetLayoutPoint(checkbox.label, "LEFT", checkbox, "RIGHT", LABEL_GAP, 0)
-        checkbox:SetHitRectInsets(0, math.min(checkbox:GetWidth() - width, 0), 0, 0)
+        lib:_ApplyDefaultFont(
+            checkbox.label,
+            options.fontObject or GameFontHighlight
+        )
+        checkbox.label:SetWidth(
+            math.max(width - checkbox:GetWidth() - LABEL_GAP, 1)
+        )
+        lib:_SetLayoutPoint(
+            checkbox.label,
+            "LEFT",
+            checkbox,
+            "RIGHT",
+            LABEL_GAP,
+            0
+        )
+        checkbox:SetHitRectInsets(
+            0,
+            math.min(checkbox:GetWidth() - width, 0),
+            0,
+            0
+        )
     end
 end
 

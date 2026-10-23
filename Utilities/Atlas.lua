@@ -1,13 +1,15 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Utilities/Atlas", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Utilities/Atlas", MINOR)
+then
     return
 end
 
-local EDIT_BOX_FOCUS_ATLAS =
-    "common-button-tertiary-depressed-normal-glow"
+local EDIT_BOX_FOCUS_ATLAS = "common-button-tertiary-depressed-normal-glow"
 local EDIT_BOX_FOCUS_LEFT_OFFSET = -2
 local EDIT_BOX_FOCUS_TOP_OFFSET = 3
 local EDIT_BOX_FOCUS_RIGHT_OFFSET = 2
@@ -30,10 +32,17 @@ function lib:_CreateAtlasTexture(owner, layer, atlas)
 end
 
 function lib:_ApplyTertiarySquareMask(button, artwork, buttonSize, inset)
-    assert(type(buttonSize) == "number" and buttonSize > 0 and buttonSize < math.huge,
-        "tertiary-square button size must be a positive finite number")
-    assert(inset == nil or (type(inset) == "number" and inset >= 0 and inset < math.huge),
-        "tertiary-square mask inset must be finite and non-negative")
+    assert(
+        type(buttonSize) == "number"
+            and buttonSize > 0
+            and buttonSize < math.huge,
+        "tertiary-square button size must be a positive finite number"
+    )
+    assert(
+        inset == nil
+            or (type(inset) == "number" and inset >= 0 and inset < math.huge),
+        "tertiary-square mask inset must be finite and non-negative"
+    )
 
     local mask = artwork._libModernSettingsSquareMask
 
@@ -47,13 +56,22 @@ function lib:_ApplyTertiarySquareMask(button, artwork, buttonSize, inset)
     -- glyphs keep their shape; larger artwork cannot cover the frame's border.
     local size = inset and (buttonSize - inset * 2) or (buttonSize * 0.7)
     size = math.max(1, math.floor(size + 0.5))
-    if not self:_LayoutSizeMatches(mask:GetWidth(), size)
-        or not self:_LayoutSizeMatches(mask:GetHeight(), size) then
+
+    if
+        not self:_LayoutSizeMatches(mask:GetWidth(), size)
+        or not self:_LayoutSizeMatches(mask:GetHeight(), size)
+    then
         mask:SetSize(size, size)
     end
+
     self:_SetLayoutPoint(mask, "CENTER", button, "CENTER", 0, 1)
+
     if mask._libModernSettingsMaskPath ~= self._tertiarySquareMask then
-        mask:SetTexture(self._tertiarySquareMask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+        mask:SetTexture(
+            self._tertiarySquareMask,
+            "CLAMPTOBLACKADDITIVE",
+            "CLAMPTOBLACKADDITIVE"
+        )
         mask._libModernSettingsMaskPath = self._tertiarySquareMask
     end
 

@@ -2,13 +2,14 @@ local addonName = ...
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
-if not lib then
-    return
-end
+if not lib then return end
 
 -- Owned media follows the selected standalone package or canonical embed.
 local libraryFolder = addonName == MAJOR and "" or "Libs\\" .. MAJOR .. "\\"
-lib._tertiarySquareMask = "Interface\\AddOns\\" .. addonName .. "\\" .. libraryFolder
+lib._tertiarySquareMask = "Interface\\AddOns\\"
+    .. addonName
+    .. "\\"
+    .. libraryFolder
     .. "Media\\Textures\\common-button-tertiary-square-mask.tga"
 
 lib._implementationMinor = MINOR
@@ -20,9 +21,7 @@ lib._methodDispatchers = lib._methodDispatchers or {}
 
 -- Module files retain their version guard and run once per accepted revision.
 function lib:_BeginModule(moduleName, minor)
-    if self._loadedModules[moduleName] == minor then
-        return false
-    end
+    if self._loadedModules[moduleName] == minor then return false end
 
     self._loadedModules[moduleName] = minor
     return true
@@ -31,25 +30,30 @@ end
 local function getMethodDispatcher(methodName)
     local dispatcher = lib._methodDispatchers[methodName]
 
-    if dispatcher then
-        return dispatcher
-    end
+    if dispatcher then return dispatcher end
 
     dispatcher = function(control, ...)
         local controlType = control._libModernSettingsControlType
         local definition = lib._controlTypes[controlType]
-        local navigationMethod = definition and definition.navigation
+        local navigationMethod = definition
+            and definition.navigation
             and lib._navigationControlMethods[methodName]
-        local method = navigationMethod or (definition and definition.methods[methodName])
+        local method = navigationMethod
+            or (definition and definition.methods[methodName])
 
         if not method then
-            error((
-                "LibModernSettings control type %q has no method %q"
-            ):format(tostring(controlType), methodName), 2)
+            error(
+                ("LibModernSettings control type %q has no method %q"):format(
+                    tostring(controlType),
+                    methodName
+                ),
+                2
+            )
         end
 
         return method(control, ...)
     end
+
     lib._methodDispatchers[methodName] = dispatcher
 
     return dispatcher
@@ -59,6 +63,7 @@ function lib:_InstallControlMethods(control, definition)
     for methodName in pairs(definition.methods) do
         control[methodName] = getMethodDispatcher(methodName)
     end
+
     if definition.navigation then
         for methodName in pairs(self._navigationControlMethods) do
             control[methodName] = getMethodDispatcher(methodName)
@@ -69,19 +74,29 @@ end
 function lib:_RefreshControlAppearance(control)
     local definition = self._controlTypes[control._libModernSettingsControlType]
     local options = control._libModernSettingsAppearanceOptions
-    if not options or not definition.refreshAppearance or control._libModernSettingsRefreshingAppearance then
+
+    if
+        not options
+        or not definition.refreshAppearance
+        or control._libModernSettingsRefreshingAppearance
+    then
         return
     end
 
     control._libModernSettingsRefreshingAppearance = true
     definition.refreshAppearance(control, options)
     control._libModernSettingsRefreshingAppearance = nil
-    if definition.navigation then
-        control:_RefreshNavigationHover()
-    end
+
+    if definition.navigation then control:_RefreshNavigationHover() end
 end
 
-function lib:RegisterControlType(controlType, factory, methods, initializer, refreshAppearance)
+function lib:RegisterControlType(
+    controlType,
+    factory,
+    methods,
+    initializer,
+    refreshAppearance
+)
     assert(
         type(controlType) == "string" and controlType ~= "",
         "controlType must be a non-empty string"
@@ -125,7 +140,10 @@ function lib:RegisterControlType(controlType, factory, methods, initializer, ref
             self:_InstallControlMethods(control, definition)
             -- Old releases did not retain option intent. Never guess whether
             -- their measured dimensions were defaults or addon overrides.
-            if refreshAppearance and control._libModernSettingsAppearanceOptions then
+            if
+                refreshAppearance
+                and control._libModernSettingsAppearanceOptions
+            then
                 self:_RefreshControlAppearance(control)
             end
         end
@@ -136,24 +154,32 @@ function lib:CreateControl(controlType, parent, options)
     local definition = self._controlTypes[controlType]
 
     if not definition then
-        error((
-            "LibModernSettings control type %q is not registered"
-        ):format(tostring(controlType)), 2)
+        error(
+            ("LibModernSettings control type %q is not registered"):format(
+                tostring(controlType)
+            ),
+            2
+        )
     end
 
     options = options or {}
     assert(type(options) == "table", "options must be a table")
 
     local appearanceOptions = {}
+
     for key, value in pairs(options) do
         appearanceOptions[key] = value
     end
+
     local control = definition.factory(parent, options)
 
     if not control then
-        error((
-            "LibModernSettings control factory %q returned no control"
-        ):format(controlType), 2)
+        error(
+            ("LibModernSettings control factory %q returned no control"):format(
+                controlType
+            ),
+            2
+        )
     end
 
     control._libModernSettingsControlType = controlType
@@ -165,13 +191,9 @@ function lib:CreateControl(controlType, parent, options)
         self:_RefreshControlAppearance(control)
     end
 
-    if definition.initializer then
-        definition.initializer(control, options)
-    end
+    if definition.initializer then definition.initializer(control, options) end
 
-    if definition.navigation then
-        self:_ConfigureControlNavigation(control)
-    end
+    if definition.navigation then self:_ConfigureControlNavigation(control) end
 
     return control
 end

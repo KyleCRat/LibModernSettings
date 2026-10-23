@@ -7,22 +7,53 @@ return function(lib, makeFrame)
 
     local function equal(actual, expected)
         for _, channel in ipairs({ "r", "g", "b", "a" }) do
-            assert(math.abs(actual[channel] - expected[channel]) < 0.000001, channel .. " differs")
+            assert(
+                math.abs(actual[channel] - expected[channel]) < 0.000001,
+                channel .. " differs"
+            )
         end
     end
 
-    for _, invalid in ipairs({ true, false, "default", 1, {} }) do
-        assert(not pcall(lib.CreateColor, lib, makeFrame("Frame"), { defaultColor = invalid }))
+    for _, invalid in ipairs({
+        true,
+        false,
+        "default",
+        1,
+        {},
+    }) do
+        assert(
+            not pcall(
+                lib.CreateColor,
+                lib,
+                makeFrame("Frame"),
+                { defaultColor = invalid }
+            )
+        )
     end
 
     local legacy = lib:CreateColor(makeFrame("Frame"), { classColor = true })
     assert(legacy:GetValue().mode == "custom" and not legacy.buttons.default)
-    assert(legacy.buttons.class.point[4] == 0 and legacy.buttons.custom.point[4] == 38)
-    assert(not pcall(legacy.SetValue, legacy, { r = 1, g = 1, b = 1, mode = "default" }))
+    assert(
+        legacy.buttons.class.point[4] == 0
+            and legacy.buttons.custom.point[4] == 38
+    )
+    assert(not pcall(legacy.SetValue, legacy, {
+        r = 1,
+        g = 1,
+        b = 1,
+        mode = "default",
+    }))
 
-    local initial = lib:CreateColor(makeFrame("Frame"), { defaultColor = defaultColor })
-    assert(initial:GetValue().mode == "default" and initial.buttons.default.selection:IsShown())
-    assert(initial:GetValue().a == 1, "RGB-only default sources must remain opaque")
+    local initial =
+        lib:CreateColor(makeFrame("Frame"), { defaultColor = defaultColor })
+    assert(
+        initial:GetValue().mode == "default"
+            and initial.buttons.default.selection:IsShown()
+    )
+    assert(
+        initial:GetValue().a == 1,
+        "RGB-only default sources must remain opaque"
+    )
 
     local parent = makeFrame("Frame")
     parent:SetSize(500, 200)
@@ -47,10 +78,15 @@ return function(lib, makeFrame)
         end,
     })
     control:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
-    assert(control:GetValue().mode == "custom", "an explicit value takes priority over the default mode")
+    assert(
+        control:GetValue().mode == "custom",
+        "an explicit value takes priority over the default mode"
+    )
+
     for index, mode in ipairs({ "default", "class", "accent", "custom" }) do
         assert(control.buttons[mode].point[4] == (index - 1) * 38)
     end
+
     assert(#events == 0)
 
     control.buttons.default:Click()
@@ -58,7 +94,10 @@ return function(lib, makeFrame)
     assert(saved.mode == "default" and not picker.session)
     equal(saved, defaultColor)
     equal(saved.custom, original)
-    assert(control.buttons.default.selection:IsShown() and not control.buttons.custom.selection:IsShown())
+    assert(
+        control.buttons.default.selection:IsShown()
+            and not control.buttons.custom.selection:IsShown()
+    )
     local copy = control:GetValue()
     copy.r = 0
     copy.custom.r = 0
@@ -78,7 +117,10 @@ return function(lib, makeFrame)
     local count = #events
     picker:Cancel()
     assert(#events == count + 1 and events[#events] == "end")
-    assert(control:GetValue().mode == "custom", "Cancel keeps the selected Custom mode")
+    assert(
+        control:GetValue().mode == "custom",
+        "Cancel keeps the selected Custom mode"
+    )
     equal(control:GetValue(), original)
     assert(#control.palette:GetColors("recent") == 0)
 
@@ -87,15 +129,21 @@ return function(lib, makeFrame)
     count = #events
     control.buttons.default:Click()
     assert(not picker.session and #events == count + 2)
-    assert(events[count + 1] == "end" and events[count + 2] == "default",
-        "choosing Default must discard the live draft before committing its mode")
+    assert(
+        events[count + 1] == "end" and events[count + 2] == "default",
+        "choosing Default must discard the live draft before committing its mode"
+    )
     equal(saved.custom, original)
     control.buttons.custom:Click()
     equal(picker.session.original, original)
     picker:SetColor(blue)
     count = #events
     picker:Apply()
-    assert(#events == count + 2 and events[count + 1] == "end" and events[count + 2] == "custom")
+    assert(
+        #events == count + 2
+            and events[count + 1] == "end"
+            and events[count + 2] == "custom"
+    )
     equal(control:GetValue(), blue)
     assert(#control.palette:GetColors("recent") == 1)
 
@@ -118,7 +166,10 @@ return function(lib, makeFrame)
     control.buttons.default:_FocusForTab()
     assert(lib:_HandleNavigationKey(control.buttons.default, "TAB"))
     assert(lib._navigationKeyboardFrame.control == control.buttons.class)
-    assert(control:GetValue().mode == "default", "focus must not change the chosen color mode")
+    assert(
+        control:GetValue().mode == "default",
+        "focus must not change the chosen color mode"
+    )
     assert(lib:_HandleNavigationKey(control.buttons.class, "SPACE"))
     assert(control:GetValue().mode == "class")
     control.buttons.default:_FocusForTab()
@@ -128,13 +179,18 @@ return function(lib, makeFrame)
     control.buttons.custom:Click()
     picker:SetColor(original)
     control:RefreshColors()
-    assert(picker.session.owner == control, "refreshing sources must not discard a Custom draft")
+    assert(
+        picker.session.owner == control,
+        "refreshing sources must not discard a Custom draft"
+    )
     equal(picker.color, original)
     control:SetControlEnabled(false)
     assert(not picker.session and events[#events] == "end")
+
     for _, button in pairs(control.buttons) do
         assert(not button:IsEnabled())
     end
+
     control:OpenPicker()
     assert(not picker.session)
     equal(control:GetValue(), blue)
@@ -148,7 +204,10 @@ return function(lib, makeFrame)
     lib._loadedModules["Controls/Color"] = nil
     dofile("Controls/Color.lua")
     assert(control:GetValue().mode == "default" and #events == count)
-    assert(control.buttons.default.swatchMask == mask and #control.buttons.default.swatch.masks == 1)
+    assert(
+        control.buttons.default.swatchMask == mask
+            and #control.buttons.default.swatch.masks == 1
+    )
     equal(control:GetValue(), defaultColor)
     equal(control:GetValue().custom, blue)
     assert(not legacy.buttons.default and legacy.buttons.custom.point[4] == 38)
@@ -156,7 +215,10 @@ return function(lib, makeFrame)
     lib._loadedModules["Controls/Color"] = nil
     lib._implementationMinor = minor + 1
     dofile("Controls/Color.lua")
-    assert(lib._controlTypes.color.factory == factory, "an older embed must not replace the Default-capable control")
+    assert(
+        lib._controlTypes.color.factory == factory,
+        "an older embed must not replace the Default-capable control"
+    )
     lib._implementationMinor = minor
     lib._loadedModules["Controls/Color"] = minor
     lib:_ClearNavigationFocus()

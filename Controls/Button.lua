@@ -1,8 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Controls/Button", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/Button", MINOR)
+then
     return
 end
 
@@ -58,13 +61,24 @@ local DEFAULT_ICON_GAP = 4
 local DEFAULT_TEXTURE_ICON_SIZE = 16
 
 local function validateButtonIcon(options, style)
-    assert(options.iconAtlas == nil or type(options.iconAtlas) == "string",
-        "iconAtlas must be a string or nil")
-    assert(options.iconTexture == nil or type(options.iconTexture) == "string"
-        or type(options.iconTexture) == "number", "iconTexture must be a texture path, file ID, or nil")
-    assert(not (options.iconAtlas and options.iconTexture), "use either iconAtlas or iconTexture")
-    assert(not style.iconOnly or options.iconAtlas or options.iconTexture,
-        "square buttons require iconAtlas or iconTexture")
+    assert(
+        options.iconAtlas == nil or type(options.iconAtlas) == "string",
+        "iconAtlas must be a string or nil"
+    )
+    assert(
+        options.iconTexture == nil
+            or type(options.iconTexture) == "string"
+            or type(options.iconTexture) == "number",
+        "iconTexture must be a texture path, file ID, or nil"
+    )
+    assert(
+        not (options.iconAtlas and options.iconTexture),
+        "use either iconAtlas or iconTexture"
+    )
+    assert(
+        not style.iconOnly or options.iconAtlas or options.iconTexture,
+        "square buttons require iconAtlas or iconTexture"
+    )
 end
 
 local function sizeButtonIcon(icon, style, options)
@@ -87,8 +101,10 @@ local function sizeButtonIcon(icon, style, options)
         end
     end
 
-    if not lib:_LayoutSizeMatches(icon:GetWidth(), width)
-        or not lib:_LayoutSizeMatches(icon:GetHeight(), height) then
+    if
+        not lib:_LayoutSizeMatches(icon:GetWidth(), width)
+        or not lib:_LayoutSizeMatches(icon:GetHeight(), height)
+    then
         icon:SetSize(width, height)
     end
 end
@@ -98,9 +114,8 @@ local function applyButtonIcon(button, style, options)
     local wasShown = icon and icon:IsShown()
 
     if not options.iconAtlas and not options.iconTexture then
-        if icon then
-            icon:Hide()
-        end
+        if icon then icon:Hide() end
+
         return wasShown
     end
 
@@ -135,7 +150,7 @@ local function getButtonStyle(button)
     end
 
     return button:GetHeight() <= BUTTON_STYLES.small.height
-        and BUTTON_STYLES.small
+            and BUTTON_STYLES.small
         or BUTTON_STYLES.regular
 end
 
@@ -144,39 +159,38 @@ local function layoutButtonContent(button)
     local label = button.label or button:GetFontString()
     local icon = button.icon
 
-    if icon and not icon:IsShown() then
-        icon = nil
-    end
+    if icon and not icon:IsShown() then icon = nil end
 
-    if not label then
-        return
-    end
+    if not label then return end
 
     -- SetButtonText can reanchor this label inside OnClick. Native push/pop
     -- displacement would then offset the new anchor again on mouse release.
     -- Keep label placement here; the pressed texture supplies click feedback.
     button:SetPushedTextOffset(0, 0)
     button.label = label
-    button._libModernSettingsMinWidth =
-        button._libModernSettingsMinWidth or style.minWidth
-    button._libModernSettingsPaddingX =
-        button._libModernSettingsPaddingX or style.paddingX
-    button._libModernSettingsIconGap =
-        button._libModernSettingsIconGap or DEFAULT_ICON_GAP
+    button._libModernSettingsMinWidth = button._libModernSettingsMinWidth
+        or style.minWidth
+    button._libModernSettingsPaddingX = button._libModernSettingsPaddingX
+        or style.paddingX
+    button._libModernSettingsIconGap = button._libModernSettingsIconGap
+        or DEFAULT_ICON_GAP
 
     local textWidth = label:GetStringWidth()
     local iconWidth = icon and icon:GetWidth() or 0
-    local gap = icon and textWidth > 0
-        and button._libModernSettingsIconGap
-        or 0
+    local gap = icon and textWidth > 0 and button._libModernSettingsIconGap or 0
 
     if icon then
         if style.iconOnly then
-            local mask = lib:_ApplyTertiarySquareMask(button, icon, button:GetWidth(),
-                button._libModernSettingsIconMaskInset)
+            local mask = lib:_ApplyTertiarySquareMask(
+                button,
+                icon,
+                button:GetWidth(),
+                button._libModernSettingsIconMaskInset
+            )
             lib:_SetLayoutPoint(icon, "CENTER", mask, "CENTER", 0, 0)
         else
-            lib:_SetLayoutPoint(icon,
+            lib:_SetLayoutPoint(
+                icon,
                 "CENTER",
                 button,
                 "CENTER",
@@ -185,7 +199,8 @@ local function layoutButtonContent(button)
             )
         end
 
-        lib:_SetLayoutPoint(label,
+        lib:_SetLayoutPoint(
+            label,
             "CENTER",
             button,
             "CENTER",
@@ -200,13 +215,11 @@ local function layoutButtonContent(button)
         local contentWidth = textWidth + iconWidth + gap
         local width = math.max(
             button._libModernSettingsMinWidth,
-            math.ceil(
-                contentWidth
-                    + (button._libModernSettingsPaddingX * 2)
-            )
+            math.ceil(contentWidth + (button._libModernSettingsPaddingX * 2))
         )
 
         button:SetWidth(width)
+
         if button._libModernSettingsAppliedSize then
             button._libModernSettingsAppliedSize.width = width
         end
@@ -216,10 +229,7 @@ end
 local function createButton(parent, options)
     local style = BUTTON_STYLES[options.variant or "regular"]
 
-    assert(
-        style,
-        "button variant must be 'regular', 'small', or 'square'"
-    )
+    assert(style, "button variant must be 'regular', 'small', or 'square'")
     assert(
         options.onClick == nil or type(options.onClick) == "function",
         "onClick must be a function or nil"
@@ -229,20 +239,27 @@ local function createButton(parent, options)
         "selected must be a boolean or nil"
     )
     validateButtonIcon(options, style)
-    assert(options.iconMaskInset == nil or (style.iconOnly
-        and type(options.iconMaskInset) == "number"
-        and options.iconMaskInset >= 0 and options.iconMaskInset < math.huge),
-        "iconMaskInset must be finite and non-negative, and requires a square button")
+    assert(
+        options.iconMaskInset == nil
+            or (
+                style.iconOnly
+                and type(options.iconMaskInset) == "number"
+                and options.iconMaskInset >= 0
+                and options.iconMaskInset < math.huge
+            ),
+        "iconMaskInset must be finite and non-negative, and requires a square button"
+    )
     assert(
         options.iconSize == nil
-            or (type(options.iconSize) == "number"
-                and options.iconSize > 0),
+            or (type(options.iconSize) == "number" and options.iconSize > 0),
         "iconSize must be a positive number or nil"
     )
     assert(
         options.maxIconSize == nil
-            or (type(options.maxIconSize) == "number"
-                and options.maxIconSize > 0),
+            or (
+                type(options.maxIconSize) == "number"
+                and options.maxIconSize > 0
+            ),
         "maxIconSize must be a positive number or nil"
     )
     assert(
@@ -265,9 +282,7 @@ local function createButton(parent, options)
             "square button width and height must match"
         )
 
-        local squareSize = options.width
-            or options.height
-            or style.defaultWidth
+        local squareSize = options.width or options.height or style.defaultWidth
 
         initialWidth = squareSize
         initialHeight = squareSize
@@ -281,10 +296,8 @@ local function createButton(parent, options)
     button._libModernSettingsMinWidth = options.minWidth
         or (options.fitToContent and options.width)
         or style.minWidth
-    button._libModernSettingsPaddingX = options.paddingX
-        or style.paddingX
-    button._libModernSettingsIconGap = options.iconGap
-        or DEFAULT_ICON_GAP
+    button._libModernSettingsPaddingX = options.paddingX or style.paddingX
+    button._libModernSettingsIconGap = options.iconGap or DEFAULT_ICON_GAP
 
     local label = button:CreateFontString(nil, "OVERLAY")
 
@@ -294,36 +307,22 @@ local function createButton(parent, options)
     label:SetMaxLines(1)
     button:SetFontString(label)
     button:SetNormalFontObject(options.normalFont or style.normalFont)
-    button:SetHighlightFontObject(
-        options.highlightFont or style.highlightFont
-    )
-    button:SetDisabledFontObject(
-        options.disabledFont or style.disabledFont
-    )
-    local normalTexture = lib:_CreateAtlasTexture(
-        button,
-        "BACKGROUND",
-        style.normal
-    )
+    button:SetHighlightFontObject(options.highlightFont or style.highlightFont)
+    button:SetDisabledFontObject(options.disabledFont or style.disabledFont)
+    local normalTexture =
+        lib:_CreateAtlasTexture(button, "BACKGROUND", style.normal)
 
     button:SetNormalTexture(normalTexture)
-    button:SetPushedTexture(lib:_CreateAtlasTexture(
-        button,
-        "BACKGROUND",
-        style.pressed
-    ))
-    button:SetDisabledTexture(lib:_CreateAtlasTexture(
-        button,
-        "BACKGROUND",
-        style.disabled
-    ))
+    button:SetPushedTexture(
+        lib:_CreateAtlasTexture(button, "BACKGROUND", style.pressed)
+    )
+    button:SetDisabledTexture(
+        lib:_CreateAtlasTexture(button, "BACKGROUND", style.disabled)
+    )
 
     if style.highlight then
-        local highlightTexture = lib:_CreateAtlasTexture(
-            button,
-            "HIGHLIGHT",
-            style.highlight
-        )
+        local highlightTexture =
+            lib:_CreateAtlasTexture(button, "HIGHLIGHT", style.highlight)
 
         highlightTexture:SetBlendMode("ADD")
         button:SetHighlightTexture(highlightTexture)
@@ -356,9 +355,7 @@ function buttonMethods:_HandleClick(...)
 
     lib:_FlushPendingEditBoxCommits()
 
-    if onClick then
-        onClick(self, ...)
-    end
+    if onClick then onClick(self, ...) end
 end
 
 function buttonMethods:SetOnClick(onClick)
@@ -425,39 +422,45 @@ function buttonMethods:SetControlEnabled(enabled, disabledTooltip)
 end
 
 local function initializeButton(button, options)
-    button:SetControlEnabled(
-        options.enabled ~= false,
-        options.disabledTooltip
-    )
+    button:SetControlEnabled(options.enabled ~= false, options.disabledTooltip)
 end
 
 local function refreshButtonAppearance(button, options)
     local style = BUTTON_STYLES[options.variant or "regular"]
     local width = options.width or style.defaultWidth or 100
     local height = options.height or style.height
+
     if style.iconOnly then
         width = options.width or options.height or style.defaultWidth
         height = width
     end
+
     button._libModernSettingsIconMaskInset = options.iconMaskInset
     lib:_ApplyFixedControlSize(button, width, height)
     button._libModernSettingsButtonStyle = style
     button._libModernSettingsMinWidth = options.minWidth
-        or (options.fitToContent and options.width) or style.minWidth
+        or (options.fitToContent and options.width)
+        or style.minWidth
     button._libModernSettingsPaddingX = options.paddingX or style.paddingX
     button._libModernSettingsIconGap = options.iconGap or DEFAULT_ICON_GAP
-    lib:_ApplyButtonFonts(button,
+    lib:_ApplyButtonFonts(
+        button,
         options.normalFont or style.normalFont,
         options.highlightFont or style.highlightFont,
-        options.disabledFont or style.disabledFont)
+        options.disabledFont or style.disabledFont
+    )
     applyButtonIcon(button, style, options)
     layoutButtonContent(button)
 
     if style.iconOnly and not button._libModernSettingsIconMaskSizeHooked then
         button._libModernSettingsIconMaskSizeHooked = true
         button:HookScript("OnSizeChanged", function(self)
-            lib:_ApplyTertiarySquareMask(self, self.icon, self:GetWidth(),
-                self._libModernSettingsIconMaskInset)
+            lib:_ApplyTertiarySquareMask(
+                self,
+                self.icon,
+                self:GetWidth(),
+                self._libModernSettingsIconMaskInset
+            )
         end)
     end
 end
@@ -494,7 +497,13 @@ lib:RegisterControlNavigation("button", {
             if texture._libModernSettingsButtonOutset ~= outset then
                 texture:ClearAllPoints()
                 texture:SetPoint("TOPLEFT", control, "TOPLEFT", -outset, outset)
-                texture:SetPoint("BOTTOMRIGHT", control, "BOTTOMRIGHT", outset, -outset)
+                texture:SetPoint(
+                    "BOTTOMRIGHT",
+                    control,
+                    "BOTTOMRIGHT",
+                    outset,
+                    -outset
+                )
                 texture._libModernSettingsButtonOutset = outset
             end
         end

@@ -1,7 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("IconPicker/Browser", MINOR) then
+
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("IconPicker/Browser", MINOR)
+then
     return
 end
 
@@ -14,7 +18,11 @@ Icons.ButtonStep = SIZE + GAP
 Icons.ShelfIconOffset = 80
 
 local function label(parent, value, font)
-    local text = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
+    local text = parent:CreateFontString(
+        nil,
+        "OVERLAY",
+        font or "GameFontHighlightSmall"
+    )
     text:SetText(value)
     text:SetJustifyH("LEFT")
     return text
@@ -28,9 +36,8 @@ function Icons.CreateButton(picker, parent)
         iconSize = 32,
         iconMaskInset = 6,
         onClick = function(self, mouseButton)
-            if not picker:Validate() or not self.entry then
-                return
-            end
+            if not picker:Validate() or not self.entry then return end
+
             if mouseButton == "RightButton" then
                 picker:ToggleFavorite(self.entry.texture)
             else
@@ -59,8 +66,16 @@ local function makeShelf(picker, kind, title, y)
     shelf.placeholder = CreateFrame("Frame", nil, shelf)
     shelf.placeholder:SetSize(SIZE, SIZE)
     shelf.placeholder:SetPoint("LEFT", Icons.ShelfIconOffset, 0)
-    lib:_CreateAtlasTexture(shelf.placeholder, "ARTWORK", "common-button-tertiary-square-normal")
-    shelf.empty = label(shelf, kind == "recent" and "Applied icons appear here." or "Right-click an icon to save it.")
+    lib:_CreateAtlasTexture(
+        shelf.placeholder,
+        "ARTWORK",
+        "common-button-tertiary-square-normal"
+    )
+    shelf.empty = label(
+        shelf,
+        kind == "recent" and "Applied icons appear here."
+            or "Right-click an icon to save it."
+    )
     shelf.empty:SetPoint("LEFT", shelf.placeholder, "RIGHT", GAP, 0)
     shelf.empty:SetPoint("RIGHT")
     shelf.buttons = {}
@@ -76,9 +91,9 @@ local function makeInputs(picker)
     picker.input = lib:CreateTextInput(frame, {
         onCommit = function(text)
             local value, message = Icons.Normalize(text)
-            if message then
-                return nil, message
-            end
+
+            if message then return nil, message end
+
             picker:SetValue(value, true)
             return value and tostring(value) or ""
         end,
@@ -133,6 +148,7 @@ local function makeInputs(picker)
     })
     picker.artworkType:SetPoint("TOPRIGHT", -18, -146)
     picker.artworkType:SetPoint("TOPLEFT", frame, "TOP", 4, -146)
+
     for _, input in ipairs({ picker.input, picker.search }) do
         input:HookScript("OnEscapePressed", function()
             picker:Close()
@@ -149,7 +165,11 @@ local function makeGrid(picker)
     -- Larger buttons keep the same centers, column widths and scroll range.
     local area = lib:CreateScrollArea(inset, {
         contentSpacing = "compact",
-        contentPadding = { left = 7, top = 7, bottom = 7 },
+        contentPadding = {
+            left = 7,
+            top = 7,
+            bottom = 7,
+        },
         scrollbarGap = 3,
     })
     local view = CreateScrollBoxListGridView(1, 0, 0, 0, 0, GAP, GAP)
@@ -159,7 +179,9 @@ local function makeGrid(picker)
             wrapper.button = Icons.CreateButton(picker, wrapper)
             wrapper.button:SetPoint("CENTER")
         end
+
         local entry = picker.results[index]
+
         if picker.settingResults then
             -- Skip provisional rows while replacing results and restoring the
             -- viewport. Ordinary scrolling binds immediately, without blanking.
@@ -167,6 +189,7 @@ local function makeGrid(picker)
                 lib:HideOwnedTooltip(wrapper.button)
                 wrapper.button.entry = entry
             end
+
             wrapper.button:Hide()
             picker.paintPending = true
             picker:Wake()
@@ -236,9 +259,11 @@ local function makeDropTarget(picker)
     backdrop:SetColorTexture(0, 0, 0, 0.82)
     local text = label(overlay, "Drop here to choose this icon")
     text:SetPoint("CENTER")
+
     local function receive()
         picker:ReceiveDrag()
     end
+
     overlay:SetScript("OnReceiveDrag", receive)
     overlay:SetScript("OnMouseUp", receive)
     overlay:SetScript("OnMouseDown", function()
@@ -251,15 +276,23 @@ end
 function Icons.GetBrowserWidth(picker, width)
     local left, right = picker.area:GetContentInsets()
     local margins = INSET_SIDE * 2 + left + right
-    local minimumColumns = math.ceil((MIN_WIDTH - margins + GAP) / Icons.ButtonStep)
-    local columns = math.max(minimumColumns, math.floor((width - margins + GAP) / Icons.ButtonStep + 0.5))
+    local minimumColumns =
+        math.ceil((MIN_WIDTH - margins + GAP) / Icons.ButtonStep)
+    local columns = math.max(
+        minimumColumns,
+        math.floor((width - margins + GAP) / Icons.ButtonStep + 0.5)
+    )
     return margins + columns * Icons.ButtonStep - GAP, columns
 end
 
 function Icons.SetBrowserSize(picker, width, height)
     local snappedWidth, columns = Icons.GetBrowserWidth(picker, width)
     height = math.max(MIN_HEIGHT, height)
-    if picker.browserWidth == snappedWidth and picker.browserHeight == height then
+
+    if
+        picker.browserWidth == snappedWidth
+        and picker.browserHeight == height
+    then
         return
     end
     -- The snapped window and native grid must agree even when frame measurements
@@ -268,6 +301,7 @@ function Icons.SetBrowserSize(picker, width, height)
     picker.columns = columns
     picker.gridView:SetStride(columns)
     picker.frame:SetSize(snappedWidth, height)
+
     if picker.session then
         picker.scrollBox:FullUpdate(ScrollBoxConstants.UpdateImmediately)
     end
@@ -327,9 +361,8 @@ function Icons.CreateBrowser(picker, parent)
     frame:SetPropagateKeyboardInput(true)
     frame:SetScript("OnKeyDown", function(_, key)
         frame:SetPropagateKeyboardInput(key ~= "ESCAPE")
-        if key == "ESCAPE" then
-            picker:Close()
-        end
+
+        if key == "ESCAPE" then picker:Close() end
     end)
     picker.messages = lib:CreateFlashMessages(frame)
     makeInputs(picker)
@@ -344,12 +377,12 @@ function Icons.CreateBrowser(picker, parent)
     resize:SetSize(20, 20)
     resize:SetPoint("BOTTOMRIGHT", -2, 2)
     resize:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
-    resize:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    resize:SetHighlightTexture(
+        "Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight"
+    )
     resize:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
     resize:SetScript("OnMouseDown", function(_, button)
-        if button == "LeftButton" then
-            picker:BeginResize()
-        end
+        if button == "LeftButton" then picker:BeginResize() end
     end)
     resize:SetScript("OnMouseUp", function()
         picker:EndResize()

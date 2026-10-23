@@ -1,8 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Controls/ExpandableHeader", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/ExpandableHeader", MINOR)
+then
     return
 end
 
@@ -58,35 +61,16 @@ local function updateHeaderLayout(header)
     local label = header.label
 
     if header._libModernSettingsHeaderIconAtlas then
-        label:SetPoint(
-            "LEFT",
-            header.icon,
-            "RIGHT",
-            DEFAULT_ICON_GAP,
-            0
-        )
+        label:SetPoint("LEFT", header.icon, "RIGHT", DEFAULT_ICON_GAP, 0)
     else
-        label:SetPoint(
-            "LEFT",
-            header,
-            "LEFT",
-            DEFAULT_LEFT_PADDING,
-            0
-        )
+        label:SetPoint("LEFT", header, "LEFT", DEFAULT_LEFT_PADDING, 0)
     end
-    label:SetPoint(
-        "RIGHT",
-        header.toggleIcon,
-        "LEFT",
-        -DEFAULT_TOGGLE_GAP,
-        0
-    )
+
+    label:SetPoint("RIGHT", header.toggleIcon, "LEFT", -DEFAULT_TOGGLE_GAP, 0)
 end
 
 local function updateHeaderIconState(header)
-    if not header._libModernSettingsHeaderIconAtlas then
-        return
-    end
+    if not header._libModernSettingsHeaderIconAtlas then return end
 
     local enabled = header._libModernSettingsHeaderEnabled ~= false
 
@@ -108,14 +92,13 @@ local function updateToggleState(header)
     header.toggleIcon:SetRotation(
         expanded and TOGGLE_EXPANDED_ROTATION or TOGGLE_COLLAPSED_ROTATION
     )
-    lib:_SetLayoutPoint(header.toggleIcon,
+    lib:_SetLayoutPoint(
+        header.toggleIcon,
         "RIGHT",
         header,
         "RIGHT",
         -DEFAULT_RIGHT_PADDING,
-        expanded
-            and TOGGLE_EXPANDED_Y_OFFSET
-            or TOGGLE_COLLAPSED_Y_OFFSET
+        expanded and TOGGLE_EXPANDED_Y_OFFSET or TOGGLE_COLLAPSED_Y_OFFSET
     )
     header.toggleIcon:SetDesaturated(false)
     header.toggleIcon:SetAlpha(1)
@@ -147,28 +130,19 @@ local function createExpandableHeader(parent, options)
     header:SetHighlightFontObject(
         options.highlightFont or GameFontHighlightLarge
     )
-    header:SetDisabledFontObject(
-        options.disabledFont or GameFontDisableLarge
-    )
+    header:SetDisabledFontObject(options.disabledFont or GameFontDisableLarge)
     header.label = label
 
-    local normalTexture = lib:_CreateAtlasTexture(
-        header,
-        "BACKGROUND",
-        HEADER_ATLASES.normal
-    )
+    local normalTexture =
+        lib:_CreateAtlasTexture(header, "BACKGROUND", HEADER_ATLASES.normal)
 
     header:SetNormalTexture(normalTexture)
-    header:SetPushedTexture(lib:_CreateAtlasTexture(
-        header,
-        "BACKGROUND",
-        HEADER_ATLASES.pressed
-    ))
-    header:SetDisabledTexture(lib:_CreateAtlasTexture(
-        header,
-        "BACKGROUND",
-        HEADER_ATLASES.disabled
-    ))
+    header:SetPushedTexture(
+        lib:_CreateAtlasTexture(header, "BACKGROUND", HEADER_ATLASES.pressed)
+    )
+    header:SetDisabledTexture(
+        lib:_CreateAtlasTexture(header, "BACKGROUND", HEADER_ATLASES.disabled)
+    )
     header._libModernSettingsHeaderNormalTexture = normalTexture
 
     local icon = header:CreateTexture(nil, "OVERLAY", nil, 2)
@@ -179,13 +153,7 @@ local function createExpandableHeader(parent, options)
 
     local toggleIcon = header:CreateTexture(nil, "OVERLAY", nil, 2)
 
-    toggleIcon:SetPoint(
-        "RIGHT",
-        header,
-        "RIGHT",
-        -DEFAULT_RIGHT_PADDING,
-        0
-    )
+    toggleIcon:SetPoint("RIGHT", header, "RIGHT", -DEFAULT_RIGHT_PADDING, 0)
     header.toggleIcon = toggleIcon
 
     updateHeaderLayout(header)
@@ -207,9 +175,8 @@ function expandableHeaderMethods:_HandleExpandableHeaderClick(button)
     self:SetExpanded(expanded)
 
     local callback = self._libModernSettingsOnExpandedChanged
-    if callback then
-        callback(self, expanded, button)
-    end
+
+    if callback then callback(self, expanded, button) end
 end
 
 function expandableHeaderMethods:SetHeaderText(text)
@@ -232,10 +199,7 @@ function expandableHeaderMethods:SetHeaderIcon(iconAtlas, desaturated)
 
     if iconAtlas then
         self.icon:SetAtlas(iconAtlas, true)
-        sizeAtlasIcon(
-            self.icon,
-            self._libModernSettingsHeaderIconSize
-        )
+        sizeAtlasIcon(self.icon, self._libModernSettingsHeaderIconSize)
         self.icon:Show()
         updateHeaderIconState(self)
     else
@@ -283,10 +247,7 @@ local function initializeExpandableHeader(header, options)
     header:SetHeaderIcon(options.iconAtlas, options.iconDesaturated)
     header:SetOnExpandedChanged(options.onExpandedChanged)
     header:SetExpanded(options.expanded ~= false)
-    header:SetControlEnabled(
-        options.enabled ~= false,
-        options.disabledTooltip
-    )
+    header:SetControlEnabled(options.enabled ~= false, options.disabledTooltip)
 
     if options.tooltip then
         lib:SetTooltip(header, {
@@ -297,16 +258,25 @@ local function initializeExpandableHeader(header, options)
 end
 
 local function refreshHeaderAppearance(header, options)
-    lib:_ApplyFixedControlSize(header, options.width or DEFAULT_WIDTH, options.height or DEFAULT_HEIGHT)
-    lib:_ApplyButtonFonts(header,
+    lib:_ApplyFixedControlSize(
+        header,
+        options.width or DEFAULT_WIDTH,
+        options.height or DEFAULT_HEIGHT
+    )
+    lib:_ApplyButtonFonts(
+        header,
         options.normalFont or GameFontNormalLarge,
         options.highlightFont or GameFontHighlightLarge,
-        options.disabledFont or GameFontDisableLarge)
-    header._libModernSettingsHeaderIconSize = options.iconSize or DEFAULT_ICON_SIZE
+        options.disabledFont or GameFontDisableLarge
+    )
+    header._libModernSettingsHeaderIconSize = options.iconSize
+        or DEFAULT_ICON_SIZE
     header.icon:ClearAllPoints()
     header.icon:SetPoint("LEFT", header, "LEFT", DEFAULT_LEFT_PADDING, 0)
-    header:SetHeaderIcon(header._libModernSettingsHeaderIconAtlas,
-        header._libModernSettingsHeaderIconDesaturated)
+    header:SetHeaderIcon(
+        header._libModernSettingsHeaderIconAtlas,
+        header._libModernSettingsHeaderIconDesaturated
+    )
     updateToggleState(header)
 end
 

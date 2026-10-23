@@ -5,6 +5,7 @@ return function(newEnvironment, loadVersion)
     -- Size notifications deliberately arrive later than the explicit layout.
     local function delaySizeEvents(env, frame)
         local handler = frame.scripts.OnSizeChanged
+
         if handler then
             frame.scripts.OnSizeChanged = function(self, width, height)
                 env.C_Timer.After(0, function()
@@ -23,18 +24,29 @@ return function(newEnvironment, loadVersion)
             fillWidth = true,
             onLayout = function(owner)
                 calls = calls + 1
-                assert(owner == frame and child, "nested content must be built before the first reflow")
+                assert(
+                    owner == frame and child,
+                    "nested content must be built before the first reflow"
+                )
                 child:SetSize(owner:GetWidth(), 1)
                 child:RefreshLayout()
                 owner:SetHeight(child:GetContent():GetHeight())
             end,
         }
         flow:AddFrame(frame, placement)
-        assert(calls == 0, "adding a custom frame must not run its construction-time callback")
+        assert(
+            calls == 0,
+            "adding a custom frame must not run its construction-time callback"
+        )
+
         placement.onLayout = function()
             error("placement options must be copied")
         end
-        child = library:CreateCanvasLayout(frame, { width = frame:GetWidth(), height = 1 })
+
+        child = library:CreateCanvasLayout(
+            frame,
+            { width = frame:GetWidth(), height = 1 }
+        )
         child:GetContent():HookScript("OnSizeChanged", function()
             flow.layout:RequestLayout()
         end)
@@ -45,10 +57,15 @@ return function(newEnvironment, loadVersion)
 
     local function createPage(env, library)
         local page = env.CreateFrame("Frame")
-        local layout = library:CreateCanvasLayout(page, { width = 720, height = 200, scrollable = true })
+        local layout = library:CreateCanvasLayout(page, {
+            width = 720,
+            height = 200,
+            scrollable = true,
+        })
         local group = layout:GetRootFlow():BeginGroup()
         local child, section = addNested(env, library, group)
-        local columns = child:GetRootFlow():BeginColumns({ minColumnWidth = 240 })
+        local columns =
+            child:GetRootFlow():BeginColumns({ minColumnWidth = 240 })
         columns.left:AddControl("textInput", { value = "First column" })
         columns.right:AddControl("textInput", { value = "Second column" })
         columns:Finish()
@@ -70,9 +87,11 @@ return function(newEnvironment, loadVersion)
         layout:RegisterScrollSection("target", target)
         layout:Finalize()
         env.Flush(10)
+
         page.SetAlpha = function()
             error("selection layout must never change page opacity")
         end
+
         return layout, page, section, target, input, values, details, group
     end
 
@@ -81,9 +100,13 @@ return function(newEnvironment, loadVersion)
     end
 
     local source, _, _, sourceTarget = createPage(environment, lib)
-    source:GetScrollBox():ScrollToOffset(offset(source, sourceTarget), environment.ScrollBoxConstants.NoScrollInterpolation)
+    source:GetScrollBox():ScrollToOffset(
+        offset(source, sourceTarget),
+        environment.ScrollBoxConstants.NoScrollInterpolation
+    )
     local bookmark = source:CaptureScrollBookmark()
-    local layout, page, section, target, input, values, details, group = createPage(environment, lib)
+    local layout, page, section, target, input, values, details, group =
+        createPage(environment, lib)
     input:SetFocus()
     input:SetText("Draft")
     local content = layout:GetContent()
@@ -99,16 +122,23 @@ return function(newEnvironment, loadVersion)
         layout:RestoreScrollBookmark(bookmark)
         layout:RefreshLayout()
         local expected = offset(layout, target)
-        assert(layout:GetScrollBox():GetDerivedScrollOffset() == expected,
-            "nested sizes and bookmark must be final before deferred callbacks run")
+        assert(
+            layout:GetScrollBox():GetDerivedScrollOffset() == expected,
+            "nested sizes and bookmark must be final before deferred callbacks run"
+        )
         assert(-target.point[5] >= -section.point[5] + section:GetHeight())
         local height, targetTop = content:GetHeight(), target.point[5]
         environment.Flush(15)
-        assert(content:GetHeight() == height and target.point[5] == targetTop,
-            "late native size notifications must not change settled geometry")
+        assert(
+            content:GetHeight() == height and target.point[5] == targetTop,
+            "late native size notifications must not change settled geometry"
+        )
         assert(layout:GetScrollBox():GetDerivedScrollOffset() == expected)
-        assert(page:IsShown() and input:GetText() == "Draft" and input:HasFocus())
+        assert(
+            page:IsShown() and input:GetText() == "Draft" and input:HasFocus()
+        )
     end
+
     input:CancelAndClearFocus()
 
     -- An excluded nested flow must not participate or run its callback.
@@ -121,22 +151,44 @@ return function(newEnvironment, loadVersion)
     layout:RefreshLayout()
     assert(section:GetWidth() == layout:GetContentWidth())
     environment.Flush(15)
-    assert(content.clearPointsCount == clears, "reflow must retain native content anchors")
+    assert(
+        content.clearPointsCount == clears,
+        "reflow must retain native content anchors"
+    )
     -- ValueList may create retained pills once when the larger value is assigned.
     local frames = environment.framesCreated
-    for index = 1, 6 do
+
+    for _ = 1, 6 do
         layout:RestoreScrollBookmark(source:CaptureScrollBookmark())
         layout:RefreshLayout()
     end
+
     environment.Flush(15)
-    assert(environment.framesCreated == frames, "selection changes must not duplicate forms or controls")
-    assert(environment.QueueSize() == 0, "settled selection layout must leave no repeating work")
+    assert(
+        environment.framesCreated == frames,
+        "selection changes must not duplicate forms or controls"
+    )
+    assert(
+        environment.QueueSize() == 0,
+        "settled selection layout must leave no repeating work"
+    )
 
     for _, invalid in ipairs({ true, 2, "callback" }) do
-        local invalidLayout = lib:CreateCanvasLayout(environment.CreateFrame("Frame"), { width = 500, height = 200 })
-        local frame = environment.CreateFrame("Frame", nil, invalidLayout:GetContent())
+        local invalidLayout = lib:CreateCanvasLayout(
+            environment.CreateFrame("Frame"),
+            { width = 500, height = 200 }
+        )
+        local frame =
+            environment.CreateFrame("Frame", nil, invalidLayout:GetContent())
         frame:SetSize(100, 100)
-        assert(not pcall(invalidLayout:GetRootFlow().AddFrame, invalidLayout:GetRootFlow(), frame, { onLayout = invalid }))
+        assert(
+            not pcall(
+                invalidLayout:GetRootFlow().AddFrame,
+                invalidLayout:GetRootFlow(),
+                frame,
+                { onLayout = invalid }
+            )
+        )
     end
 
     local upgrades = newEnvironment()
@@ -147,11 +199,17 @@ return function(newEnvironment, loadVersion)
     retained:SetSize(420, 200)
     retained:RestoreScrollBookmark(bookmark)
     retained:RefreshLayout()
-    assert(retained:GetScrollBox():GetDerivedScrollOffset() == offset(retained, retainedTarget))
+    assert(
+        retained:GetScrollBox():GetDerivedScrollOffset()
+            == offset(retained, retainedTarget)
+    )
     loadVersion(upgrades, true)
     loadVersion(upgrades, false)
     upgrades.Flush(15)
-    assert(retained:GetScrollBox():GetDerivedScrollOffset() == offset(retained, retainedTarget))
+    assert(
+        retained:GetScrollBox():GetDerivedScrollOffset()
+            == offset(retained, retainedTarget)
+    )
 
     print("LibModernSettings synchronous nested canvas tests passed")
 end

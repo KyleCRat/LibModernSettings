@@ -1,15 +1,16 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Utilities/Tooltip", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Utilities/Tooltip", MINOR)
+then
     return
 end
 
 local function normalizeTooltipOptions(options)
-    if type(options) == "string" then
-        return nil, options
-    end
+    if type(options) == "string" then return nil, options end
 
     assert(type(options) == "table", "tooltip options must be a table")
 
@@ -19,9 +20,7 @@ end
 function lib:_ShowTooltip(owner, target)
     local tooltip = owner and owner._libModernSettingsTooltip
 
-    if not tooltip then
-        return
-    end
+    if not tooltip then return end
 
     local title
     local text
@@ -34,19 +33,13 @@ function lib:_ShowTooltip(owner, target)
         text = tooltip.enabledText
     end
 
-    if not title and not text then
-        return
-    end
+    if not title and not text then return end
 
     GameTooltip:SetOwner(target, "ANCHOR_RIGHT")
 
-    if title then
-        GameTooltip:AddLine(title, 1, 1, 1)
-    end
+    if title then GameTooltip:AddLine(title, 1, 1, 1) end
 
-    if text then
-        GameTooltip:AddLine(text, nil, nil, nil, true)
-    end
+    if text then GameTooltip:AddLine(text, nil, nil, nil, true) end
 
     GameTooltip:Show()
 end
@@ -54,9 +47,7 @@ end
 function lib:HideOwnedTooltip(target)
     assert(target, "tooltip target is required")
 
-    if GameTooltip:GetOwner() ~= target then
-        return false
-    end
+    if GameTooltip:GetOwner() ~= target then return false end
 
     GameTooltip:Hide()
     return true
@@ -66,9 +57,8 @@ function lib:RefreshTooltip(owner, target)
     assert(owner, "tooltip owner is required")
 
     target = target or owner
-    if GameTooltip:GetOwner() ~= target then
-        return false
-    end
+
+    if GameTooltip:GetOwner() ~= target then return false end
 
     GameTooltip:Hide()
     self:_ShowTooltip(owner, target)
@@ -85,20 +75,13 @@ function lib:AddTooltipTarget(owner, target)
         target:SetMotionScriptsWhileDisabled(true)
     end
 
-    if target.EnableMouse then
-        target:EnableMouse(true)
-    end
+    if target.EnableMouse then target:EnableMouse(true) end
 
-    if target._libModernSettingsTooltipHooked then
-        return
-    end
+    if target._libModernSettingsTooltipHooked then return end
 
     target._libModernSettingsTooltipHooked = true
     target:HookScript("OnEnter", function(self)
-        lib:_ShowTooltip(
-            self._libModernSettingsTooltipOwner,
-            self
-        )
+        lib:_ShowTooltip(self._libModernSettingsTooltipOwner, self)
     end)
     target:HookScript("OnLeave", function(self)
         lib:HideOwnedTooltip(self)

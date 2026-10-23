@@ -8,9 +8,7 @@ local function createLibStub()
     function libStub:NewLibrary(major, minor)
         local oldMinor = minors[major]
 
-        if oldMinor and oldMinor >= minor then
-            return
-        end
+        if oldMinor and oldMinor >= minor then return end
 
         minors[major] = minor
         libraries[major] = libraries[major] or {}
@@ -38,9 +36,13 @@ local function readMainSource()
 end
 
 local MAIN_SOURCE = readMainSource()
-local CURRENT_MINOR = assert(tonumber(MAIN_SOURCE:match(
-    'local MAJOR, MINOR = "LibModernSettings%-1%.0", (%d+)'
-)))
+local CURRENT_MINOR = assert(
+    tonumber(
+        MAIN_SOURCE:match(
+            'local MAJOR, MINOR = "LibModernSettings%-1%.0", (%d+)'
+        )
+    )
+)
 local PREVIOUS_MINOR = CURRENT_MINOR - 1
 
 assert(PREVIOUS_MINOR > 0)
@@ -56,10 +58,7 @@ local function loadLibraryMinor(environment, minor, addonName)
     )
     assert(replacements == 1)
 
-    local chunk, errorMessage = loadstring(
-        source,
-        "@LibModernSettings-1.0.lua"
-    )
+    local chunk, errorMessage = loadstring(source, "@LibModernSettings-1.0.lua")
 
     assert(chunk, errorMessage)
     setfenv(chunk, environment)
@@ -78,8 +77,11 @@ end
 local function registerExampleControl(environment, minor, prefix)
     local lib = environment.LibStub(MAJOR, true)
 
-    if not lib or lib._implementationMinor ~= minor
-        or not lib:_BeginModule("Controls/Example", minor) then
+    if
+        not lib
+        or lib._implementationMinor ~= minor
+        or not lib:_BeginModule("Controls/Example", minor)
+    then
         return false
     end
 
@@ -97,11 +99,7 @@ local function testOldFirst()
     local environment = createEnvironment()
 
     loadLibraryMinor(environment, PREVIOUS_MINOR)
-    assert(registerExampleControl(
-        environment,
-        PREVIOUS_MINOR,
-        "old"
-    ) == true)
+    assert(registerExampleControl(environment, PREVIOUS_MINOR, "old") == true)
 
     local lib = environment.LibStub(MAJOR)
     local control = lib:CreateControl("example", nil, {
@@ -114,30 +112,20 @@ local function testOldFirst()
     loadLibraryMinor(environment, CURRENT_MINOR)
     assert(environment.LibStub(MAJOR) == lib)
     assert(lib._implementationMinor == CURRENT_MINOR)
-    assert(registerExampleControl(
-        environment,
-        CURRENT_MINOR,
-        "new"
-    ) == true)
+    assert(registerExampleControl(environment, CURRENT_MINOR, "new") == true)
 
     control:SetValue("after")
     assert(control.value == "new:after")
-    assert(registerExampleControl(
-        environment,
-        PREVIOUS_MINOR,
-        "late-old"
-    ) == false)
+    assert(
+        registerExampleControl(environment, PREVIOUS_MINOR, "late-old") == false
+    )
 end
 
 local function testNewFirst()
     local environment = createEnvironment()
 
     loadLibraryMinor(environment, CURRENT_MINOR)
-    assert(registerExampleControl(
-        environment,
-        CURRENT_MINOR,
-        "new"
-    ) == true)
+    assert(registerExampleControl(environment, CURRENT_MINOR, "new") == true)
 
     local lib = environment.LibStub(MAJOR)
     local control = lib:CreateControl("example", nil, {})
@@ -145,11 +133,9 @@ local function testNewFirst()
     loadLibraryMinor(environment, PREVIOUS_MINOR)
     assert(environment.LibStub(MAJOR) == lib)
     assert(lib._implementationMinor == CURRENT_MINOR)
-    assert(registerExampleControl(
-        environment,
-        PREVIOUS_MINOR,
-        "late-old"
-    ) == false)
+    assert(
+        registerExampleControl(environment, PREVIOUS_MINOR, "late-old") == false
+    )
 
     control:SetValue("after")
     assert(control.value == "new:after")
@@ -184,11 +170,16 @@ do
     local environment = createEnvironment()
     loadLibraryMinor(environment, PREVIOUS_MINOR, "OlderConsumer")
     local lib = environment.LibStub(MAJOR)
-    assert(lib._tertiarySquareMask == "Interface\\AddOns\\OlderConsumer\\Libs\\" .. MAJOR
-        .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga")
+    assert(
+        lib._tertiarySquareMask
+            == "Interface\\AddOns\\OlderConsumer\\Libs\\"
+                .. MAJOR
+                .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga"
+    )
 
     loadLibraryMinor(environment, CURRENT_MINOR, "NewerConsumer")
-    local selectedPath = "Interface\\AddOns\\NewerConsumer\\Libs\\" .. MAJOR
+    local selectedPath = "Interface\\AddOns\\NewerConsumer\\Libs\\"
+        .. MAJOR
         .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga"
     assert(lib._tertiarySquareMask == selectedPath)
     loadLibraryMinor(environment, PREVIOUS_MINOR, "LateOlderConsumer")
@@ -197,30 +188,41 @@ do
 
     local standalone = createEnvironment()
     loadLibraryMinor(standalone, CURRENT_MINOR)
-    assert(standalone.LibStub(MAJOR)._tertiarySquareMask == "Interface\\AddOns\\" .. MAJOR
-        .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga")
+    assert(
+        standalone.LibStub(MAJOR)._tertiarySquareMask
+            == "Interface\\AddOns\\"
+                .. MAJOR
+                .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga"
+    )
 end
 
 -- Picker models survive compatible embed upgrades; duplicate/older modules
 -- cannot replace methods or discard histories and their catalogue metadata.
 do
     local environment = createEnvironment()
+
     local function loadIconModule(path, minor)
         local file = assert(io.open(path, "rb"))
         local source = file:read("*a")
         file:close()
-        source = source:gsub('(local MAJOR, MINOR = "LibModernSettings%-1%.0", )%d+',
-            "%1" .. tostring(minor), 1)
+        source = source:gsub(
+            '(local MAJOR, MINOR = "LibModernSettings%-1%.0", )%d+',
+            "%1" .. tostring(minor),
+            1
+        )
         local chunk = assert(loadstring(source, "@" .. path))
         setfenv(chunk, environment)
         chunk()
     end
+
     loadLibraryMinor(environment, PREVIOUS_MINOR)
     loadIconModule("IconPicker/Model.lua", PREVIOUS_MINOR)
     local lib = environment.LibStub(MAJOR)
     local history = lib:CreateIconHistory()
     history:Record(10)
-    local catalogue = lib:CreateIconCatalogue({ icons = { { texture = 10, name = "Retained" } } })
+    local catalogue = lib:CreateIconCatalogue({
+        icons = { { texture = 10, name = "Retained" } },
+    })
     loadIconModule("IconPicker/NameData.lua", PREVIOUS_MINOR)
     loadIconModule("IconPicker/Names.lua", PREVIOUS_MINOR)
     loadIconModule("IconPicker/Filters.lua", PREVIOUS_MINOR)
@@ -229,13 +231,21 @@ do
         getFilename = function()
             return "Outdated_INV_Knife_Blue"
         end,
-        icons = { { texture = 6997112 }, { texture = 137008 } },
+        icons = {
+            { texture = 6997112 },
+            { texture = 137008 },
+        },
     })
     local namedEntry = namedCatalogue.entries[1]
     local markerEntry = namedCatalogue.entries[2]
     assert(namedCatalogue:Describe(namedEntry):find("outdated", 1, true))
     namedCatalogue:Describe(markerEntry)
-    assert(lib._iconUtils.GetArtworkFilter("equipment", "daggers")(namedEntry, namedCatalogue))
+    assert(
+        lib._iconUtils.GetArtworkFilter("equipment", "daggers")(
+            namedEntry,
+            namedCatalogue
+        )
+    )
     lib._defaultIconCatalogue = namedCatalogue
     loadLibraryMinor(environment, CURRENT_MINOR)
     loadIconModule("IconPicker/Model.lua", CURRENT_MINOR)
@@ -246,15 +256,38 @@ do
     local selectedIndex = lib._iconNameIndex
     local selectedCategories = lib._iconUtils.ArtworkCategories
     assert(selectedIndex ~= oldIndex)
-    assert(lib:GetIconCatalogue() == namedCatalogue and namedCatalogue.entries[1] == namedEntry)
-    assert(namedCatalogue.byTexture[137008] == markerEntry and markerEntry.name == "Raid target: Skull")
-    assert(lib._iconUtils.GetArtworkFilter("symbols", "markers")(markerEntry, namedCatalogue),
-        "retained native markers must acquire current metadata without replacing their entry")
-    assert(namedCatalogue:Describe(namedEntry):find("manaforgeomega", 1, true),
-        "a retained catalogue must invalidate filenames after a provider upgrade")
-    assert(not lib._iconUtils.GetArtworkFilter("equipment", "daggers")(namedEntry, namedCatalogue))
-    assert(lib._iconUtils.GetArtworkFilter("achievements", "raids")(namedEntry, namedCatalogue),
-        "a provider upgrade must refresh cached artwork classifications")
+    assert(
+        lib:GetIconCatalogue() == namedCatalogue
+            and namedCatalogue.entries[1] == namedEntry
+    )
+    assert(
+        namedCatalogue.byTexture[137008] == markerEntry
+            and markerEntry.name == "Raid target: Skull"
+    )
+    assert(
+        lib._iconUtils.GetArtworkFilter("symbols", "markers")(
+            markerEntry,
+            namedCatalogue
+        ),
+        "retained native markers must acquire current metadata without replacing their entry"
+    )
+    assert(
+        namedCatalogue:Describe(namedEntry):find("manaforgeomega", 1, true),
+        "a retained catalogue must invalidate filenames after a provider upgrade"
+    )
+    assert(
+        not lib._iconUtils.GetArtworkFilter("equipment", "daggers")(
+            namedEntry,
+            namedCatalogue
+        )
+    )
+    assert(
+        lib._iconUtils.GetArtworkFilter("achievements", "raids")(
+            namedEntry,
+            namedCatalogue
+        ),
+        "a provider upgrade must refresh cached artwork classifications"
+    )
     local record = lib._iconHistoryPrototype.Record
     history:Record(20)
     assert(history:GetIcons("recent")[2] == 10)
@@ -266,9 +299,13 @@ do
     loadIconModule("IconPicker/NameData.lua", CURRENT_MINOR)
     loadIconModule("IconPicker/Filters.lua", PREVIOUS_MINOR)
     loadIconModule("IconPicker/Filters.lua", CURRENT_MINOR)
-    assert(lib._iconNameIndex == selectedIndex,
-        "older and duplicate embeds must not replace the selected name snapshot")
-    assert(lib._iconHistoryPrototype.Record == record and #catalogue.entries == 1)
+    assert(
+        lib._iconNameIndex == selectedIndex,
+        "older and duplicate embeds must not replace the selected name snapshot"
+    )
+    assert(
+        lib._iconHistoryPrototype.Record == record and #catalogue.entries == 1
+    )
     assert(lib._iconUtils.ArtworkCategories == selectedCategories)
 end
 

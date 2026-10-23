@@ -20,9 +20,19 @@ NORMAL_FONT_COLOR = { r = 1, g = 0.82, b = 0 }
 GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 SEARCH = "Search"
 UIParent = { width = 1600, height = 1000 }
-function UIParent:GetParent() return nil end
-function UIParent:GetWidth() return self.width end
-function UIParent:GetEffectiveScale() return self.scale or 1 end
+
+function UIParent:GetParent()
+    return nil
+end
+
+function UIParent:GetWidth()
+    return self.width
+end
+
+function UIParent:GetEffectiveScale()
+    return self.scale or 1
+end
+
 local mouseButtonDown = false
 local deferredCallbacks = {}
 local inputState = {
@@ -50,8 +60,10 @@ end
 function DoesAncestryInclude(ancestor, frame)
     while ancestor and frame do
         if frame == ancestor then return true end
+
         frame = frame:GetParent()
     end
+
     return false
 end
 
@@ -59,10 +71,13 @@ function DoesAncestryIncludeAny(ancestor, frames)
     for _, frame in ipairs(frames) do
         if DoesAncestryInclude(ancestor, frame) then return true end
     end
+
     return false
 end
 
-SOUNDKIT = { IG_MAINMENU_OPTION_CHECKBOX_ON = 1, IG_MAINMENU_OPTION_CHECKBOX_OFF = 2 }
+SOUNDKIT =
+    { IG_MAINMENU_OPTION_CHECKBOX_ON = 1, IG_MAINMENU_OPTION_CHECKBOX_OFF = 2 }
+
 function PlaySound(sound)
     inputState.lastSound = sound
 end
@@ -83,12 +98,18 @@ function IsMetaKeyDown()
     return inputState.modifiers.meta
 end
 
-DropdownButtonMixin = { Event = { OnMenuOpen = "OnMenuOpen", OnMenuClose = "OnMenuClose" } }
-MenuInputContext = { None = 1, MouseButton = 2, MouseWheel = 3 }
+DropdownButtonMixin =
+    { Event = { OnMenuOpen = "OnMenuOpen", OnMenuClose = "OnMenuClose" } }
+MenuInputContext = {
+    None = 1,
+    MouseButton = 2,
+    MouseWheel = 3,
+}
 MenuResponse = { Refresh = 2, CloseAll = 4 }
 ScrollBoxConstants = { AlignNearest = "nearest", NoScrollInterpolation = 0 }
 
 AnchorUtil = {}
+
 function AnchorUtil.CreateAnchor(point, relativeTo, relativePoint, x, y)
     return {
         point = point,
@@ -100,75 +121,135 @@ function AnchorUtil.CreateAnchor(point, relativeTo, relativePoint, x, y)
 end
 
 local function createMenuDescription(dropdown)
-    local root = { menuAcquiredCallbacks = {}, radioButtons = {}, elements = {} }
+    local root = {
+        menuAcquiredCallbacks = {},
+        radioButtons = {},
+        elements = {},
+    }
+
     function root:SetScrollMode(height)
         self.maxScrollExtent = height
     end
+
     function root:SetMinimumWidth(width)
         self.minimumWidth = width
     end
+
     function root:SetMaximumWidth(width)
         self.maximumWidth = width
     end
+
     function root:AddMenuAcquiredCallback(callback)
         self.menuAcquiredCallbacks[#self.menuAcquiredCallbacks + 1] = callback
     end
+
     function root:CreateRadio(label, selected, responder, value)
         local description = { label, selected, responder, value }
-        function description:GetData() return self[4] end
-        function description:IsRadio() return not self.checkbox end
-        function description:IsCheckbox() return self.checkbox == true end
-        function description:CanSelect() return not self.disabled end
-        function description:IsSelected() return self[2](self[4]) end
-        function description:SetEnabled(enabled) self.disabled = not enabled end
+
+        function description:GetData()
+            return self[4]
+        end
+
+        function description:IsRadio()
+            return not self.checkbox
+        end
+
+        function description:IsCheckbox()
+            return self.checkbox == true
+        end
+
+        function description:CanSelect()
+            return not self.disabled
+        end
+
+        function description:IsSelected()
+            return self[2](self[4])
+        end
+
+        function description:SetEnabled(enabled)
+            self.disabled = not enabled
+        end
+
         function description:AddInitializer(callback)
             self.initializers = self.initializers or {}
             self.initializers[#self.initializers + 1] = callback
         end
+
         function description:SetFinalInitializer(callback)
             self.finalInitializer = callback
         end
+
         function description:AddResetter(callback)
             self.resetters = self.resetters or {}
             self.resetters[#self.resetters + 1] = callback
         end
+
         function description:HookOnLeave(callback)
             self.onLeave = callback
         end
+
         function description:SetTitleAndTextTooltip(title, text)
             self.tooltipTitle = title
             self.tooltipText = text
         end
+
         self.radioButtons[#self.radioButtons + 1] = description
         self.elements[#self.elements + 1] = description
         return description
     end
+
     function root:CreateCheckbox(label, selected, responder, value)
         local description = self:CreateRadio(label, selected, responder, value)
         description.checkbox = true
         table.remove(self.radioButtons)
         return description
     end
+
     function root:CreateDecoration(kind, label)
         local description = { kind = kind, label = label }
-        function description:GetData() return nil end
-        function description:IsRadio() return false end
-        function description:IsCheckbox() return false end
-        function description:CanSelect() return false end
-        function description:IsSelected() return false end
+
+        function description:GetData()
+            return nil
+        end
+
+        function description:IsRadio()
+            return false
+        end
+
+        function description:IsCheckbox()
+            return false
+        end
+
+        function description:CanSelect()
+            return false
+        end
+
+        function description:IsSelected()
+            return false
+        end
+
         self.elements[#self.elements + 1] = description
         return description
     end
-    function root:CreateTitle(label) return self:CreateDecoration("title", label) end
-    function root:CreateDivider() return self:CreateDecoration("divider") end
+
+    function root:CreateTitle(label)
+        return self:CreateDecoration("title", label)
+    end
+
+    function root:CreateDivider()
+        return self:CreateDecoration("divider")
+    end
+
     function root:EnumerateElementDescriptions()
         return ipairs(self.elements)
     end
+
     dropdown.menuCallback(dropdown, root)
     -- DropdownButtonMixin:RegisterMenu supplies this default after generation.
     if not root.minimumWidth or root.minimumWidth == 0 then
         root:SetMinimumWidth(dropdown:GetWidth())
     end
+
     return root
 end
 
@@ -186,6 +267,7 @@ C_Timer = {
 local function runDeferredCallbacks()
     local callbacks = deferredCallbacks
     deferredCallbacks = {}
+
     for _, callback in ipairs(callbacks) do
         callback()
     end
@@ -279,25 +361,42 @@ local function makeRegion()
         self.alpha = alpha
     end
 
-    function region:SetScale(scale) self.scale = scale end
-    function region:SetVertexColor(...) self.vertexColor = { ... } end
-    function region:SetColorTexture(...) self.color = { ... } end
+    function region:SetScale(scale)
+        self.scale = scale
+    end
+
+    function region:SetVertexColor(...)
+        self.vertexColor = { ... }
+    end
+
+    function region:SetColorTexture(...)
+        self.color = { ... }
+    end
+
     function region:SetTexture(texture, wrapHorizontal, wrapVertical)
         self.atlas = nil
         self.texture = texture
         self.wrapHorizontal = wrapHorizontal
         self.wrapVertical = wrapVertical
     end
+
     function region:SetDrawLayer(layer, sublevel)
         self.drawLayer = layer
         self.sublevel = sublevel
     end
+
     function region:AddMaskTexture(mask)
         self.masks = self.masks or {}
         self.masks[#self.masks + 1] = mask
     end
-    function region:SetTexCoord(...) self.texCoord = { ... } end
-    function region:SetGradient(...) self.gradient = { ... } end
+
+    function region:SetTexCoord(...)
+        self.texCoord = { ... }
+    end
+
+    function region:SetGradient(...)
+        self.gradient = { ... }
+    end
 
     function region:SetBlendMode(blendMode)
         self.blendMode = blendMode
@@ -351,11 +450,20 @@ local function makeFontString()
 
     function fontString:GetStringHeight()
         if self.stringHeight then return self.stringHeight end
+
         local height = (self.fontObject and self.fontObject.height) or 12
-        if self.wordWrap and self.nonSpaceWrap and self.width and self.width > 0 then
+
+        if
+            self.wordWrap
+            and self.nonSpaceWrap
+            and self.width
+            and self.width > 0
+        then
             -- A simple unbroken-text wrap is sufficient for description layout tests.
-            return height * math.max(1, math.ceil(self:GetStringWidth() / self.width))
+            return height
+                * math.max(1, math.ceil(self:GetStringWidth() / self.width))
         end
+
         return height
     end
 
@@ -388,7 +496,10 @@ local function makeFontString()
     end
 
     function fontString:SetText(text)
-        assert(not self.requiresFont or self.fontObject, "FontString:SetText(): Font not set")
+        assert(
+            not self.requiresFont or self.fontObject,
+            "FontString:SetText(): Font not set"
+        )
         self.text = text
     end
 
@@ -424,6 +535,7 @@ local function makeFrame(frameType, parent, template)
         local changed = width ~= self.width or height ~= self.height
         self.width = width
         self.height = height
+
         if changed and self.scripts.OnSizeChanged then
             self.scripts.OnSizeChanged(self, width, height)
         end
@@ -463,9 +575,11 @@ local function makeFrame(frameType, parent, template)
 
     function frame:GetNumPoints()
         local count = 0
+
         for _ in pairs(self.pointsByName or {}) do
             count = count + 1
         end
+
         return count
     end
 
@@ -473,23 +587,44 @@ local function makeFrame(frameType, parent, template)
         return unpack(self.pointsByName and self.pointsByName[name] or {})
     end
 
-    function frame:GetParent() return self.parent end
-    function frame:GetChildren() return unpack(self.children) end
-    function frame:GetEffectiveScale() return 1 end
+    function frame:GetParent()
+        return self.parent
+    end
+
+    function frame:GetChildren()
+        return unpack(self.children)
+    end
+
+    function frame:GetEffectiveScale()
+        return 1
+    end
+
     function frame:GetTop()
-        local point = self.pointsByName and self.pointsByName.TOPLEFT or self.point
-        local relative = point and type(point[2]) == "table" and point[2] or self.parent
+        local point = self.pointsByName and self.pointsByName.TOPLEFT
+            or self.point
+        local relative = point and type(point[2]) == "table" and point[2]
+            or self.parent
         return (relative and relative.GetTop and relative:GetTop() or 1000)
             + (point and point[5] or 0)
     end
+
     function frame:GetLeft()
-        local point = self.pointsByName and self.pointsByName.TOPLEFT or self.point
-        local relative = point and type(point[2]) == "table" and point[2] or self.parent
+        local point = self.pointsByName and self.pointsByName.TOPLEFT
+            or self.point
+        local relative = point and type(point[2]) == "table" and point[2]
+            or self.parent
         return (relative and relative.GetLeft and relative:GetLeft() or 0)
             + (point and point[4] or 0)
     end
-    function frame:GetBottom() return self:GetTop() - self:GetHeight() end
-    function frame:GetCenter() return self:GetLeft() + self:GetWidth() / 2, self:GetTop() - self:GetHeight() / 2 end
+
+    function frame:GetBottom()
+        return self:GetTop() - self:GetHeight()
+    end
+
+    function frame:GetCenter()
+        return self:GetLeft() + self:GetWidth() / 2,
+            self:GetTop() - self:GetHeight() / 2
+    end
 
     function frame:SetParent(parentFrame)
         if self.parent then
@@ -500,7 +635,9 @@ local function makeFrame(frameType, parent, template)
                 end
             end
         end
+
         self.parent = parentFrame
+
         if parentFrame then
             parentFrame.children = parentFrame.children or {}
             parentFrame.children[#parentFrame.children + 1] = self
@@ -509,7 +646,11 @@ local function makeFrame(frameType, parent, template)
 
     function frame:IsVisible()
         return self.visible ~= false
-            and (not self.parent or not self.parent.IsVisible or self.parent:IsVisible())
+            and (
+                not self.parent
+                or not self.parent.IsVisible
+                or self.parent:IsVisible()
+            )
     end
 
     function frame:IsShown()
@@ -547,14 +688,15 @@ local function makeFrame(frameType, parent, template)
         assert(select("#", ...) == 0)
         local fontString = makeFontString()
         fontString.requiresFont = true
-        if fontObject then
-            fontString:SetFontObject(fontObject)
-        end
+
+        if fontObject then fontString:SetFontObject(fontObject) end
+
         return fontString
     end
 
     function frame:SetFontString(fontString)
         self.fontString = fontString
+
         if self.normalFontObject then
             fontString:SetFontObject(self.normalFontObject)
         end
@@ -576,10 +718,13 @@ local function makeFrame(frameType, parent, template)
         local changed = self.text ~= text
         self.text = text
 
-        if self.fontString then
-            self.fontString:SetText(text)
-        end
-        if changed and self.frameType == "EditBox" and self.scripts.OnTextChanged then
+        if self.fontString then self.fontString:SetText(text) end
+
+        if
+            changed
+            and self.frameType == "EditBox"
+            and self.scripts.OnTextChanged
+        then
             self.scripts.OnTextChanged(self, false)
         end
     end
@@ -590,14 +735,21 @@ local function makeFrame(frameType, parent, template)
 
     function frame:SetNormalFontObject(fontObject)
         self.normalFontObject = fontObject
-        if self.fontString then
-            self.fontString:SetFontObject(fontObject)
-        end
+
+        if self.fontString then self.fontString:SetFontObject(fontObject) end
     end
 
-    function frame:GetNormalFontObject() return self.normalFontObject end
-    function frame:GetHighlightFontObject() return self.highlightFontObject end
-    function frame:GetDisabledFontObject() return self.disabledFontObject end
+    function frame:GetNormalFontObject()
+        return self.normalFontObject
+    end
+
+    function frame:GetHighlightFontObject()
+        return self.highlightFontObject
+    end
+
+    function frame:GetDisabledFontObject()
+        return self.disabledFontObject
+    end
 
     function frame:SetHighlightFontObject(fontObject)
         self.highlightFontObject = fontObject
@@ -631,28 +783,59 @@ local function makeFrame(frameType, parent, template)
         self.disabledTexture = texture
     end
 
-    function frame:SetCheckedTexture(texture) self.checkedTexture = texture end
-    function frame:SetDisabledCheckedTexture(texture) self.disabledCheckedTexture = texture end
-    function frame:SetChecked(checked) self.checked = checked end
-    function frame:GetChecked() return self.checked end
-    function frame:LockHighlight() self.highlightLocked = true end
-    function frame:UnlockHighlight() self.highlightLocked = false end
+    function frame:SetCheckedTexture(texture)
+        self.checkedTexture = texture
+    end
+
+    function frame:SetDisabledCheckedTexture(texture)
+        self.disabledCheckedTexture = texture
+    end
+
+    function frame:SetChecked(checked)
+        self.checked = checked
+    end
+
+    function frame:GetChecked()
+        return self.checked
+    end
+
+    function frame:LockHighlight()
+        self.highlightLocked = true
+    end
+
+    function frame:UnlockHighlight()
+        self.highlightLocked = false
+    end
+
     function frame:Click(button)
         if not self:IsEnabled() then return end
-        if self.frameType == "CheckButton" then self.checked = not self.checked end
-        if self.scripts.OnClick then self.scripts.OnClick(self, button or "LeftButton") end
+
+        if self.frameType == "CheckButton" then
+            self.checked = not self.checked
+        end
+
+        if self.scripts.OnClick then
+            self.scripts.OnClick(self, button or "LeftButton")
+        end
     end
-    function frame:SetHitRectInsets(...) self.hitRectInsets = { ... } end
+
+    function frame:SetHitRectInsets(...)
+        self.hitRectInsets = { ... }
+    end
 
     function frame:SetScript(script, callback)
         self.baseScripts[script] = callback
+
         if not self.scriptHooks[script] then
             self.scripts[script] = callback
             return
         end
+
         self.scripts[script] = function(...)
             local handler = self.baseScripts[script]
+
             if handler then handler(...) end
+
             for _, hook in ipairs(self.scriptHooks[script]) do
                 hook(...)
             end
@@ -663,39 +846,106 @@ local function makeFrame(frameType, parent, template)
         return self.scripts[script]
     end
 
-    function frame:EnableMouseWheel(enabled) self.mouseWheelEnabled = enabled == true end
-    function frame:IsMouseWheelEnabled() return self.mouseWheelEnabled == true end
-    function frame:SetAltArrowKeyMode(enabled) self.altArrowKeyMode = enabled end
-    function frame:SetAllPoints(target) self.allPoints = target end
-    function frame:SetFrameLevel(level) self.frameLevel = level end
-    function frame:GetFrameLevel() return self.frameLevel or 1 end
-    function frame:SetFrameStrata(strata) self.strata = strata end
-    function frame:GetFrameStrata() return self.strata or "MEDIUM" end
-    function frame:SetAlpha(alpha) self.alpha = alpha end
-    function frame:SetScale(scale) self.scale = scale end
-    function frame:SetToplevel(value) self.topLevel = value end
-    function frame:SetClampedToScreen(value) self.clamped = value end
-    function frame:SetMovable(value) self.movable = value end
-    function frame:EnableMouse(value) self.mouseEnabled = value end
-    function frame:EnableMouseMotion(value) self.mouseMotionEnabled = value end
+    function frame:EnableMouseWheel(enabled)
+        self.mouseWheelEnabled = enabled == true
+    end
+
+    function frame:IsMouseWheelEnabled()
+        return self.mouseWheelEnabled == true
+    end
+
+    function frame:SetAltArrowKeyMode(enabled)
+        self.altArrowKeyMode = enabled
+    end
+
+    function frame:SetAllPoints(target)
+        self.allPoints = target
+    end
+
+    function frame:SetFrameLevel(level)
+        self.frameLevel = level
+    end
+
+    function frame:GetFrameLevel()
+        return self.frameLevel or 1
+    end
+
+    function frame:SetFrameStrata(strata)
+        self.strata = strata
+    end
+
+    function frame:GetFrameStrata()
+        return self.strata or "MEDIUM"
+    end
+
+    function frame:SetAlpha(alpha)
+        self.alpha = alpha
+    end
+
+    function frame:SetScale(scale)
+        self.scale = scale
+    end
+
+    function frame:SetToplevel(value)
+        self.topLevel = value
+    end
+
+    function frame:SetClampedToScreen(value)
+        self.clamped = value
+    end
+
+    function frame:SetMovable(value)
+        self.movable = value
+    end
+
+    function frame:EnableMouse(value)
+        self.mouseEnabled = value
+    end
+
+    function frame:EnableMouseMotion(value)
+        self.mouseMotionEnabled = value
+    end
+
     function frame:IsMouseMotionFocus()
         if not self:IsVisible() then return false end
+
         for _, focus in ipairs(inputState.mouseFoci or {}) do
             if focus == self then return true end
         end
+
         return false
     end
-    function frame:RegisterForClicks(...) self.clicks = { ... } end
-    function frame:RegisterForDrag(...) self.dragButtons = { ... } end
-    function frame:StartMoving() self.moving = true end
-    function frame:StopMovingOrSizing() self.moving = false end
-    function frame:SetTitle(title) self.title = title end
+
+    function frame:RegisterForClicks(...)
+        self.clicks = { ... }
+    end
+
+    function frame:RegisterForDrag(...)
+        self.dragButtons = { ... }
+    end
+
+    function frame:StartMoving()
+        self.moving = true
+    end
+
+    function frame:StopMovingOrSizing()
+        self.moving = false
+    end
+
+    function frame:SetTitle(title)
+        self.title = title
+    end
+
     function frame:EnableKeyboard(enabled)
         assert(not inputState.inCombat, "EnableKeyboard must not run in combat")
         self.keyboardEnabled = enabled
     end
+
     function frame:SetPropagateKeyboardInput(propagate)
-        assert(not inputState.inCombat, "SetPropagateKeyboardInput must not run in combat")
+        assert(
+            not inputState.inCombat,
+            "SetPropagateKeyboardInput must not run in combat"
+        )
         self.propagateKeyboardInput = propagate
     end
 
@@ -715,9 +965,7 @@ local function makeFrame(frameType, parent, template)
     end
 
     function frame:UnregisterEvent(event)
-        if self.registeredEvents then
-            self.registeredEvents[event] = nil
-        end
+        if self.registeredEvents then self.registeredEvents[event] = nil end
     end
 
     -- Plain Frames have no enabled-state API. Interactive widgets and template
@@ -727,6 +975,7 @@ local function makeFrame(frameType, parent, template)
             local wasEnabled = self:IsEnabled()
             self.enabled = enabled
             local script = enabled and "OnEnable" or "OnDisable"
+
             if wasEnabled ~= enabled and self.scripts[script] then
                 self.scripts[script](self)
             end
@@ -744,7 +993,9 @@ local function makeFrame(frameType, parent, template)
     end
 
     function frame:TriggerEvent(event, ...)
-        for _, registration in ipairs(self.callbacks and self.callbacks[event] or {}) do
+        for _, registration in
+            ipairs(self.callbacks and self.callbacks[event] or {})
+        do
             registration[1](registration[2], ...)
         end
     end
@@ -752,40 +1003,52 @@ local function makeFrame(frameType, parent, template)
     function frame:SetupMenu(callback)
         self.menuCallback = callback
     end
+
     function frame:SetMenuAnchor(anchor)
         self.menuAnchor = anchor
     end
+
     function frame:SetDefaultText(text)
         self.defaultText = text
     end
+
     function frame:SetSelectionText(callback)
         self.selectionFunc = callback
     end
 
     function frame:GenerateMenu()
         self.generateMenuCount = (self.generateMenuCount or 0) + 1
+
         if self.menuCallback then
             self.menuDescription = createMenuDescription(self)
+
             if self.menu then
                 self.menu:SetMenuDescription(self.menuDescription)
             end
         end
     end
 
-    function frame:GetMenuDescription() return self.menuDescription end
-    function frame:IsMenuOpen() return self.menu ~= nil end
+    function frame:GetMenuDescription()
+        return self.menuDescription
+    end
+
+    function frame:IsMenuOpen()
+        return self.menu ~= nil
+    end
+
     function frame:CloseMenu()
         local menu = self.menu
         self.menu = nil
+
         if menu then
             menu.ScrollBox:RemoveDataProvider()
             self:TriggerEvent(DropdownButtonMixin.Event.OnMenuClose, self, menu)
             menu:Hide()
+
             for _, child in ipairs({ menu:GetChildren() }) do
-                if child.scripts.OnHide then
-                    child.scripts.OnHide(child)
-                end
+                if child.scripts.OnHide then child.scripts.OnHide(child) end
             end
+
             for _, row in ipairs(menu.rows or {}) do
                 for _, resetter in ipairs(row.description.resetters or {}) do
                     resetter(row)
@@ -793,9 +1056,13 @@ local function makeFrame(frameType, parent, template)
             end
         end
     end
+
     function frame:CollectSelectionData()
         local previous, following, selected = nil, nil, {}
-        for _, description in self.menuDescription:EnumerateElementDescriptions() do
+
+        for _, description in
+            self.menuDescription:EnumerateElementDescriptions()
+        do
             if description:IsRadio() and description:IsSelected() then
                 selected[#selected + 1] = description
             elseif description:IsRadio() and description:CanSelect() then
@@ -806,17 +1073,22 @@ local function makeFrame(frameType, parent, template)
                 end
             end
         end
+
         return previous, following, selected
     end
+
     function frame:Pick(description, context)
         assert(description:CanSelect())
-        local response = description[3](description:GetData(), { context = context })
+        local response =
+            description[3](description:GetData(), { context = context })
         self:Update()
+
         if response == MenuResponse.Refresh and self.menu then
             self.menu:ReinitializeAll()
         else
             self:CloseMenu()
         end
+
         return true
     end
 
@@ -904,6 +1176,7 @@ local function makeFrame(frameType, parent, template)
         local hadFocus = self.hasFocus
 
         self.hasFocus = false
+
         if inputState.keyboardFocus == self then
             inputState.keyboardFocus = nil
         end
@@ -950,7 +1223,13 @@ function CreateFrame(frameType, _, parent, template)
         frame.Bg = makeRegion()
         frame.LeftEdge = makeRegion()
         frame.RightEdge = makeRegion()
-        for _, corner in ipairs({ "TopLeftCorner", "TopRightCorner", "BottomLeftCorner", "BottomRightCorner" }) do
+
+        for _, corner in ipairs({
+            "TopLeftCorner",
+            "TopRightCorner",
+            "BottomLeftCorner",
+            "BottomRightCorner",
+        }) do
             frame[corner] = makeRegion()
             frame[corner]:SetSize(24, 24)
         end
@@ -980,15 +1259,15 @@ function CreateFrame(frameType, _, parent, template)
             self.clearButton:Show()
         end)
         frame:SetScript("OnEditFocusLost", function(self)
-            if self:GetText() == "" then
-                self.clearButton:Hide()
-            end
+            if self:GetText() == "" then self.clearButton:Hide() end
         end)
+
         for _, script in ipairs({ "OnEscapePressed", "OnEnterPressed" }) do
             frame:SetScript(script, function(self)
                 self:ClearFocus()
             end)
         end
+
         frame.clearButton:SetScript("OnClick", function(self)
             local input = self:GetParent()
             input:SetText("")
@@ -1021,7 +1300,9 @@ function EditBox_ClearHighlight(editBox)
 end
 
 function EditBox_OnTabPressed(editBox)
-    local target = IsShiftKeyDown() and editBox.previousEditBox or editBox.nextEditBox
+    local target = IsShiftKeyDown() and editBox.previousEditBox
+        or editBox.nextEditBox
+
     if target then
         editBox:ClearFocus()
         target:SetFocus()
@@ -1102,17 +1383,9 @@ lib:RegisterControlType("slider", function(parent)
 
     control:SetSize(270, 60)
     control.label = makeFontString()
-    control.slider = CreateFrame(
-        "Frame",
-        nil,
-        control,
-        "MinimalSliderWithSteppersTemplate"
-    )
-    control.valueBox = makeFrame(
-        "EditBox",
-        control,
-        "InputBoxScriptTemplate"
-    )
+    control.slider =
+        CreateFrame("Frame", nil, control, "MinimalSliderWithSteppersTemplate")
+    control.valueBox = makeFrame("EditBox", control, "InputBoxScriptTemplate")
     control.valueBox:SetSize(60, 39)
     control.valueBox:SetPoint("LEFT", control.slider, "RIGHT", 0, 0)
     control.valueBox:SetText("60")
@@ -1132,11 +1405,7 @@ end, {
 local oldSlider = lib:CreateControl("slider", nil, {})
 
 lib:RegisterControlType("textInput", function(parent)
-    local editBox = makeFrame(
-        "EditBox",
-        parent,
-        "InputBoxScriptTemplate"
-    )
+    local editBox = makeFrame("EditBox", parent, "InputBoxScriptTemplate")
 
     editBox._libModernSettingsCommittedValue = "Old"
     editBox:SetText("Old")
@@ -1158,12 +1427,20 @@ lib:RegisterControlType("field", function(parent)
     field.control:SetSize(270, 34)
     field.control:SetPoint("TOPLEFT", field, "TOPLEFT", 0, -25)
     return field
-end, { SetControlEnabled = function() end })
+end, {
+    SetControlEnabled = function() end,
+})
 
 local oldField = lib:CreateControl("field", nil, {})
 
 -- These fixtures represent releases predating retained appearance options.
-for _, control in ipairs({ oldButton, oldDropdown, oldSlider, oldTextInput, oldField }) do
+for _, control in ipairs({
+    oldButton,
+    oldDropdown,
+    oldSlider,
+    oldTextInput,
+    oldField,
+}) do
     control._libModernSettingsAppearanceOptions = nil
 end
 
@@ -1206,8 +1483,10 @@ assert(oldField.height == 59)
 assert(oldField.control.point[5] == -7)
 
 assert(oldSlider.valueBox._libModernSettingsSlider == oldSlider)
-assert(oldSlider.valueBox.focusTexture.atlas ==
-    "common-button-tertiary-depressed-normal-glow")
+assert(
+    oldSlider.valueBox.focusTexture.atlas
+        == "common-button-tertiary-depressed-normal-glow"
+)
 oldSlider:SetControlEnabled(false, "Disabled")
 assert(oldSlider.valueBox.focusTexture:IsShown() == false)
 oldSlider:SetControlEnabled(true)
@@ -1216,8 +1495,10 @@ assert(oldSlider.valueBox.focusTexture:IsShown() == true)
 oldSlider.valueBox:ClearFocus()
 assert(oldSlider.valueBox.focusTexture:IsShown() == false)
 
-assert(oldTextInput.focusTexture.atlas ==
-    "common-button-tertiary-depressed-normal-glow")
+assert(
+    oldTextInput.focusTexture.atlas
+        == "common-button-tertiary-depressed-normal-glow"
+)
 oldTextInput:SetControlEnabled(false, "Disabled")
 assert(oldTextInput.focusTexture:IsShown() == false)
 oldTextInput:SetControlEnabled(true)
@@ -1301,18 +1582,26 @@ assert(squareButton.height == 34)
 assert(squareButton.icon:GetWidth() == 16)
 assert(squareButton.icon:GetHeight() == 16)
 assert(squareButton.icon.point[1] == "CENTER")
-assert(squareButton.normalTexture.atlas ==
-    "common-button-tertiary-square-normal")
-assert(squareButton.pushedTexture.atlas ==
-    "common-button-tertiary-square-pressed")
-assert(squareButton.disabledTexture.atlas ==
-    "common-button-tertiary-square-disabled")
-assert(squareButton.highlightTexture.atlas ==
-    "common-button-tertiary-square-normal")
+assert(
+    squareButton.normalTexture.atlas == "common-button-tertiary-square-normal"
+)
+assert(
+    squareButton.pushedTexture.atlas == "common-button-tertiary-square-pressed"
+)
+assert(
+    squareButton.disabledTexture.atlas
+        == "common-button-tertiary-square-disabled"
+)
+assert(
+    squareButton.highlightTexture.atlas
+        == "common-button-tertiary-square-normal"
+)
 assert(squareButton.highlightTexture.blendMode == "ADD")
 squareButton.scripts.OnEnter(squareButton)
 squareButton.scripts.OnLeave(squareButton)
-assert(squareButton.normalTexture.atlas == "common-button-tertiary-square-normal")
+assert(
+    squareButton.normalTexture.atlas == "common-button-tertiary-square-normal"
+)
 
 local squareWithoutIconSucceeded = pcall(function()
     lib:CreateButton(nil, { variant = "square" })
@@ -1363,11 +1652,11 @@ local expandableHeader = lib:CreateExpandableHeader(nil, {
     expanded = false,
     iconAtlas = "header-icon",
     iconSize = 20,
-    onExpandedChanged = function(header, expanded, button)
+    onExpandedChanged = function(header, expanded, clickedButton)
         expandedChanges[#expandedChanges + 1] = {
             header = header,
             expanded = expanded,
-            button = button,
+            button = clickedButton,
         }
     end,
 })
@@ -1375,12 +1664,14 @@ local expandableHeader = lib:CreateExpandableHeader(nil, {
 assert(expandableHeader.width == 300)
 assert(expandableHeader.height == 34)
 assert(expandableHeader:GetText() == "Mythic")
-assert(expandableHeader._libModernSettingsHeaderNormalTexture.atlas ==
-    "common-button-tertiary-normal")
-assert(expandableHeader.pushedTexture.atlas ==
-    "common-button-tertiary-pressed")
-assert(expandableHeader.disabledTexture.atlas ==
-    "common-button-tertiary-disabled")
+assert(
+    expandableHeader._libModernSettingsHeaderNormalTexture.atlas
+        == "common-button-tertiary-normal"
+)
+assert(expandableHeader.pushedTexture.atlas == "common-button-tertiary-pressed")
+assert(
+    expandableHeader.disabledTexture.atlas == "common-button-tertiary-disabled"
+)
 assert(expandableHeader.icon.atlas == "header-icon")
 assert(expandableHeader.icon.drawLayer == "OVERLAY")
 assert(expandableHeader.icon:GetWidth() == 20)
@@ -1388,8 +1679,7 @@ assert(expandableHeader.icon:GetHeight() == 20)
 assert(expandableHeader.icon:IsShown())
 assert(expandableHeader.label.points[1][2] == expandableHeader.icon)
 assert(expandableHeader.toggleIcon.drawLayer == "OVERLAY")
-assert(expandableHeader.toggleIcon.atlas ==
-    "common-dropdown-icon-next")
+assert(expandableHeader.toggleIcon.atlas == "common-dropdown-icon-next")
 assert(expandableHeader.toggleIcon:GetWidth() == 17)
 assert(expandableHeader.toggleIcon:GetHeight() == 17)
 assert(expandableHeader.toggleIcon.rotation == math.pi * 0.5)
@@ -1398,11 +1688,15 @@ assert(type(collapsedToggleYOffset) == "number")
 assert(expandableHeader:IsExpanded() == false)
 
 expandableHeader.scripts.OnEnter(expandableHeader)
-assert(expandableHeader._libModernSettingsHeaderNormalTexture.atlas ==
-    "common-button-tertiary-hover")
+assert(
+    expandableHeader._libModernSettingsHeaderNormalTexture.atlas
+        == "common-button-tertiary-hover"
+)
 expandableHeader.scripts.OnLeave(expandableHeader)
-assert(expandableHeader._libModernSettingsHeaderNormalTexture.atlas ==
-    "common-button-tertiary-normal")
+assert(
+    expandableHeader._libModernSettingsHeaderNormalTexture.atlas
+        == "common-button-tertiary-normal"
+)
 
 expandableHeader.scripts.OnClick(expandableHeader, "LeftButton")
 assert(expandableHeader:IsExpanded() == true)
@@ -1430,8 +1724,9 @@ expandableHeader:SetControlEnabled(false, "Unavailable")
 assert(expandableHeader.enabled == false)
 assert(expandableHeader.icon.desaturated == true)
 assert(expandableHeader.icon.alpha == 0.5)
-assert(expandableHeader.toggleIcon.atlas ==
-    "common-dropdown-icon-next-disabled")
+assert(
+    expandableHeader.toggleIcon.atlas == "common-dropdown-icon-next-disabled"
+)
 assert(expandableHeader.toggleIcon.desaturated == false)
 assert(expandableHeader.toggleIcon.alpha == 1)
 assert(expandableHeader.disabledTooltip == "Unavailable")
@@ -1440,8 +1735,7 @@ expandableHeader:SetControlEnabled(true)
 assert(expandableHeader.enabled == true)
 assert(expandableHeader.icon.desaturated == false)
 assert(expandableHeader.icon.alpha == 1)
-assert(expandableHeader.toggleIcon.atlas ==
-    "common-dropdown-icon-next")
+assert(expandableHeader.toggleIcon.atlas == "common-dropdown-icon-next")
 assert(expandableHeader.toggleIcon.desaturated == false)
 assert(expandableHeader.toggleIcon.alpha == 1)
 
@@ -1452,7 +1746,10 @@ local labeledDropdown = lib:CreateDropdown(nil, {
 
 assert(labeledDropdown.width == 270)
 assert(labeledDropdown.height == 53)
-assert(labeledDropdown.dropdown.height == 34, "dropdown artwork must match tertiary button height")
+assert(
+    labeledDropdown.dropdown.height == 34,
+    "dropdown artwork must match tertiary button height"
+)
 assert(labeledDropdown.label:IsShown() == true)
 assert(labeledDropdown.label.point[1] == "TOPLEFT")
 assert(labeledDropdown.dropdown.width == 270)
@@ -1568,7 +1865,9 @@ do
     canvas.visible = false
     local dropdown = lib:CreateDropdown(canvas, {
         value = "old",
-        onChanged = function() error("visual refresh must not submit a selection") end,
+        onChanged = function()
+            error("visual refresh must not submit a selection")
+        end,
     })
     assert(#deferredCallbacks == 0)
     dropdown.scripts.OnShow(dropdown)
@@ -1581,8 +1880,14 @@ do
     runDeferredCallbacks()
     assert(dropdown.dropdown.updateCount == 1)
     assert(dropdown.dropdown.renderedValue == "latest")
-    assert(dropdown.dropdown.Background.atlas == "common-button-tertiary-depressed-normal")
-    assert(dropdown.dropdown.arrowBackground.atlas == "common-button-tertiary-square-disabled")
+    assert(
+        dropdown.dropdown.Background.atlas
+            == "common-button-tertiary-depressed-normal"
+    )
+    assert(
+        dropdown.dropdown.arrowBackground.atlas
+            == "common-button-tertiary-square-disabled"
+    )
 
     dropdown.scripts.OnShow(dropdown)
     canvas.visible = false
@@ -1654,7 +1959,11 @@ do
         { label = "", visible = false },
         { label = "Setting", visible = true },
         -- Retired visibility flags must not override the actual label text.
-        { label = "Setting", showLabel = false, visible = true },
+        {
+            label = "Setting",
+            showLabel = false,
+            visible = true,
+        },
         { showLabel = true, visible = false },
     }
 
@@ -1679,14 +1988,23 @@ do
         assert(slider.slider.height == 19)
         assert(slider.slider.point[1] == "LEFT")
         assert(slider.slider.point[2] == slider.inputRow)
-        assert(slider.inputRow.point[1] == (case.visible and "TOPLEFT" or "LEFT"))
-        assert(slider.inputRow.point[2] == (case.visible and slider.label or slider))
+        assert(
+            slider.inputRow.point[1] == (case.visible and "TOPLEFT" or "LEFT")
+        )
+        assert(
+            slider.inputRow.point[2]
+                == (case.visible and slider.label or slider)
+        )
         slider:SetValue(66)
         assert(slider:GetValue() == 65)
         slider:SetControlEnabled(false)
-        assert(slider.slider.enabled == false and slider.valueBox.enabled == false)
+        assert(
+            slider.slider.enabled == false and slider.valueBox.enabled == false
+        )
         slider:SetControlEnabled(true)
-        assert(slider.slider.enabled == true and slider.valueBox.enabled == true)
+        assert(
+            slider.slider.enabled == true and slider.valueBox.enabled == true
+        )
     end
 
     local tallInputSlider = lib:CreateSlider(nil, {
@@ -1708,7 +2026,6 @@ do
 
     assert(paddedSlider.height == 64)
     assert(paddedSlider:GetContentTopInset() == 22.5)
-
 end
 
 local commitCount = 0
@@ -1719,9 +2036,7 @@ local textInput = lib:CreateTextInput(nil, {
     onCommit = function(value)
         commitCount = commitCount + 1
 
-        if value == "invalid" then
-            return nil, "INVALID"
-        end
+        if value == "invalid" then return nil, "INVALID" end
 
         return string.upper(value)
     end,
@@ -1733,12 +2048,13 @@ local textInput = lib:CreateTextInput(nil, {
 assert(textInput.template == "InputBoxScriptTemplate")
 assert(textInput.width == 300)
 assert(textInput.height == 34)
-assert(textInput.background.atlas ==
-    "common-button-tertiary-depressed-normal")
+assert(textInput.background.atlas == "common-button-tertiary-depressed-normal")
 assert(textInput.background.drawLayer == "BACKGROUND")
 assert(textInput.background.allPoints == textInput)
-assert(textInput.focusTexture.atlas ==
-    "common-button-tertiary-depressed-normal-glow")
+assert(
+    textInput.focusTexture.atlas
+        == "common-button-tertiary-depressed-normal-glow"
+)
 assert(textInput.focusTexture.drawLayer == "BORDER")
 assert(textInput.focusTexture.allPoints == nil)
 assert(textInput.focusTexture.points[1][1] == "TOPLEFT")
@@ -1770,8 +2086,10 @@ local sliderControl = lib:CreateSlider(nil, {
     value = 1,
 })
 
-assert(sliderControl.valueBox.focusTexture.atlas ==
-    "common-button-tertiary-depressed-normal-glow")
+assert(
+    sliderControl.valueBox.focusTexture.atlas
+        == "common-button-tertiary-depressed-normal-glow"
+)
 assert(sliderControl.valueBox.focusTexture:IsShown() == false)
 sliderControl.valueBox:SetFocus()
 assert(sliderControl.valueBox.focusTexture:IsShown() == true)
@@ -1823,11 +2141,7 @@ assert(textInput:GetValue() == "BUTTON CLICK")
 mouseButtonDown = false
 local commitFrame = lib._editBoxCommitFrame
 
-commitFrame.scripts.OnEvent(
-    commitFrame,
-    "GLOBAL_MOUSE_UP",
-    "LeftButton"
-)
+commitFrame.scripts.OnEvent(commitFrame, "GLOBAL_MOUSE_UP", "LeftButton")
 assert(textInput:GetValue() == "BUTTON CLICK")
 commitFrame.scripts.OnUpdate(commitFrame, 0)
 assert(textInput:GetValue() == "GLOBAL MOUSE UP")
@@ -1869,8 +2183,10 @@ mouseButtonDown = false
 commitFrame.scripts.OnEvent(commitFrame, "GLOBAL_MOUSE_UP", "LeftButton")
 commitFrame.scripts.OnUpdate(commitFrame, 0)
 assert(focusTransferSource:GetText() == "Transferred")
-assert(not focusTransferSource:HasFocus() and focusTransferTarget:HasFocus(),
-    "a rejected mouse commit must not steal focus from the clicked input")
+assert(
+    not focusTransferSource:HasFocus() and focusTransferTarget:HasFocus(),
+    "a rejected mouse commit must not steal focus from the clicked input"
+)
 focusTransferTarget:CancelAndClearFocus()
 
 textInput:FocusValue()
@@ -1880,15 +2196,22 @@ assert(textInput:GetValue() == "GLOBAL MOUSE UP")
 assert(textInput:GetText() == "GLOBAL MOUSE UP")
 assert(reportedError == "INVALID")
 assert(commitCount == 5)
-assert(textInput:HasFocus() and textInput.focusTexture:IsShown() and textInput.highlighted,
-    "a rejected Enter commit must keep the restored value focused and selected")
+assert(
+    textInput:HasFocus()
+        and textInput.focusTexture:IsShown()
+        and textInput.highlighted,
+    "a rejected Enter commit must keep the restored value focused and selected"
+)
 
 textInput:SetText("discarded")
 textInput.scripts.OnEscapePressed(textInput)
 assert(textInput:GetValue() == "GLOBAL MOUSE UP")
 assert(textInput:GetText() == "GLOBAL MOUSE UP")
 assert(commitCount == 5)
-assert(not textInput:HasFocus(), "Escape must still release focus after a validation error")
+assert(
+    not textInput:HasFocus(),
+    "Escape must still release focus after a validation error"
+)
 
 textInput:SetControlEnabled(false, "Disabled")
 assert(textInput.enabled == false)
@@ -1929,13 +2252,17 @@ local stackedDropdownField = lib:CreateField(nil, {
 })
 local stackedDropdown = stackedDropdownField:GetControl()
 
-assert(stackedDropdownField.label:GetHeight() == labeledDropdown.label:GetHeight())
+assert(
+    stackedDropdownField.label:GetHeight() == labeledDropdown.label:GetHeight()
+)
 assert(stackedDropdownField.height == labeledDropdown.height)
 assert(stackedDropdown.dropdown.width == stackedDropdownField.width)
 assert(stackedDropdown.point[2] == stackedDropdownField.label)
 assert(stackedDropdown.point[3] == "BOTTOMLEFT")
-assert(stackedDropdown.point[5] - stackedDropdown:GetContentTopInset()
-    == labeledDropdown.dropdown.point[5])
+assert(
+    stackedDropdown.point[5] - stackedDropdown:GetContentTopInset()
+        == labeledDropdown.dropdown.point[5]
+)
 
 local customStackedField = lib:CreateField(nil, {
     label = "Profile",
@@ -1948,11 +2275,18 @@ local customStackedDropdown = customStackedField:GetControl()
 
 assert(customStackedField.label:GetHeight() == 24)
 assert(customStackedField.height == 72)
-assert(customStackedDropdown.point[5]
-    - customStackedDropdown:GetContentTopInset() == -11)
+assert(
+    customStackedDropdown.point[5] - customStackedDropdown:GetContentTopInset()
+        == -11
+)
 
 do
-    local sliderOptions = { minValue = 0, maxValue = 100, step = 1, value = 50 }
+    local sliderOptions = {
+        minValue = 0,
+        maxValue = 100,
+        step = 1,
+        value = 50,
+    }
 
     for _, labelPosition in ipairs({ "left", "top" }) do
         local field = lib:CreateField(nil, {
@@ -1966,12 +2300,16 @@ do
         assert(slider.label:IsShown() == false)
         assert(slider.height == slider.valueBox:GetHeight())
         assert(field.height == (labelPosition == "left" and 39 or 48))
+
         if labelPosition == "top" then
             assert(field.height == sliderControl.height)
-            assert(slider.point[5] - slider:GetContentTopInset()
-                == sliderControl.inputRow.point[5]
-                    - (sliderControl.inputRow.height - sliderControl.slider.height) / 2)
+            assert(
+                slider.point[5] - slider:GetContentTopInset()
+                    == sliderControl.inputRow.point[5]
+                        - (sliderControl.inputRow.height - sliderControl.slider.height) / 2
+            )
         end
+
         assert(slider:GetValue() == 50)
         slider:SetValue(75)
         assert(slider:GetValue() == 75)
@@ -1983,7 +2321,12 @@ do
         label = "Slider",
         gap = 11,
         controlType = "slider",
-        controlOptions = { minValue = 0, maxValue = 100, step = 1, height = 64 },
+        controlOptions = {
+            minValue = 0,
+            maxValue = 100,
+            step = 1,
+            height = 64,
+        },
     })
     local slider = customField:GetControl()
 
@@ -2033,8 +2376,11 @@ assert(inlineField.label.textColor[1] == GRAY_FONT_COLOR.r)
 do
     for _, position in ipairs({ "left", "top" }) do
         local field = lib:CreateField(nil, {
-            label = "Name", labelPosition = position, width = 240,
-            controlType = "textInput", controlOptions = { value = "Saved" },
+            label = "Name",
+            labelPosition = position,
+            width = 240,
+            controlType = "textInput",
+            controlOptions = { value = "Saved" },
         })
         local input = field:GetControl()
         local inputHeight = field:GetHeight()
@@ -2045,38 +2391,57 @@ do
         field:SetDescription(string.rep("a", 40))
         local description = field.description
         assert(description.fontObject == GameFontHighlightSmall)
-        assert(description.wordWrap and description.nonSpaceWrap and description.width == 240)
+        assert(
+            description.wordWrap
+                and description.nonSpaceWrap
+                and description.width == 240
+        )
         assert(field:GetHeight() == inputHeight + 4 + 12)
         assert(description.point[5] == -inputHeight - 4)
+
         if position == "left" then
             assert(input.point[1] == "TOPLEFT" and input.point[5] == 0)
             assert(field.label.height == inputHeight)
         end
 
         field:SetControlWidth(120)
-        assert(description.width == 120 and field:GetHeight() == inputHeight + 4 + 24)
+        assert(
+            description.width == 120
+                and field:GetHeight() == inputHeight + 4 + 24
+        )
         field:SetDescription("Short")
         assert(field:GetHeight() == inputHeight + 4 + 12)
         assert(field._libModernSettingsAppearanceOptions.description == "Short")
         description.stringHeight = 24
         field.scripts.OnShow(field)
-        assert(field:GetHeight() == inputHeight + 4 + 24, "show must remeasure description text")
+        assert(
+            field:GetHeight() == inputHeight + 4 + 24,
+            "show must remeasure description text"
+        )
         field:SetDescription(nil)
         assert(field:GetHeight() == inputHeight and not description:IsShown())
-        assert(field:GetDescription() == "" and field.description == description)
+        assert(
+            field:GetDescription() == "" and field.description == description
+        )
         assert(field:GetControl() == input and input:HasFocus())
         assert(input:GetText() == "Draft" and input:GetValue() == "Saved")
         assert(not pcall(field.SetDescription, field, {}))
     end
 
     local field = lib:CreateField(nil, {
-        label = "Name", description = "Hint", descriptionGap = 0,
-        descriptionFontObject = { height = 10 }, controlType = "textInput",
+        label = "Name",
+        description = "Hint",
+        descriptionGap = 0,
+        descriptionFontObject = { height = 10 },
+        controlType = "textInput",
     })
     assert(field:GetDescription() == "Hint" and field:GetHeight() == 53 + 10)
     field:SetControlHeight(100)
     field:SetDescription(nil)
-    assert(field:GetHeight() == 100, "explicit Field heights remain addon-owned")
+    assert(
+        field:GetHeight() == 100,
+        "explicit Field heights remain addon-owned"
+    )
     field:SetControlHeight(nil)
     assert(field:GetHeight() == 53)
 end
@@ -2096,7 +2461,9 @@ do
 
     stackedDropdownField:SetWidth(360)
     assert(stackedDropdownField.label.width == 360)
-    assert(stackedDropdown.width == 360 and stackedDropdown.dropdown.width == 360)
+    assert(
+        stackedDropdown.width == 360 and stackedDropdown.dropdown.width == 360
+    )
     stackedDropdown:SetControlHeight(40)
     runDeferredCallbacks()
     assert(stackedDropdownField.height == 56)
@@ -2152,8 +2519,11 @@ end
 do
     for _, position in ipairs({ "left", "top" }) do
         local field = lib:CreateField(nil, {
-            label = "Name", labelPosition = position, width = 418,
-            controlType = "textInput", controlOptions = { value = "Saved" },
+            label = "Name",
+            labelPosition = position,
+            width = 418,
+            controlType = "textInput",
+            controlOptions = { value = "Saved" },
         })
         local input = field:GetControl()
         input:FocusValue()
@@ -2162,16 +2532,34 @@ do
         local height = field:GetHeight()
 
         input.scripts.OnSizeChanged(input, input:GetWidth(), input:GetHeight())
-        input.scripts.OnSizeChanged(input, input:GetWidth() - 0.0001, input:GetHeight() - 0.0001)
-        field.scripts.OnSizeChanged(field, field:GetWidth() - 0.0001, height - 0.0001)
-        assert(input.point == inputPoint, "settled size notifications must not invalidate input geometry")
+        input.scripts.OnSizeChanged(
+            input,
+            input:GetWidth() - 0.0001,
+            input:GetHeight() - 0.0001
+        )
+        field.scripts.OnSizeChanged(
+            field,
+            field:GetWidth() - 0.0001,
+            height - 0.0001
+        )
+        assert(
+            input.point == inputPoint,
+            "settled size notifications must not invalidate input geometry"
+        )
         assert(field._libModernSettingsExplicitHeight == nil)
         assert(field._libModernSettingsAppearanceOptions.height == nil)
 
         input:SetHeight(40)
         runDeferredCallbacks()
-        assert(field:GetHeight() == height + 6, "real child height changes must still reflow the field")
-        assert(input:HasFocus() and input:GetText() == "Draft" and input:GetValue() == "Saved")
+        assert(
+            field:GetHeight() == height + 6,
+            "real child height changes must still reflow the field"
+        )
+        assert(
+            input:HasFocus()
+                and input:GetText() == "Draft"
+                and input:GetValue() == "Saved"
+        )
     end
 end
 
@@ -2217,8 +2605,13 @@ do
     assert(empty:GetFontObject() == GameFontHighlight and empty.text == "")
 
     local customFont = { height = 18 }
-    local custom = lib:CreateText(parent, { text = "Custom text", fontObject = customFont })
-    assert(custom:GetFontObject() == customFont and custom.text == "Custom text")
+    local custom = lib:CreateText(
+        parent,
+        { text = "Custom text", fontObject = customFont }
+    )
+    assert(
+        custom:GetFontObject() == customFont and custom.text == "Custom text"
+    )
 end
 
 dofile("tests/navigation.lua")(lib, makeFrame, inputState)

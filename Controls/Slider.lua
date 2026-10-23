@@ -1,8 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Controls/Slider", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/Slider", MINOR)
+then
     return
 end
 
@@ -21,6 +24,7 @@ local STEP_MODIFIERS = {
 
 local function getInputSteps(context)
     local rules = STEP_MODIFIERS[context.source]
+
     if rules then
         for _, rule in ipairs(rules) do
             if context.modifiers[rule.modifier] then
@@ -28,19 +32,21 @@ local function getInputSteps(context)
             end
         end
     end
+
     return context.direction
 end
 
 local function isFiniteNumber(value)
-    return type(value) == "number" and value == value and math.abs(value) < math.huge
+    return type(value) == "number"
+        and value == value
+        and math.abs(value) < math.huge
 end
 
 local function snapValue(value, options)
-    if options.snapToStep == false then
-        return value
-    end
+    if options.snapToStep == false then return value end
 
-    local stepIndex = math.floor(((value - options.minValue) / options.step) + 0.5)
+    local stepIndex =
+        math.floor(((value - options.minValue) / options.step) + 0.5)
 
     return options.minValue + (stepIndex * options.step)
 end
@@ -51,27 +57,40 @@ end
 
 local function prepareValueLabels(options)
     local maxLetters = options.maxLetters or 5
-    if options.valueLabels == nil then
-        return nil, nil, maxLetters
-    end
 
-    assert(type(options.valueLabels) == "table", "valueLabels must be a table or nil")
+    if options.valueLabels == nil then return nil, nil, maxLetters end
+
+    assert(
+        type(options.valueLabels) == "table",
+        "valueLabels must be a table or nil"
+    )
     local labels, values = {}, {}
 
     for value, label in pairs(options.valueLabels) do
         assert(isFiniteNumber(value), "valueLabels keys must be finite numbers")
-        assert(type(label) == "string" and label:find("%S"), "valueLabels must contain non-empty labels")
+        assert(
+            type(label) == "string" and label:find("%S"),
+            "valueLabels must contain non-empty labels"
+        )
         local normalizedValue = snapValue(value, options)
         local normalizedLabel = normalizeValueLabel(label)
 
-        assert(isFiniteNumber(normalizedValue), "valueLabels must snap to finite values")
-        assert(labels[normalizedValue] == nil, "valueLabels must name distinct values")
-        assert(values[normalizedLabel] == nil, "valueLabels must have distinct labels ignoring case and whitespace")
+        assert(
+            isFiniteNumber(normalizedValue),
+            "valueLabels must snap to finite values"
+        )
+        assert(
+            labels[normalizedValue] == nil,
+            "valueLabels must name distinct values"
+        )
+        assert(
+            values[normalizedLabel] == nil,
+            "valueLabels must have distinct labels ignoring case and whitespace"
+        )
         labels[normalizedValue] = label
         values[normalizedLabel] = normalizedValue
-        if maxLetters > 0 then
-            maxLetters = math.max(maxLetters, #label)
-        end
+
+        if maxLetters > 0 then maxLetters = math.max(maxLetters, #label) end
     end
 
     return labels, values, maxLetters
@@ -96,7 +115,9 @@ local function layoutSlider(control)
 
     control.label:SetWidth(width)
     inputRow:SetSize(width, rowHeight)
-    slider:SetWidth(math.max(1, width - valueBox:GetWidth() - inputGap - INPUT_RIGHT_INSET))
+    slider:SetWidth(
+        math.max(1, width - valueBox:GetWidth() - inputGap - INPUT_RIGHT_INSET)
+    )
     lib:_SetLayoutPoint(slider, "LEFT", inputRow, "LEFT", 0, 0)
 
     if control.label:IsShown() then
@@ -138,16 +159,25 @@ local function configureSliderInput(control)
         updateSliderWheel(control)
         lib:_FinalizeEditBoxOnFocusLost(self, finalizeSliderInput)
     end)
+
     local function onMouseWheel(_, delta)
         if delta ~= 0 then
-            control:_StepValue(lib:_CreateNavigationContext("wheel", delta > 0 and 1 or -1))
+            control:_StepValue(
+                lib:_CreateNavigationContext("wheel", delta > 0 and 1 or -1)
+            )
         end
     end
 
     control:SetScript("OnMouseWheel", onMouseWheel)
     valueBox:SetScript("OnMouseWheel", onMouseWheel)
-    for _, target in ipairs({ control.slider.Slider, control.slider.Back, control.slider.Forward }) do
+
+    for _, target in ipairs({
+        control.slider.Slider,
+        control.slider.Back,
+        control.slider.Forward,
+    }) do
         target:SetScript("OnMouseWheel", onMouseWheel)
+
         if not target._libModernSettingsFocusHooked then
             target._libModernSettingsFocusHooked = true
             -- Blizzard clears edit focus on global mouse-down outside the
@@ -159,6 +189,7 @@ local function configureSliderInput(control)
             end)
         end
     end
+
     updateSliderWheel(control)
 
     if valueBox:HasFocus() then
@@ -172,18 +203,23 @@ local function validateOptions(options)
     assert(isFiniteNumber(options.minValue), "minValue must be a finite number")
     assert(isFiniteNumber(options.maxValue), "maxValue must be a finite number")
     assert(isFiniteNumber(options.step), "step must be a finite number")
-    assert(options.value == nil or isFiniteNumber(options.value), "value must be a finite number or nil")
+    assert(
+        options.value == nil or isFiniteNumber(options.value),
+        "value must be a finite number or nil"
+    )
     assert(options.maxValue > options.minValue, "maxValue must exceed minValue")
     assert(options.step > 0, "step must be greater than zero")
-    assert(options.snapToStep == nil or type(options.snapToStep) == "boolean", "snapToStep must be a boolean or nil")
+    assert(
+        options.snapToStep == nil or type(options.snapToStep) == "boolean",
+        "snapToStep must be a boolean or nil"
+    )
     assert(
         options.inputFormatter == nil
             or type(options.inputFormatter) == "function",
         "inputFormatter must be a function or nil"
     )
     assert(
-        options.inputParser == nil
-            or type(options.inputParser) == "function",
+        options.inputParser == nil or type(options.inputParser) == "function",
         "inputParser must be a function or nil"
     )
     assert(
@@ -191,7 +227,8 @@ local function validateOptions(options)
         "onChanged must be a function or nil"
     )
     assert(
-        options.height == nil or (type(options.height) == "number" and options.height > 0),
+        options.height == nil
+            or (type(options.height) == "number" and options.height > 0),
         "height must be a positive number or nil"
     )
 end
@@ -206,7 +243,8 @@ local function createSlider(parent, options)
     local inputWidth = options.inputWidth or DEFAULT_INPUT_WIDTH
     local inputHeight = options.inputHeight or inputAtlasInfo.height
     local inputGap = options.inputGap or 0
-    local sliderWidth = math.max(1, width - inputWidth - inputGap - INPUT_RIGHT_INSET)
+    local sliderWidth =
+        math.max(1, width - inputWidth - inputGap - INPUT_RIGHT_INSET)
     local stepCount = (options.maxValue - options.minValue) / options.step
     local hasLabel = type(options.label) == "string" and options.label ~= ""
 
@@ -234,16 +272,11 @@ local function createSlider(parent, options)
         width = width,
     })
     local inputRow = CreateFrame("Frame", nil, control)
-    local slider = CreateFrame(
-        "Frame",
-        nil,
-        inputRow,
-        "MinimalSliderWithSteppersTemplate"
-    )
+    local slider =
+        CreateFrame("Frame", nil, inputRow, "MinimalSliderWithSteppersTemplate")
     slider:SetSize(sliderWidth, TRACK_HEIGHT)
-    if not hasLabel then
-        label:Hide()
-    end
+
+    if not hasLabel then label:Hide() end
 
     slider:Init(
         options.value or options.minValue,
@@ -253,12 +286,8 @@ local function createSlider(parent, options)
         nil
     )
 
-    local valueBox = CreateFrame(
-        "EditBox",
-        nil,
-        inputRow,
-        "InputBoxScriptTemplate"
-    )
+    local valueBox =
+        CreateFrame("EditBox", nil, inputRow, "InputBoxScriptTemplate")
     valueBox:SetSize(inputWidth, inputHeight)
     valueBox:SetPoint("LEFT", slider, "RIGHT", inputGap, 0)
     valueBox:SetAutoFocus(false)
@@ -321,18 +350,14 @@ end
 function sliderMethods:_GetTrackValue(value)
     local options = self._libModernSettingsSliderOptions
 
-    return math.max(
-        options.minValue,
-        math.min(options.maxValue, value)
-    )
+    return math.max(options.minValue, math.min(options.maxValue, value))
 end
 
 function sliderMethods:_FormatValue(value)
     local options = self._libModernSettingsSliderOptions
     local label = options.valueLabels and options.valueLabels[value]
-    if label then
-        return label
-    end
+
+    if label then return label end
 
     local text
 
@@ -354,14 +379,12 @@ end
 function sliderMethods:_ParseInput()
     local options = self._libModernSettingsSliderOptions
     local text = self.valueBox:GetText()
-    local namedValue = options.valuesByLabel and options.valuesByLabel[normalizeValueLabel(text)]
-    if namedValue ~= nil then
-        return namedValue
-    end
+    local namedValue = options.valuesByLabel
+        and options.valuesByLabel[normalizeValueLabel(text)]
 
-    if options.inputParser then
-        return options.inputParser(text)
-    end
+    if namedValue ~= nil then return namedValue end
+
+    if options.inputParser then return options.inputParser(text) end
 
     local numericText = text:match("^%s*([+-]?%d*%.?%d+)")
 
@@ -376,10 +399,12 @@ end
 
 function sliderMethods:_SetCurrentValue(value, notify)
     local normalized = self:_SnapValue(value)
+
     if not isFiniteNumber(normalized) then
         self:_SyncValueBox(self.currentValue)
         return
     end
+
     local changed = self.currentValue ~= normalized
 
     self.currentValue = normalized
@@ -405,17 +430,23 @@ function sliderMethods:_FinalizeInput()
 end
 
 function sliderMethods:_StepValue(context)
-    if not self:IsVisible() or not self.valueBox:IsEnabled() or not self.valueBox:HasFocus() then
+    if
+        not self:IsVisible()
+        or not self.valueBox:IsEnabled()
+        or not self.valueBox:HasFocus()
+    then
         return
     end
 
     local value = self:_ParseInput()
-    if not isFiniteNumber(value) then
-        value = self.currentValue
-    end
+
+    if not isFiniteNumber(value) then value = self.currentValue end
 
     local steps = getInputSteps(context)
-    self:_SetCurrentValue(value + steps * self._libModernSettingsSliderOptions.step, true)
+    self:_SetCurrentValue(
+        value + steps * self._libModernSettingsSliderOptions.step,
+        true
+    )
 end
 
 function sliderMethods:SetValue(value)
@@ -438,16 +469,15 @@ end
 
 function sliderMethods:GetInputAlignmentOffset()
     if self.label:IsShown() then
-        return self._libModernSettingsLabelLayout.inputTop + self.inputRow:GetHeight() / 2
+        return self._libModernSettingsLabelLayout.inputTop
+            + self.inputRow:GetHeight() / 2
     end
 
     return self:GetHeight() / 2
 end
 
 function sliderMethods:GetContentTopInset()
-    if self.label:IsShown() then
-        return 0
-    end
+    if self.label:IsShown() then return 0 end
 
     -- The taller numeric input sets the row height; the track is centered in it.
     return (self:GetHeight() - self.slider:GetHeight()) / 2
@@ -473,10 +503,7 @@ end
 
 local function initializeSlider(slider, options)
     slider:SetValue(options.value or options.minValue)
-    slider:SetControlEnabled(
-        options.enabled ~= false,
-        options.disabledTooltip
-    )
+    slider:SetControlEnabled(options.enabled ~= false, options.disabledTooltip)
 end
 
 local function refreshSliderAppearance(control, options)
@@ -488,9 +515,22 @@ local function refreshSliderAppearance(control, options)
         options.inputWidth or DEFAULT_INPUT_WIDTH,
         options.inputHeight or C_Texture.GetAtlasInfo(INPUT_ATLAS).height
     )
-    lib:_SetLayoutPoint(control.valueBox, "LEFT", control.slider, "RIGHT", control._libModernSettingsInputGap, 0)
-    lib:_ApplyDefaultFont(control.label, options.fontObject or GameFontHighlight)
-    lib:_ApplyDefaultFont(control.valueBox, options.inputFontObject or GameFontHighlight)
+    lib:_SetLayoutPoint(
+        control.valueBox,
+        "LEFT",
+        control.slider,
+        "RIGHT",
+        control._libModernSettingsInputGap,
+        0
+    )
+    lib:_ApplyDefaultFont(
+        control.label,
+        options.fontObject or GameFontHighlight
+    )
+    lib:_ApplyDefaultFont(
+        control.valueBox,
+        options.inputFontObject or GameFontHighlight
+    )
     control:RefreshLayout()
 end
 
@@ -518,6 +558,7 @@ for control, controlType in pairs(lib._controlInstances) do
             control:RefreshLayout()
             lib:_WatchControlSize(control)
         end
+
         configureSliderInput(control)
     end
 end

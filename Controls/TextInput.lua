@@ -1,8 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Controls/TextInput", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/TextInput", MINOR)
+then
     return
 end
 
@@ -26,8 +29,10 @@ local function validateOptions(options)
     )
     assert(
         options.maxLetters == nil
-            or (type(options.maxLetters) == "number"
-                and options.maxLetters >= 0),
+            or (
+                type(options.maxLetters) == "number"
+                and options.maxLetters >= 0
+            ),
         "maxLetters must be a non-negative number or nil"
     )
     assert(
@@ -80,12 +85,8 @@ end
 local function createTextInput(parent, options)
     validateOptions(options)
 
-    local editBox = CreateFrame(
-        "EditBox",
-        nil,
-        parent,
-        "InputBoxScriptTemplate"
-    )
+    local editBox =
+        CreateFrame("EditBox", nil, parent, "InputBoxScriptTemplate")
     local textInset = options.textInset or DEFAULT_TEXT_INSET
 
     editBox:SetSize(
@@ -101,11 +102,8 @@ local function createTextInput(parent, options)
     editBox._libModernSettingsCommittedValue = ""
     editBox._libModernSettingsOnCommit = options.onCommit
     editBox._libModernSettingsOnError = options.onError
-    editBox.background = lib:_CreateAtlasTexture(
-        editBox,
-        "BACKGROUND",
-        INPUT_ATLAS
-    )
+    editBox.background =
+        lib:_CreateAtlasTexture(editBox, "BACKGROUND", INPUT_ATLAS)
     configureTextInput(editBox)
 
     if options.tooltip then
@@ -153,12 +151,10 @@ function textInputMethods:Commit()
 end
 
 function textInputMethods:CommitAndClearFocus()
-    local pending, committed, value =
+    local pending, pendingCommitted, pendingValue =
         lib:_FlushPendingEditBoxCommit(self)
 
-    if pending then
-        return committed ~= false, value
-    end
+    if pending then return pendingCommitted ~= false, pendingValue end
 
     if not self:HasFocus() then
         return true, self._libModernSettingsCommittedValue
@@ -167,9 +163,8 @@ function textInputMethods:CommitAndClearFocus()
     local committed, value = self:Commit()
 
     if not committed then
-        if self:HasFocus() then
-            self:HighlightText()
-        end
+        if self:HasFocus() then self:HighlightText() end
+
         return false, value
     end
 
@@ -238,14 +233,15 @@ end
 
 local function initializeTextInput(editBox, options)
     editBox:SetValue(options.value or "")
-    editBox:SetControlEnabled(
-        options.enabled ~= false,
-        options.disabledTooltip
-    )
+    editBox:SetControlEnabled(options.enabled ~= false, options.disabledTooltip)
 end
 
 local function refreshTextInputAppearance(editBox, options)
-    lib:_ApplyFixedControlSize(editBox, options.width or DEFAULT_WIDTH, options.height or DEFAULT_HEIGHT)
+    lib:_ApplyFixedControlSize(
+        editBox,
+        options.width or DEFAULT_WIDTH,
+        options.height or DEFAULT_HEIGHT
+    )
     lib:_ApplyDefaultFont(editBox, options.fontObject or GameFontHighlight)
     local inset = options.textInset or DEFAULT_TEXT_INSET
     editBox:SetTextInsets(inset, inset, 0, 0)
@@ -262,9 +258,7 @@ lib:RegisterControlType(
 
 -- Compatible upgrades preserve controls but not construction-owned regions.
 for control, controlType in pairs(lib._controlInstances) do
-    if controlType == "textInput" then
-        configureTextInput(control)
-    end
+    if controlType == "textInput" then configureTextInput(control) end
 end
 
 lib:RegisterControlNavigation("textInput", {

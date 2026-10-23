@@ -1,8 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Utilities/EditBoxCommit", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Utilities/EditBoxCommit", MINOR)
+then
     return
 end
 
@@ -37,24 +40,18 @@ local function FlushPendingCommitsOnUpdate(self)
 end
 
 commitFrame:SetScript("OnEvent", function(self, event)
-    if event ~= "GLOBAL_MOUSE_UP" or IsMouseButtonDown() then
-        return
-    end
+    if event ~= "GLOBAL_MOUSE_UP" or IsMouseButtonDown() then return end
 
     self:UnregisterEvent("GLOBAL_MOUSE_UP")
     self:SetScript("OnUpdate", FlushPendingCommitsOnUpdate)
 end)
 
 function lib:_CancelPendingEditBoxCommit(editBox)
-    if self._pendingEditBoxCommits[editBox] == nil then
-        return false
-    end
+    if self._pendingEditBoxCommits[editBox] == nil then return false end
 
     self._pendingEditBoxCommits[editBox] = nil
 
-    if not HasPendingCommits() then
-        StopCommitFrame()
-    end
+    if not HasPendingCommits() then StopCommitFrame() end
 
     return true
 end
@@ -62,9 +59,7 @@ end
 function lib:_FinalizeEditBoxOnFocusLost(editBox, finalizer)
     self:_CancelPendingEditBoxCommit(editBox)
 
-    if not IsMouseButtonDown() then
-        return finalizer(editBox)
-    end
+    if not IsMouseButtonDown() then return finalizer(editBox) end
 
     self._pendingEditBoxCommits[editBox] = finalizer
     commitFrame:SetScript("OnUpdate", nil)
@@ -74,27 +69,19 @@ end
 function lib:_FlushPendingEditBoxCommit(editBox)
     local finalizer = self._pendingEditBoxCommits[editBox]
 
-    if not finalizer then
-        return false
-    end
+    if not finalizer then return false end
 
     self._pendingEditBoxCommits[editBox] = nil
 
-    if not HasPendingCommits() then
-        StopCommitFrame()
-    end
+    if not HasPendingCommits() then StopCommitFrame() end
 
-    if editBox:HasFocus() then
-        return true
-    end
+    if editBox:HasFocus() then return true end
 
     return true, finalizer(editBox)
 end
 
 function lib:_FlushPendingEditBoxCommits()
-    if not HasPendingCommits() then
-        return true
-    end
+    if not HasPendingCommits() then return true end
 
     local pending = self._pendingEditBoxCommits
     local editBoxes = {}
@@ -113,8 +100,7 @@ function lib:_FlushPendingEditBoxCommits()
     for index = 1, #editBoxes do
         local editBox = editBoxes[index]
 
-        if not editBox:HasFocus()
-            and finalizers[index](editBox) == false then
+        if not editBox:HasFocus() and finalizers[index](editBox) == false then
             allCommitted = false
         end
     end

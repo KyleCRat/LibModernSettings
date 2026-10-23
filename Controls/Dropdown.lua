@@ -1,8 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Controls/Dropdown", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/Dropdown", MINOR)
+then
     return
 end
 
@@ -35,6 +38,7 @@ local NAVIGATION_ACTIONS = {
         else
             control.dropdown:OpenMenu()
         end
+
         return true
     end,
     dismiss = function(control)
@@ -43,6 +47,7 @@ local NAVIGATION_ACTIONS = {
         else
             lib:_ClearNavigationFocus(control)
         end
+
         return true
     end,
     previous = stepSelection,
@@ -54,16 +59,27 @@ local function onButtonStateChanged(dropdown)
 end
 
 local function copySelections(value)
-    assert(value == nil or type(value) == "table", "multi-select value must be a set table or nil")
+    assert(
+        value == nil or type(value) == "table",
+        "multi-select value must be a set table or nil"
+    )
     local result = {}
+
     for key, selected in pairs(value or {}) do
-        assert(type(key) == "string" or type(key) == "number" or type(key) == "boolean",
-            "multi-select keys must be strings, numbers or booleans")
-        assert(type(selected) == "boolean", "multi-select values must be booleans")
-        if selected then
-            result[key] = true
-        end
+        assert(
+            type(key) == "string"
+                or type(key) == "number"
+                or type(key) == "boolean",
+            "multi-select keys must be strings, numbers or booleans"
+        )
+        assert(
+            type(selected) == "boolean",
+            "multi-select values must be booleans"
+        )
+
+        if selected then result[key] = true end
     end
+
     return result
 end
 
@@ -81,18 +97,35 @@ end
 local function layoutSelectionPreview(control)
     local dropdown = control.dropdown
     local preview = dropdown.selectionPreview
-    if not preview then
-        return
-    end
+
+    if not preview then return end
 
     local leftInset = TEXT_INSET - ACTION_STYLE.inset
-    local available = dropdown:GetWidth() - leftInset - ACTION_STYLE.size - ACTION_STYLE.inset * 2
-    local shown = control._libModernSettingsSelectionTexture ~= nil and available > 0
+    local available = dropdown:GetWidth()
+        - leftInset
+        - ACTION_STYLE.size
+        - ACTION_STYLE.inset * 2
+    local shown = control._libModernSettingsSelectionTexture ~= nil
+        and available > 0
     preview:SetShown(shown)
     preview:SetSize(math.max(1, available), PREVIEW_HEIGHT)
     -- The recessed atlas has more transparent padding below its visible border.
-    lib:_SetLayoutPoint(preview, "LEFT", dropdown, "LEFT", leftInset, SELECTION_PREVIEW_OFFSET_Y)
-    dropdown.Text:SetPoint("RIGHT", dropdown.arrowBackground, "LEFT", -ACTION_STYLE.inset, 0)
+    lib:_SetLayoutPoint(
+        preview,
+        "LEFT",
+        dropdown,
+        "LEFT",
+        leftInset,
+        SELECTION_PREVIEW_OFFSET_Y
+    )
+    dropdown.Text:SetPoint(
+        "RIGHT",
+        dropdown.arrowBackground,
+        "LEFT",
+        -ACTION_STYLE.inset,
+        0
+    )
+
     if shown then
         dropdown.Text:SetFontObject(GameFontHighlightOutline)
     else
@@ -119,7 +152,9 @@ local function addTexturePreview(description, choice)
         label:SetDrawLayer("OVERLAY")
         label:SetWordWrap(false)
         label:SetMaxLines(1)
-        local width = button.leftTexture1:GetWidth() + PREVIEW_GAP + label:GetUnboundedStringWidth()
+        local width = button.leftTexture1:GetWidth()
+            + PREVIEW_GAP
+            + label:GetUnboundedStringWidth()
             + ACTION_STYLE.inset * 3
         return width, math.max(PREVIEW_ROW_HEIGHT, label:GetHeight())
     end)
@@ -136,18 +171,33 @@ local function configureDropdownButton(control)
     dropdown.Background:ClearAllPoints()
     dropdown.Background:SetAllPoints(dropdown)
     dropdown.Background:SetAtlas(INPUT_ATLAS, false)
-    dropdown.focusTexture = dropdown.focusTexture or lib:_CreateEditBoxFocusTexture(dropdown)
+    dropdown.focusTexture = dropdown.focusTexture
+        or lib:_CreateEditBoxFocusTexture(dropdown)
 
     if not dropdown.arrowBackground then
         dropdown.arrowBackground = dropdown:CreateTexture(nil, "ARTWORK")
     end
+
     dropdown.arrowBackground:SetSize(ACTION_STYLE.size, ACTION_STYLE.size)
-    lib:_SetLayoutPoint(dropdown.arrowBackground, "RIGHT", dropdown, "RIGHT", -ACTION_STYLE.inset, 0)
+    lib:_SetLayoutPoint(
+        dropdown.arrowBackground,
+        "RIGHT",
+        dropdown,
+        "RIGHT",
+        -ACTION_STYLE.inset,
+        0
+    )
     dropdown.Arrow:SetSize(ACTION_STYLE.iconSize, ACTION_STYLE.iconSize)
     dropdown.Arrow:SetRotation(math.pi * 1.5)
     dropdown.Text:ClearAllPoints()
     dropdown.Text:SetPoint("LEFT", dropdown, "LEFT", TEXT_INSET, 0)
-    dropdown.Text:SetPoint("RIGHT", dropdown.arrowBackground, "LEFT", -ACTION_STYLE.inset, 0)
+    dropdown.Text:SetPoint(
+        "RIGHT",
+        dropdown.arrowBackground,
+        "LEFT",
+        -ACTION_STYLE.inset,
+        0
+    )
     dropdown.Text:SetHeight(DEFAULT_INPUT_HEIGHT)
     dropdown.Text:SetJustifyV("MIDDLE")
     dropdown.Text:SetWordWrap(false)
@@ -159,16 +209,21 @@ end
 
 local function configureDropdownMenu(control)
     local dropdown = control.dropdown
-    if control._libModernSettingsNavigationHooked then
-        return
-    end
+
+    if control._libModernSettingsNavigationHooked then return end
+
     control._libModernSettingsNavigationHooked = true
-    dropdown:RegisterCallback(DropdownButtonMixin.Event.OnMenuOpen, function(_, openedDropdown)
-        control:_OnMenuOpened(openedDropdown.menu)
-    end, control)
+    dropdown:RegisterCallback(
+        DropdownButtonMixin.Event.OnMenuOpen,
+        function(_, openedDropdown)
+            control:_OnMenuOpened(openedDropdown.menu)
+        end,
+        control
+    )
     dropdown:RegisterCallback(DropdownButtonMixin.Event.OnMenuClose, function()
         control:_OnMenuClosed()
     end, control)
+
     if dropdown:IsMenuOpen() then
         control:_GenerateMenu()
         control:_OnMenuOpened(dropdown.menu)
@@ -176,13 +231,13 @@ local function configureDropdownMenu(control)
 end
 
 local function configureMenuDirection(control, direction)
-    if direction == nil then
-        return
-    end
+    if direction == nil then return end
 
     local point = direction == "up" and "BOTTOMLEFT" or "TOPLEFT"
     local relativePoint = direction == "up" and "TOPLEFT" or "BOTTOMLEFT"
-    control.dropdown:SetMenuAnchor(AnchorUtil.CreateAnchor(point, control.dropdown, relativePoint, 0, 0))
+    control.dropdown:SetMenuAnchor(
+        AnchorUtil.CreateAnchor(point, control.dropdown, relativePoint, 0, 0)
+    )
 end
 
 local function getMaxMenuHeight()
@@ -196,9 +251,7 @@ local function centerScrollableMenuOnShow(menuFrame)
     menuFrame:SetScript("OnShow", function(frame)
         frame:SetScript("OnShow", nil)
 
-        if not frame.ScrollBox:IsShown() then
-            return
-        end
+        if not frame.ScrollBox:IsShown() then return end
 
         local left = frame:GetLeft()
 
@@ -218,15 +271,14 @@ local function layoutDropdown(control)
     local leftInset = control._libModernSettingsLeftInset
     local rightInset = control._libModernSettingsRightInset
     control.label:SetWidth(width)
-    control.dropdown:SetWidth(math.max(
-        1,
-        width - leftInset - rightInset
-    ))
+    control.dropdown:SetWidth(math.max(1, width - leftInset - rightInset))
     layoutSelectionPreview(control)
 
     if control.label:IsShown() then
         return lib:_LayoutStackedLabel(
-            control, control.label, control.dropdown,
+            control,
+            control.label,
+            control.dropdown,
             control._libModernSettingsLabelLayout
         )
     end
@@ -236,16 +288,13 @@ local function layoutDropdown(control)
 end
 
 local function onDropdownShow(control)
-    if control._libModernSettingsVisualRefreshPending then
-        return
-    end
+    if control._libModernSettingsVisualRefreshPending then return end
 
     control._libModernSettingsVisualRefreshPending = true
     C_Timer.After(0, function()
         control._libModernSettingsVisualRefreshPending = nil
-        if not control:IsVisible() then
-            return
-        end
+
+        if not control:IsVisible() then return end
 
         -- Canvas OnRefresh can run before its parent is shown and laid out.
         -- Native OnShow updates selection text, but not the arrow's state.
@@ -256,32 +305,49 @@ local function onDropdownShow(control)
 end
 
 local function configureDropdownVisibility(control)
-    if control._libModernSettingsVisibilityHooked then
-        return
-    end
+    if control._libModernSettingsVisibilityHooked then return end
 
     control._libModernSettingsVisibilityHooked = true
     control:HookScript("OnShow", onDropdownShow)
-    if control:IsVisible() then
-        onDropdownShow(control)
-    end
+
+    if control:IsVisible() then onDropdownShow(control) end
 end
 
 local function createDropdown(parent, options)
-    assert(options.menuWidth == nil or (type(options.menuWidth) == "number"
-        and options.menuWidth > 0 and options.menuWidth < math.huge), "menuWidth must be a positive finite number or nil")
-    assert(options.menuDirection == nil or options.menuDirection == "up" or options.menuDirection == "down",
-        "menuDirection must be up, down, or nil")
-    assert(options.multiSelect == nil or type(options.multiSelect) == "boolean", "multiSelect must be a boolean or nil")
-    assert(options.selectionText == nil or type(options.selectionText) == "function", "selectionText must be a function or nil")
-    assert(options.placeholder == nil or type(options.placeholder) == "string", "placeholder must be a string or nil")
+    assert(
+        options.menuWidth == nil
+            or (
+                type(options.menuWidth) == "number"
+                and options.menuWidth > 0
+                and options.menuWidth < math.huge
+            ),
+        "menuWidth must be a positive finite number or nil"
+    )
+    assert(
+        options.menuDirection == nil
+            or options.menuDirection == "up"
+            or options.menuDirection == "down",
+        "menuDirection must be up, down, or nil"
+    )
+    assert(
+        options.multiSelect == nil or type(options.multiSelect) == "boolean",
+        "multiSelect must be a boolean or nil"
+    )
+    assert(
+        options.selectionText == nil
+            or type(options.selectionText) == "function",
+        "selectionText must be a function or nil"
+    )
+    assert(
+        options.placeholder == nil or type(options.placeholder) == "string",
+        "placeholder must be a string or nil"
+    )
     assert(
         options.choices == nil or type(options.choices) == "table",
         "choices must be a table or nil"
     )
     assert(
-        options.getChoices == nil
-            or type(options.getChoices) == "function",
+        options.getChoices == nil or type(options.getChoices) == "function",
         "getChoices must be a function or nil"
     )
     assert(
@@ -289,19 +355,21 @@ local function createDropdown(parent, options)
         "onChanged must be a function or nil"
     )
     assert(
-        options.height == nil or (type(options.height) == "number" and options.height > 0),
+        options.height == nil
+            or (type(options.height) == "number" and options.height > 0),
         "height must be a positive number or nil"
     )
     assert(
         options.leftInset == nil
-            or (type(options.leftInset) == "number"
-                and options.leftInset >= 0),
+            or (type(options.leftInset) == "number" and options.leftInset >= 0),
         "leftInset must be a non-negative number or nil"
     )
     assert(
         options.rightInset == nil
-            or (type(options.rightInset) == "number"
-                and options.rightInset >= 0),
+            or (
+                type(options.rightInset) == "number"
+                and options.rightInset >= 0
+            ),
         "rightInset must be a non-negative number or nil"
     )
 
@@ -328,30 +396,29 @@ local function createDropdown(parent, options)
         width = width,
     })
 
-    local dropdown = CreateFrame(
-        "DropdownButton",
-        nil,
-        control,
-        "WowStyle1DropdownTemplate"
-    )
+    local dropdown =
+        CreateFrame("DropdownButton", nil, control, "WowStyle1DropdownTemplate")
 
     control.label = label
     control.dropdown = dropdown
-    control.currentValue = options.multiSelect and copySelections(options.value) or options.value
+    control.currentValue = options.multiSelect and copySelections(options.value)
+        or options.value
     configureDropdownButton(control)
     configureMenuDirection(control, options.menuDirection)
-    if options.placeholder then
-        dropdown:SetDefaultText(options.placeholder)
-    end
+
+    if options.placeholder then dropdown:SetDefaultText(options.placeholder) end
+
     if options.selectionText then
         dropdown:SetSelectionText(function()
-            return options.selectionText(control:GetValue(), control:_GetChoices())
+            return options.selectionText(
+                control:GetValue(),
+                control:_GetChoices()
+            )
         end)
     end
 
-    if not hasLabel then
-        label:Hide()
-    end
+    if not hasLabel then label:Hide() end
+
     lib:_RefreshControlLayout(control, layoutDropdown)
     lib:_WatchControlSize(control)
 
@@ -374,6 +441,7 @@ function dropdownMethods:_RefreshButtonState()
     local enabled = dropdown:IsEnabled()
     local pressed = dropdown:IsDown() or dropdown:IsMenuOpen()
     local state = "normal"
+
     if not enabled then
         state = "disabled"
     elseif pressed then
@@ -382,14 +450,33 @@ function dropdownMethods:_RefreshButtonState()
         state = "hover"
     end
 
-    dropdown.focusTexture:SetShown(enabled and
-        (self._libModernSettingsKeyboardFocused == true or dropdown:IsMenuOpen()))
-    dropdown.arrowBackground:SetAtlas("common-button-tertiary-square-" .. state, false)
-    dropdown.Arrow:SetAtlas(enabled and "common-dropdown-icon-next" or "common-dropdown-icon-next-disabled", false)
-    lib:_SetLayoutPoint(dropdown.Arrow, "CENTER", dropdown.arrowBackground, "CENTER",
-        enabled and pressed and 1 or 0, enabled and pressed and 0 or 1)
+    dropdown.focusTexture:SetShown(
+        enabled
+            and (
+                self._libModernSettingsKeyboardFocused == true
+                or dropdown:IsMenuOpen()
+            )
+    )
+    dropdown.arrowBackground:SetAtlas(
+        "common-button-tertiary-square-" .. state,
+        false
+    )
+    dropdown.Arrow:SetAtlas(
+        enabled and "common-dropdown-icon-next"
+            or "common-dropdown-icon-next-disabled",
+        false
+    )
+    lib:_SetLayoutPoint(
+        dropdown.Arrow,
+        "CENTER",
+        dropdown.arrowBackground,
+        "CENTER",
+        enabled and pressed and 1 or 0,
+        enabled and pressed and 0 or 1
+    )
     local color = enabled and HIGHLIGHT_FONT_COLOR or GRAY_FONT_COLOR
     dropdown.Text:SetTextColor(color.r, color.g, color.b)
+
     if dropdown.selectionPreview then
         dropdown.selectionPreview:SetAlpha(enabled and 1 or 0.4)
     end
@@ -397,9 +484,13 @@ end
 
 function dropdownMethods:_RefreshSelectionPreview()
     local texture
+
     if not self._libModernSettingsMultiSelect then
         for _, choice in ipairs(self._libModernSettingsResolvedChoices or {}) do
-            if (choice.type == nil or choice.type == "choice") and choice.value == self.currentValue then
+            if
+                (choice.type == nil or choice.type == "choice")
+                and choice.value == self.currentValue
+            then
                 texture = choice.previewTexture
                 break
             end
@@ -408,9 +499,11 @@ function dropdownMethods:_RefreshSelectionPreview()
 
     self._libModernSettingsSelectionTexture = texture
     local dropdown = self.dropdown
+
     if texture and not dropdown.selectionPreview then
         dropdown.selectionPreview = dropdown:CreateTexture(nil, "ARTWORK")
     end
+
     if dropdown.selectionPreview then
         dropdown.selectionPreview:SetTexture(texture)
         dropdown.selectionPreview:SetAlpha(dropdown:IsEnabled() and 1 or 0.4)
@@ -421,10 +514,12 @@ end
 function dropdownMethods:_OnMenuOpened(menu)
     self._libModernSettingsOpenMenu = menu
     lib:_SetNavigationFocus(self, menu)
+
     if self._libModernSettingsMultiSelect then
         self:_EnsureMenuFocus()
         self:_RefreshMenuFocus()
     end
+
     self:_ScrollSelectionIntoView()
     self:_RefreshButtonState()
 end
@@ -435,6 +530,7 @@ function dropdownMethods:_OnMenuClosed()
     self:_RefreshButtonState()
 
     local keyboard = lib._navigationKeyboardFrame
+
     if keyboard and keyboard.control == self then
         -- Blizzard calls OnMenuClose before hiding/recycling the menu. Move the
         -- keyboard frame back to the input before its old parent disappears.
@@ -444,50 +540,74 @@ end
 
 function dropdownMethods:_ScrollSelectionIntoView()
     local menu = self._libModernSettingsOpenMenu
-    if not menu or not menu.ScrollBox:IsShown() or not menu.ScrollBox:HasDataProvider() then
+
+    if
+        not menu
+        or not menu.ScrollBox:IsShown()
+        or not menu.ScrollBox:HasDataProvider()
+    then
         return
     end
 
     local multiSelect = self._libModernSettingsMultiSelect
     local value
+
     if multiSelect then
         value = self._libModernSettingsMenuFocus
     else
         value = self:GetValue()
     end
-    menu.ScrollBox:ScrollToElementDataByPredicate(function(frame)
-        -- An onChanged callback can regenerate the menu, replacing descriptions.
-        local description = frame:GetElementDescription()
-        return (multiSelect and description:IsCheckbox() or description:IsRadio()) and description:GetData() == value
-    end, ScrollBoxConstants.AlignNearest, 0, ScrollBoxConstants.NoScrollInterpolation)
+
+    menu.ScrollBox:ScrollToElementDataByPredicate(
+        function(frame)
+            -- An onChanged callback can regenerate the menu, replacing descriptions.
+            local description = frame:GetElementDescription()
+            return (
+                multiSelect and description:IsCheckbox()
+                or description:IsRadio()
+            ) and description:GetData() == value
+        end,
+        ScrollBoxConstants.AlignNearest,
+        0,
+        ScrollBoxConstants.NoScrollInterpolation
+    )
 end
 
 function dropdownMethods:_StepSelection(direction)
     local dropdown = self.dropdown
-    if not self:IsVisible() or not dropdown:IsEnabled() or not dropdown:IsMenuOpen() then
+
+    if
+        not self:IsVisible()
+        or not dropdown:IsEnabled()
+        or not dropdown:IsMenuOpen()
+    then
         return
     end
 
     if self._libModernSettingsMultiSelect then
         local choices, index = self:_EnsureMenuFocus()
+
         if index then
             local target = math.max(1, math.min(#choices, index + direction))
             self._libModernSettingsMenuFocus = choices[target]:GetData()
             self:_ScrollSelectionIntoView()
             self:_RefreshMenuFocus()
         end
+
         return true
     end
 
     local previous, following, selections = dropdown:CollectSelectionData()
     local description
+
     if #selections == 0 then
-        for _, candidate in dropdown:GetMenuDescription():EnumerateElementDescriptions() do
+        for _, candidate in
+            dropdown:GetMenuDescription():EnumerateElementDescriptions()
+        do
             if candidate:IsRadio() and candidate:CanSelect() then
                 description = candidate
-                if direction > 0 then
-                    break
-                end
+
+                if direction > 0 then break end
             end
         end
     elseif direction > 0 then
@@ -496,31 +616,38 @@ function dropdownMethods:_StepSelection(direction)
         description = previous
     end
 
-    if description then
-        dropdown:Pick(description, MenuInputContext.None)
-    end
+    if description then dropdown:Pick(description, MenuInputContext.None) end
+
     self:_ScrollSelectionIntoView()
     return true
 end
 
 function dropdownMethods:_EnsureMenuFocus()
     local choices, index, selected = {}, nil, nil
-    for _, description in self.dropdown:GetMenuDescription():EnumerateElementDescriptions() do
+
+    for _, description in
+        self.dropdown:GetMenuDescription():EnumerateElementDescriptions()
+    do
         if description:IsCheckbox() and description:CanSelect() then
             choices[#choices + 1] = description
+
             if description:GetData() == self._libModernSettingsMenuFocus then
                 index = #choices
             end
+
             if not selected and description:IsSelected() then
                 selected = #choices
             end
         end
     end
+
     index = index or selected or (#choices > 0 and 1 or nil)
     self._libModernSettingsMenuFocus = nil
+
     if index then
         self._libModernSettingsMenuFocus = choices[index]:GetData()
     end
+
     return choices, index
 end
 
@@ -532,6 +659,7 @@ end
 
 function dropdownMethods:_ToggleFocusedChoice()
     local choices, index = self:_EnsureMenuFocus()
+
     if index then
         self.dropdown:Pick(choices[index], MenuInputContext.None)
         self:_ScrollSelectionIntoView()
@@ -568,23 +696,30 @@ function dropdownMethods:_BuildMenu(rootDescription)
     self._libModernSettingsResolvedChoices = choices
 
     rootDescription:SetScrollMode(getMaxMenuHeight())
+
     if menuWidth then
         menuWidth = math.min(menuWidth, UIParent:GetWidth())
         rootDescription:SetMinimumWidth(menuWidth)
         rootDescription:SetMaximumWidth(menuWidth)
     end
+
     rootDescription:AddMenuAcquiredCallback(centerScrollableMenuOnShow)
 
     local function isSelected(value)
         if control._libModernSettingsMultiSelect then
             return control.currentValue[value] == true
         end
+
         return control:GetValue() == value
     end
 
     local function setSelected(value, inputData)
         control:_SelectValue(value)
-        if control._libModernSettingsMultiSelect or inputData.context ~= MenuInputContext.MouseButton then
+
+        if
+            control._libModernSettingsMultiSelect
+            or inputData.context ~= MenuInputContext.MouseButton
+        then
             return MenuResponse.Refresh
         end
     end
@@ -597,12 +732,21 @@ function dropdownMethods:_BuildMenu(rootDescription)
         elseif choice.type == "divider" then
             rootDescription:CreateDivider()
         else
-            assert(choice.type == nil or choice.type == "choice", "unknown dropdown choice type")
-            assert(choice.previewTexture == nil or type(choice.previewTexture) == "string"
-                or type(choice.previewTexture) == "number", "previewTexture must be a texture path, file ID, or nil")
+            assert(
+                choice.type == nil or choice.type == "choice",
+                "unknown dropdown choice type"
+            )
+            assert(
+                choice.previewTexture == nil
+                    or type(choice.previewTexture) == "string"
+                    or type(choice.previewTexture) == "number",
+                "previewTexture must be a texture path, file ID, or nil"
+            )
             local multiSelect = control._libModernSettingsMultiSelect
-            local createChoice = multiSelect and rootDescription.CreateCheckbox or rootDescription.CreateRadio
-            local description = createChoice(rootDescription,
+            local createChoice = multiSelect and rootDescription.CreateCheckbox
+                or rootDescription.CreateRadio
+            local description = createChoice(
+                rootDescription,
                 choice.label,
                 isSelected,
                 setSelected,
@@ -620,14 +764,21 @@ function dropdownMethods:_BuildMenu(rootDescription)
                 -- the compositor has measured text and optional preview artwork.
                 description:SetFinalInitializer(function(button, _, menu)
                     local inset = menu:GetInset()
-                    button:SetWidth(math.max(1, menuWidth - inset.left - inset.right))
+                    button:SetWidth(
+                        math.max(1, menuWidth - inset.left - inset.right)
+                    )
                 end)
             end
 
             if multiSelect then
-                assert(type(choice.value) == "string" or type(choice.value) == "number" or type(choice.value) == "boolean",
-                    "multi-select choice values must be strings, numbers or booleans")
-                control._libModernSettingsMenuRows = control._libModernSettingsMenuRows or {}
+                assert(
+                    type(choice.value) == "string"
+                        or type(choice.value) == "number"
+                        or type(choice.value) == "boolean",
+                    "multi-select choice values must be strings, numbers or booleans"
+                )
+                control._libModernSettingsMenuRows = control._libModernSettingsMenuRows
+                    or {}
                 description:AddInitializer(function(button)
                     control._libModernSettingsMenuRows[button] = description
                     refreshMenuRowFocus(control, button, description)
@@ -639,8 +790,12 @@ function dropdownMethods:_BuildMenu(rootDescription)
             end
 
             if choice.tooltip then
-                description:SetTitleAndTextTooltip(choice.tooltipTitle or choice.label, choice.tooltip)
+                description:SetTitleAndTextTooltip(
+                    choice.tooltipTitle or choice.label,
+                    choice.tooltip
+                )
             end
+
             if multiSelect then
                 description:HookOnLeave(function(button)
                     refreshMenuRowFocus(control, button, description)
@@ -648,6 +803,7 @@ function dropdownMethods:_BuildMenu(rootDescription)
             end
         end
     end
+
     self:_RefreshSelectionPreview()
 end
 
@@ -658,11 +814,18 @@ function dropdownMethods:_SelectValue(value)
         selections[value] = selected or nil
         self.currentValue = selections
         self._libModernSettingsMenuFocus = value
+
         if self._libModernSettingsOnChanged then
-            self._libModernSettingsOnChanged(copySelections(selections), value, selected)
+            self._libModernSettingsOnChanged(
+                copySelections(selections),
+                value,
+                selected
+            )
         end
+
         return
     end
+
     self.currentValue = value
     self:_RefreshSelectionPreview()
 
@@ -674,6 +837,7 @@ end
 function dropdownMethods:_GenerateMenu()
     local menu = self.dropdown.menu
     local scrollPercentage
+
     if menu then
         -- Blizzard reanchors/recycles menu rows during generation but retains
         -- the ScrollBox provider. Release its old row references first.
@@ -689,12 +853,17 @@ function dropdownMethods:_GenerateMenu()
     end
 
     if menu and menu.ScrollBox:HasDataProvider() then
-        menu.ScrollBox:SetScrollPercentage(scrollPercentage, ScrollBoxConstants.NoScrollInterpolation)
+        menu.ScrollBox:SetScrollPercentage(
+            scrollPercentage,
+            ScrollBoxConstants.NoScrollInterpolation
+        )
     end
 end
 
 function dropdownMethods:SetValue(value)
-    self.currentValue = self._libModernSettingsMultiSelect and copySelections(value) or value
+    self.currentValue = self._libModernSettingsMultiSelect
+            and copySelections(value)
+        or value
     self:_GenerateMenu()
 end
 
@@ -702,6 +871,7 @@ function dropdownMethods:GetValue()
     if self._libModernSettingsMultiSelect then
         return copySelections(self.currentValue)
     end
+
     return self.currentValue
 end
 
@@ -729,25 +899,23 @@ end
 
 function dropdownMethods:GetInputAlignmentOffset()
     if self.label:IsShown() then
-        return self._libModernSettingsLabelLayout.inputTop + self.dropdown:GetHeight() / 2
+        return self._libModernSettingsLabelLayout.inputTop
+            + self.dropdown:GetHeight() / 2
     end
 
     return self:GetHeight() / 2
 end
 
 function dropdownMethods:GetContentTopInset()
-    if self.label:IsShown() then
-        return 0
-    end
+    if self.label:IsShown() then return 0 end
 
     return (self:GetHeight() - self.dropdown:GetHeight()) / 2
 end
 
 function dropdownMethods:SetControlEnabled(enabled, disabledTooltip)
     self.dropdown:SetEnabled(enabled == true)
-    if not enabled then
-        self:_ReleaseTabFocus()
-    end
+
+    if not enabled then self:_ReleaseTabFocus() end
 
     local color = enabled and HIGHLIGHT_FONT_COLOR or GRAY_FONT_COLOR
 
@@ -773,18 +941,20 @@ local function refreshDropdownAppearance(control, options)
     lib:_ApplyInputWidth(control, options.width or DEFAULT_WIDTH)
     control._libModernSettingsLeftInset = options.leftInset or DEFAULT_INSET
     control._libModernSettingsRightInset = options.rightInset or DEFAULT_INSET
-    control._libModernSettingsLabelLayout.inputOffsetX = control._libModernSettingsLeftInset
+    control._libModernSettingsLabelLayout.inputOffsetX =
+        control._libModernSettingsLeftInset
     control._libModernSettingsExplicitHeight = options.height
-    lib:_ApplyDefaultFont(control.label, options.fontObject or GameFontHighlight)
+    lib:_ApplyDefaultFont(
+        control.label,
+        options.fontObject or GameFontHighlight
+    )
     control:RefreshLayout()
 end
 
 -- Existing controls need their regions before prototype replacement can refresh
 -- their appearance or navigation state through an older embed's callbacks.
 for control, controlType in pairs(lib._controlInstances) do
-    if controlType == "dropdown" then
-        configureDropdownButton(control)
-    end
+    if controlType == "dropdown" then configureDropdownButton(control) end
 end
 
 lib:RegisterControlType(
@@ -809,6 +979,7 @@ lib:RegisterControlNavigation("dropdown", {
             control:_RefreshButtonState()
             return
         end
+
         if highlighted then
             control.dropdown:OnEnter()
         else
@@ -822,14 +993,17 @@ for control, controlType in pairs(lib._controlInstances) do
     if controlType == "dropdown" then
         if not control._libModernSettingsLabelLayout then
             control._libModernSettingsExplicitHeight = control:GetHeight()
-            control._libModernSettingsLeftInset = control._libModernSettingsLeftInset or LEGACY_INSET
-            control._libModernSettingsRightInset = control._libModernSettingsRightInset or LEGACY_INSET
+            control._libModernSettingsLeftInset = control._libModernSettingsLeftInset
+                or LEGACY_INSET
+            control._libModernSettingsRightInset = control._libModernSettingsRightInset
+                or LEGACY_INSET
             control._libModernSettingsLabelLayout = {
                 inputOffsetX = control._libModernSettingsLeftInset,
             }
             control:RefreshLayout()
             lib:_WatchControlSize(control)
         end
+
         configureDropdownVisibility(control)
         configureDropdownMenu(control)
         control:RefreshLayout()

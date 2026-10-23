@@ -1,8 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Layouts/Canvas", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Layouts/Canvas", MINOR)
+then
     return
 end
 
@@ -65,9 +68,7 @@ local function createStyle(options)
     for key, value in pairs(DEFAULT_STYLE) do
         local override = overrides[key]
 
-        if override == nil then
-            override = options[key]
-        end
+        if override == nil then override = options[key] end
 
         style[key] = override == nil and value or override
     end
@@ -77,33 +78,59 @@ end
 
 local function applyContentOverflow(geometry, options)
     local overflow = options.contentOverflow or {}
-    assert(options.contentOverflow == nil or type(options.contentOverflow) == "table",
-        "canvas contentOverflow must be a table")
+    assert(
+        options.contentOverflow == nil
+            or type(options.contentOverflow) == "table",
+        "canvas contentOverflow must be a table"
+    )
 
     for _, edge in ipairs({ "left", "right" }) do
         local value = overflow[edge]
-        assert(value == nil or (type(value) == "number" and value >= 0 and value < math.huge),
-            "canvas content overflow must be finite and non-negative")
+        assert(
+            value == nil
+                or (
+                    type(value) == "number"
+                    and value >= 0
+                    and value < math.huge
+                ),
+            "canvas content overflow must be finite and non-negative"
+        )
     end
 
     -- Permit artwork in the existing margins without crossing a border or the
     -- scrollbar column. Control widths and their reported insets stay unchanged.
-    geometry.overflowLeft = math.min(overflow.left or 0, geometry.left - (geometry.borderLeft or 0))
-    geometry.overflowRight = math.min(overflow.right or 0, geometry.scrollbarGap)
+    geometry.overflowLeft =
+        math.min(overflow.left or 0, geometry.left - (geometry.borderLeft or 0))
+    geometry.overflowRight =
+        math.min(overflow.right or 0, geometry.scrollbarGap)
     return geometry
 end
 
 local function createGeometry(style, options)
     if options.scrollArea ~= nil then
-        assert(options.viewportMarginTop == nil and options.viewportMarginBottom == nil,
-            "scrollArea owns viewport margins; use its borderInsets instead")
+        assert(
+            options.viewportMarginTop == nil
+                and options.viewportMarginBottom == nil,
+            "scrollArea owns viewport margins; use its borderInsets instead"
+        )
 
         local overrides = options.style or {}
 
-        for _, key in ipairs({ "paddingLeft", "scrollbarGap", "scrollbarWidth", "paddingTop", "paddingBottom" }) do
-            local headerPadding = not options.scrollable and (key == "paddingTop" or key == "paddingBottom")
-            assert(headerPadding or (overrides[key] == nil and options[key] == nil),
-                "scrollArea owns " .. key .. "; configure its contentPadding or scrollbar options instead")
+        for _, key in ipairs({
+            "paddingLeft",
+            "scrollbarGap",
+            "scrollbarWidth",
+            "paddingTop",
+            "paddingBottom",
+        }) do
+            local headerPadding = not options.scrollable
+                and (key == "paddingTop" or key == "paddingBottom")
+            assert(
+                headerPadding or (overrides[key] == nil and options[key] == nil),
+                "scrollArea owns "
+                    .. key
+                    .. "; configure its contentPadding or scrollbar options instead"
+            )
         end
 
         local geometry = lib:_ResolveScrollAreaGeometry(options.scrollArea)
@@ -112,23 +139,30 @@ local function createGeometry(style, options)
         style.scrollbarWidth = geometry.scrollbarWidth
 
         if options.scrollable then
-            style.paddingTop, style.paddingBottom = geometry.paddingTop, geometry.paddingBottom
+            style.paddingTop, style.paddingBottom =
+                geometry.paddingTop, geometry.paddingBottom
         else
             -- Non-scrolling headers can share the horizontal content bounds
             -- without also adopting the scrolling body's vertical padding.
             geometry.top, geometry.bottom = 0, 0
-            geometry.paddingTop, geometry.paddingBottom = style.paddingTop, style.paddingBottom
+            geometry.paddingTop, geometry.paddingBottom =
+                style.paddingTop, style.paddingBottom
         end
 
         return applyContentOverflow(geometry, options)
     end
 
     local top = options.scrollable and (options.viewportMarginTop or 0) or 0
-    local bottom = options.scrollable and (options.viewportMarginBottom or 0) or 0
-    assert(type(top) == "number" and top >= 0 and top < math.huge,
-        "scroll viewport top margin must be finite and non-negative")
-    assert(type(bottom) == "number" and bottom >= 0 and bottom < math.huge,
-        "scroll viewport bottom margin must be finite and non-negative")
+    local bottom = options.scrollable and (options.viewportMarginBottom or 0)
+        or 0
+    assert(
+        type(top) == "number" and top >= 0 and top < math.huge,
+        "scroll viewport top margin must be finite and non-negative"
+    )
+    assert(
+        type(bottom) == "number" and bottom >= 0 and bottom < math.huge,
+        "scroll viewport bottom margin must be finite and non-negative"
+    )
 
     return applyContentOverflow({
         left = style.paddingLeft,
@@ -144,31 +178,21 @@ local function createGeometry(style, options)
 end
 
 local function getMeasuredDimension(frame, methodName)
-    if not frame then
-        return
-    end
+    if not frame then return end
 
     local value = frame[methodName](frame)
 
-    if value and value > 0 then
-        return value
-    end
+    if value and value > 0 then return value end
 end
 
 local function getFrameHeight(frame, explicitHeight)
-    if explicitHeight then
-        return explicitHeight
-    end
+    if explicitHeight then return explicitHeight end
 
     local height = frame:GetHeight()
 
-    if height and height > 0 then
-        return height
-    end
+    if height and height > 0 then return height end
 
-    if frame.GetStringHeight then
-        height = frame:GetStringHeight()
-    end
+    if frame.GetStringHeight then height = frame:GetStringHeight() end
 
     assert(height and height > 0, "layout frames require a positive height")
 
@@ -180,9 +204,17 @@ end
 -- still owns extent calculation, scroll offsets and scrollbar handling.
 local function layoutScrollContent(view, scrollBox)
     local content = view:GetFrames()[1]
+
     if content then
         local geometry = content._libModernSettingsCanvasLayout.geometry
-        lib:_SetLayoutPoint(content, "TOPLEFT", scrollBox:GetScrollTarget(), "TOPLEFT", geometry.overflowLeft, 0)
+        lib:_SetLayoutPoint(
+            content,
+            "TOPLEFT",
+            scrollBox:GetScrollTarget(),
+            "TOPLEFT",
+            geometry.overflowLeft,
+            0
+        )
     end
 end
 
@@ -193,18 +225,13 @@ local function createContent(layout, options)
         local content = CreateFrame("Frame", nil, parent)
 
         content:SetSize(layout.contentWidth, layout.canvasHeight)
-        content:SetPoint(
-            "TOPLEFT",
-            parent,
-            "TOPLEFT",
-            layout.geometry.left,
-            0
-        )
+        content:SetPoint("TOPLEFT", parent, "TOPLEFT", layout.geometry.left, 0)
 
         return content
     end
 
-    local area = lib:_CreateScrollArea(parent, layout.geometry, { kind = "canvas" })
+    local area =
+        lib:_CreateScrollArea(parent, layout.geometry, { kind = "canvas" })
     local scrollBox = area:GetScrollBox()
 
     local content = CreateFrame("Frame", nil, scrollBox)
@@ -253,11 +280,15 @@ end
 
 function Layout:GetContentInsets()
     local geometry = self.geometry
-    local paddingBottom = self.finalizeOptions and self.finalizeOptions.paddingBottom
+    local paddingBottom = self.finalizeOptions
+        and self.finalizeOptions.paddingBottom
+
     if paddingBottom == nil then paddingBottom = self.style.paddingBottom end
 
-    return geometry.left, geometry.right,
-        geometry.top + self.style.paddingTop, geometry.bottom + paddingBottom
+    return geometry.left,
+        geometry.right,
+        geometry.top + self.style.paddingTop,
+        geometry.bottom + paddingBottom
 end
 
 function Layout:GetStyleValue(key)
@@ -273,29 +304,38 @@ function Layout:GetScrollBar()
 end
 
 function Layout:SetSize(width, height)
-    assert(type(width) == "number" and width > 0 and width < math.huge,
-        "canvas width must be a positive finite number")
-    assert(type(height) == "number" and height > 0 and height < math.huge,
-        "canvas height must be a positive finite number")
+    assert(
+        type(width) == "number" and width > 0 and width < math.huge,
+        "canvas width must be a positive finite number"
+    )
+    assert(
+        type(height) == "number" and height > 0 and height < math.huge,
+        "canvas height must be a positive finite number"
+    )
 
     local contentWidth = width - self.geometry.left - self.geometry.right
     assert(contentWidth > 0, "canvas insets must leave positive content width")
-    assert(not self.scrollBox or height > self.viewportMarginTop + self.viewportMarginBottom,
-        "scroll viewport margins must leave a positive height")
+    assert(
+        not self.scrollBox
+            or height > self.viewportMarginTop + self.viewportMarginBottom,
+        "scroll viewport margins must leave a positive height"
+    )
 
     local widthChanged = not lib:_LayoutSizeMatches(width, self.canvasWidth)
     local heightChanged = not lib:_LayoutSizeMatches(height, self.canvasHeight)
-    if not widthChanged and not heightChanged then
-        return
-    end
+
+    if not widthChanged and not heightChanged then return end
 
     self.canvasWidth, self.canvasHeight = width, height
     self.contentWidth = contentWidth
     self.rootFlow.width = contentWidth
     -- Do not write an unchanged axis back to a content-sized parent, or feed
     -- resolved geometry back through its own OnSizeChanged notification.
-    local resizeWidth = widthChanged and not lib:_LayoutSizeMatches(self.parent:GetWidth(), width)
-    local resizeHeight = heightChanged and not lib:_LayoutSizeMatches(self.parent:GetHeight(), height)
+    local resizeWidth = widthChanged
+        and not lib:_LayoutSizeMatches(self.parent:GetWidth(), width)
+    local resizeHeight = heightChanged
+        and not lib:_LayoutSizeMatches(self.parent:GetHeight(), height)
+
     if resizeWidth and resizeHeight then
         self.parent:SetSize(width, height)
     elseif resizeWidth then
@@ -303,9 +343,11 @@ function Layout:SetSize(width, height)
     elseif resizeHeight then
         self.parent:SetHeight(height)
     end
+
     if not lib:_LayoutSizeMatches(self.content:GetWidth(), contentWidth) then
         self.content:SetWidth(contentWidth)
     end
+
     self:RequestLayout()
 end
 
@@ -329,9 +371,9 @@ function Layout:AddHeader(title, description, options)
     titleOptions.text = title
 
     local titleMarginBottom = options.marginBottom
-    if hasDescription then
-        titleMarginBottom = options.titleMarginBottom
-    end
+
+    if hasDescription then titleMarginBottom = options.titleMarginBottom end
+
     local titleText = self.rootFlow:_AddText(titleOptions, {
         marginBottom = titleMarginBottom,
     }, hasDescription and "titleWithDescription" or "title")
@@ -358,27 +400,25 @@ end
 
 -- Replays geometry only: controls, values, handlers and focus stay intact.
 function Layout:RefreshLayout()
-    if self.refreshing or not self.finalized then
-        return
-    end
+    if self.refreshing or not self.finalized then return end
 
     self.refreshing = true
     self.dirty = nil
+
     if self.rootFlow.entries then
         self.rootFlow:_RefreshLayout(self.style.paddingTop)
     end
+
     local options = self.finalizeOptions
 
-    local paddingBottom = options.paddingBottom
-        or self.style.paddingBottom
+    local paddingBottom = options.paddingBottom or self.style.paddingBottom
 
     assert(
         type(paddingBottom) == "number" and paddingBottom >= 0,
         "layout bottom padding must be non-negative"
     )
 
-    local bottom = self.rootFlow.cursor
-        + paddingBottom
+    local bottom = self.rootFlow.cursor + paddingBottom
 
     if options.contentHeight then
         bottom = math.max(bottom, options.contentHeight)
@@ -402,62 +442,70 @@ function Layout:RefreshLayout()
 end
 
 function Layout:RequestLayout()
-    if self.refreshing or not self.rootFlow.entries then
-        return
-    end
+    if self.refreshing or not self.rootFlow.entries then return end
+
     self.dirty = true
-    if not self.finalized or self.refreshPending or not self.parent:IsVisible() then
+
+    if
+        not self.finalized
+        or self.refreshPending
+        or not self.parent:IsVisible()
+    then
         return
     end
 
     self.refreshPending = true
     C_Timer.After(0, function()
         self.refreshPending = nil
-        if self.dirty and self.parent:IsVisible() then
-            self:RefreshLayout()
-        end
+
+        if self.dirty and self.parent:IsVisible() then self:RefreshLayout() end
     end)
 end
 
 function Layout:_ScrollControlIntoView(control)
-    if not self.scrollBox then
-        return
-    end
+    if not self.scrollBox then return end
 
     local extent = self.scrollBox:GetVisibleExtent()
     local frame = control
     local ancestor = control:GetParent()
+
     while ancestor and ancestor ~= self.content do
         if ancestor._libModernSettingsControlType == "field" then
-            local height = ancestor:GetHeight() * ancestor:GetEffectiveScale() / self.content:GetEffectiveScale()
+            local height = ancestor:GetHeight()
+                * ancestor:GetEffectiveScale()
+                / self.content:GetEffectiveScale()
             -- Keep the label visible when it fits, but reveal the focused child
             -- when a wrapping composite field is taller than the viewport.
-            if height <= extent then
-                frame = ancestor
-            end
+            if height <= extent then frame = ancestor end
         end
+
         ancestor = ancestor:GetParent()
     end
-    if not ancestor then
-        return
-    end
+
+    if not ancestor then return end
 
     self:SetScrollAnchor(nil)
     local contentTop = self.content:GetTop()
     local frameTop = frame:GetTop()
-    if not contentTop or not frameTop then
-        return
-    end
+
+    if not contentTop or not frameTop then return end
 
     local scale = frame:GetEffectiveScale() / self.content:GetEffectiveScale()
     local top = contentTop - frameTop * scale
     local height = frame:GetHeight() * scale
     local bottom = top + height
     local offset = self.scrollBox:GetDerivedScrollOffset()
+
     if top < offset or height > extent then
-        self.scrollBox:ScrollToOffset(top, ScrollBoxConstants.NoScrollInterpolation)
+        self.scrollBox:ScrollToOffset(
+            top,
+            ScrollBoxConstants.NoScrollInterpolation
+        )
     elseif bottom > offset + extent then
-        self.scrollBox:ScrollToOffset(bottom - extent, ScrollBoxConstants.NoScrollInterpolation)
+        self.scrollBox:ScrollToOffset(
+            bottom - extent,
+            ScrollBoxConstants.NoScrollInterpolation
+        )
     end
 end
 
@@ -470,7 +518,8 @@ function Flow:GetCursor()
 end
 
 local function isFlowShown(flow)
-    return flow.shown ~= false and (not flow.parentFlow or isFlowShown(flow.parentFlow))
+    return flow.shown ~= false
+        and (not flow.parentFlow or isFlowShown(flow.parentFlow))
 end
 
 local function setFlowFramesShown(flow, shown)
@@ -493,9 +542,7 @@ function Flow:SetShown(shown)
     assert(type(shown) == "boolean", "flow visibility must be boolean")
     assert(self.entries, "flow visibility requires a tracked canvas")
 
-    if (self.shown ~= false) == shown then
-        return
-    end
+    if (self.shown ~= false) == shown then return end
 
     self.shown = shown
     setFlowFramesShown(self, isFlowShown(self))
@@ -507,7 +554,10 @@ function Flow:_GetRect(options)
 
     local indent = options.indent or 0
 
-    assert(type(indent) == "number" and indent >= 0, "indent must be non-negative")
+    assert(
+        type(indent) == "number" and indent >= 0,
+        "indent must be non-negative"
+    )
 
     local indentWidth = indent * self.layout.style.indent
     local x = self.x + indentWidth
@@ -516,8 +566,7 @@ function Flow:_GetRect(options)
 
     if splitCount then
         local splitIndex = options.splitIndex or 1
-        local columnGap = options.columnGap
-            or self.layout.style.nestedColumnGap
+        local columnGap = options.columnGap or self.layout.style.nestedColumnGap
 
         assert(
             type(splitCount) == "number"
@@ -550,16 +599,20 @@ function Flow:_PlaceFrame(frame, options, role, entry)
     assert(frame, "layout frame is required")
 
     options = options or {}
-    assert(options.onLayout == nil or type(options.onLayout) == "function",
-        "frame onLayout must be a function")
+    assert(
+        options.onLayout == nil or type(options.onLayout) == "function",
+        "frame onLayout must be a function"
+    )
 
     local x, width = self:_GetRect(options)
     local marginTop = options.marginTop
     local marginBottom = options.marginBottom
 
     if marginTop == nil then
-        marginTop = role == "section" and self.layout.style.sectionMarginTop or 0
+        marginTop = role == "section" and self.layout.style.sectionMarginTop
+            or 0
     end
+
     if marginBottom == nil then
         if role == "section" then
             marginBottom = self.layout.style.sectionMarginBottom
@@ -582,15 +635,13 @@ function Flow:_PlaceFrame(frame, options, role, entry)
     )
 
     self.cursor = self.cursor + marginTop
-    if entry then
-        entry.layoutTop = self.cursor
-    end
 
-    if options.fillWidth then
-        frame:SetWidth(width)
-    end
+    if entry then entry.layoutTop = self.cursor end
 
-    lib:_SetLayoutPoint(frame,
+    if options.fillWidth then frame:SetWidth(width) end
+
+    lib:_SetLayoutPoint(
+        frame,
         "TOPLEFT",
         self.parent,
         "TOPLEFT",
@@ -613,19 +664,28 @@ end
 
 local function watchEntrySize(entry, layout)
     local frame = entry.frame
+
     if not frame:HasScript("OnSizeChanged") then
         return -- FontStrings are measured during layout and visible OnShow.
     end
+
     frame:HookScript("OnSizeChanged", function()
         local width, height = frame:GetWidth(), frame:GetHeight()
-        if entry.autoWidth and not lib:_LayoutSizeMatches(width, entry.allocatedWidth)
+
+        if
+            entry.autoWidth
+            and not lib:_LayoutSizeMatches(width, entry.allocatedWidth)
             and not layout.refreshing
             and not frame._libModernSettingsUpdatingLayout
-            and not frame._libModernSettingsRefreshingAppearance then
+            and not frame._libModernSettingsRefreshingAppearance
+        then
             entry.autoWidth = nil
         end
-        if not lib:_LayoutSizeMatches(width, entry.width)
-            or not lib:_LayoutSizeMatches(height, entry.height) then
+
+        if
+            not lib:_LayoutSizeMatches(width, entry.width)
+            or not lib:_LayoutSizeMatches(height, entry.height)
+        then
             entry.width, entry.height = width, height
             layout:RequestLayout()
         end
@@ -633,19 +693,20 @@ local function watchEntrySize(entry, layout)
 end
 
 function Flow:_AddFrame(frame, options, role)
-    if not self.entries then
-        return self:_PlaceFrame(frame, options, role)
-    end
-    local entry = { frame = frame, placement = shallowCopy(options), role = role }
+    if not self.entries then return self:_PlaceFrame(frame, options, role) end
+
+    local entry = {
+        frame = frame,
+        placement = shallowCopy(options),
+        role = role,
+    }
     self.entries[#self.entries + 1] = entry
     self:_PlaceFrame(frame, entry.placement, role, entry)
     entry.width, entry.height = frame:GetWidth(), frame:GetHeight()
     entry.allocatedWidth = entry.width
     watchEntrySize(entry, self.layout)
 
-    if not isFlowShown(self) then
-        frame:Hide()
-    end
+    if not isFlowShown(self) then frame:Hide() end
 
     return frame
 end
@@ -664,14 +725,23 @@ function Flow:_AddText(textOptions, placement, role)
     local text = lib:CreateText(self.parent, options)
 
     self:_AddFrame(text, placement, role)
+
     if self.entries then
-        self.entries[#self.entries].autoWidth = not (textOptions and textOptions.width)
+        self.entries[#self.entries].autoWidth = not (
+            textOptions and textOptions.width
+        )
     end
-    if self.entries and role and not (textOptions and textOptions.fontObject) then
+
+    if
+        self.entries
+        and role
+        and not (textOptions and textOptions.fontObject)
+    then
         local entry = self.entries[#self.entries]
         entry.defaultFont = true
         lib:_ApplyDefaultFont(text, defaultFont(role))
     end
+
     return text
 end
 
@@ -697,9 +767,13 @@ function Flow:AddControl(controlType, controlOptions, placement)
     local control = lib:CreateControl(controlType, self.parent, options)
 
     self:AddFrame(control, placement)
+
     if self.entries then
-        self.entries[#self.entries].autoWidth = not (controlOptions and controlOptions.width)
+        self.entries[#self.entries].autoWidth = not (
+            controlOptions and controlOptions.width
+        )
     end
+
     return control
 end
 
@@ -727,6 +801,7 @@ function Flow:AddSpacer(height)
     if self.entries then
         self.entries[#self.entries + 1] = { spacer = height }
     end
+
     self.cursor = self.cursor + height
 end
 
@@ -737,8 +812,10 @@ function Flow:BeginGroup(options)
 
     local x, width = self:_GetRect(options)
     local marginTop = options.marginTop or 0
-    assert(type(marginTop) == "number" and marginTop >= 0 and marginTop < math.huge,
-        "group top margin must be a non-negative finite number")
+    assert(
+        type(marginTop) == "number" and marginTop >= 0 and marginTop < math.huge,
+        "group top margin must be a non-negative finite number"
+    )
 
     local group = self.layout:_CreateFlow(x, width, self.cursor + marginTop)
     group.parentFlow = self
@@ -753,8 +830,12 @@ function Flow:Finish(options)
     assert(type(options) == "table", "group finish options must be a table")
 
     local marginBottom = options.marginBottom or 0
-    assert(type(marginBottom) == "number" and marginBottom >= 0 and marginBottom < math.huge,
-        "group bottom margin must be a non-negative finite number")
+    assert(
+        type(marginBottom) == "number"
+            and marginBottom >= 0
+            and marginBottom < math.huge,
+        "group bottom margin must be a non-negative finite number"
+    )
     self.finishOptions = shallowCopy(options)
 
     if self.shown ~= false then
@@ -766,17 +847,13 @@ function Flow:Finish(options)
 end
 
 function Flow:_RefreshGroup()
-    if self.shown == false then
-        return
-    end
+    if self.shown == false then return end
 
     local parentFlow = self.parentFlow
     self.x, self.width = parentFlow:_GetRect(self.groupOptions)
     self:_RefreshLayout(parentFlow.cursor + (self.groupOptions.marginTop or 0))
 
-    if self.finishOptions then
-        self:Finish(self.finishOptions)
-    end
+    if self.finishOptions then self:Finish(self.finishOptions) end
 end
 
 function Flow:BeginColumns(options)
@@ -799,14 +876,23 @@ function Flow:BeginColumns(options)
         type(marginTop) == "number" and marginTop >= 0,
         "column region top margin must be non-negative"
     )
-    assert(options.minColumnWidth == nil
-        or (type(options.minColumnWidth) == "number"
-            and options.minColumnWidth > 0 and options.minColumnWidth < math.huge),
-        "minimum column width must be a positive finite number or nil")
-    assert(options.verticalAlign == nil or options.verticalAlign == "top"
-        or options.verticalAlign == "center" or options.verticalAlign == "bottom"
-        or options.verticalAlign == "input",
-        "column vertical alignment must be 'top', 'center', 'bottom', or 'input'")
+    assert(
+        options.minColumnWidth == nil
+            or (
+                type(options.minColumnWidth) == "number"
+                and options.minColumnWidth > 0
+                and options.minColumnWidth < math.huge
+            ),
+        "minimum column width must be a positive finite number or nil"
+    )
+    assert(
+        options.verticalAlign == nil
+            or options.verticalAlign == "top"
+            or options.verticalAlign == "center"
+            or options.verticalAlign == "bottom"
+            or options.verticalAlign == "input",
+        "column vertical alignment must be 'top', 'center', 'bottom', or 'input'"
+    )
 
     self.cursor = self.cursor + marginTop
 
@@ -819,18 +905,14 @@ function Flow:BeginColumns(options)
         flows = {},
         options = shallowCopy(options),
     }, { __index = Columns })
+
     if self.entries then
         self.entries[#self.entries + 1] = { columns = columns }
     end
 
     for index = 1, count do
-        local columnX = x
-            + ((index - 1) * (columnWidth + columnGap))
-        local flow = self.layout:_CreateFlow(
-            columnX,
-            columnWidth,
-            self.cursor
-        )
+        local columnX = x + ((index - 1) * (columnWidth + columnGap))
+        local flow = self.layout:_CreateFlow(columnX, columnWidth, self.cursor)
         flow.parentFlow = self
 
         columns.flows[index] = flow
@@ -868,29 +950,31 @@ function Columns:Finish(options)
 end
 
 local function getFlowInputAlignment(flow)
-    if flow.shown == false then
-        return nil
-    end
+    if flow.shown == false then return nil end
 
     for _, entry in ipairs(flow.entries) do
         local alignment
+
         if entry.group then
             alignment = getFlowInputAlignment(entry.group)
         elseif entry.columns or entry.grid then
             for _, child in ipairs((entry.columns or entry.grid).flows) do
                 alignment = getFlowInputAlignment(child)
-                if alignment then
-                    break
-                end
+
+                if alignment then break end
             end
-        elseif entry.frame and (entry.frame._libModernSettingsControlType
-            or type(entry.frame.GetInputAlignmentOffset) == "function") then
-            alignment = entry.layoutTop + lib:_GetInputAlignmentOffset(entry.frame)
+        elseif
+            entry.frame
+            and (
+                entry.frame._libModernSettingsControlType
+                or type(entry.frame.GetInputAlignmentOffset) == "function"
+            )
+        then
+            alignment = entry.layoutTop
+                + lib:_GetInputAlignmentOffset(entry.frame)
         end
 
-        if alignment then
-            return alignment
-        end
+        if alignment then return alignment end
     end
 end
 
@@ -904,17 +988,14 @@ function Columns:_RefreshLayout()
     for _, flow in ipairs(self.flows) do
         flow.parentFlow = parentFlow
 
-        if flow.shown ~= false then
-            count = count + 1
-        end
+        if flow.shown ~= false then count = count + 1 end
     end
 
-    if count == 0 then
-        return
-    end
+    if count == 0 then return end
 
     local columnWidth = (width - (count - 1) * gap) / count
-    local stacked = options.minColumnWidth and columnWidth < options.minColumnWidth
+    local stacked = options.minColumnWidth
+        and columnWidth < options.minColumnWidth
     parentFlow.cursor = parentFlow.cursor + (options.marginTop or 0)
     local cursor = parentFlow.cursor
     local visibleIndex = 0
@@ -928,22 +1009,27 @@ function Columns:_RefreshLayout()
             bottom = math.max(bottom, flow.cursor)
             visibleIndex = visibleIndex + 1
 
-            if stacked then
-                cursor = flow.cursor
-            end
+            if stacked then cursor = flow.cursor end
         end
     end
 
     -- Measure at the final column widths first, then align the input centers or
     -- shorter columns. Input measurements include labels but exclude descriptions.
     -- Stacked flows keep their normal sequential placement.
-    if not stacked and options.verticalAlign and options.verticalAlign ~= "top" then
+    if
+        not stacked
+        and options.verticalAlign
+        and options.verticalAlign ~= "top"
+    then
         local inputAlignment
+
         if options.verticalAlign == "input" then
             for _, flow in ipairs(self.flows) do
                 local alignment = getFlowInputAlignment(flow)
+
                 if alignment then
-                    inputAlignment = math.max(inputAlignment or alignment, alignment)
+                    inputAlignment =
+                        math.max(inputAlignment or alignment, alignment)
                 end
             end
         end
@@ -959,16 +1045,12 @@ function Columns:_RefreshLayout()
                     offset = offset / 2
                 end
 
-                if offset > 0 then
-                    flow:_RefreshLayout(cursor + offset)
-                end
+                if offset > 0 then flow:_RefreshLayout(cursor + offset) end
             end
         end
     end
 
-    if self.finishOptions then
-        self:Finish(self.finishOptions)
-    end
+    if self.finishOptions then self:Finish(self.finishOptions) end
 end
 
 -- Unlike independent column flows, grid cells wrap in declaration order.
@@ -977,17 +1059,35 @@ function Flow:BeginGrid(options)
     options = options or {}
     assert(type(options) == "table", "grid options must be a table")
     assert(self.entries, "grids require a tracked canvas")
-    assert(type(options.minColumnWidth) == "number"
-        and options.minColumnWidth > 0 and options.minColumnWidth < math.huge,
-        "grid minimum column width must be a positive finite number")
-    assert(options.maxColumns == nil or (type(options.maxColumns) == "number"
-        and options.maxColumns >= 1 and options.maxColumns < math.huge and options.maxColumns % 1 == 0),
-        "grid maximum columns must be a positive integer or nil")
+    assert(
+        type(options.minColumnWidth) == "number"
+            and options.minColumnWidth > 0
+            and options.minColumnWidth < math.huge,
+        "grid minimum column width must be a positive finite number"
+    )
+    assert(
+        options.maxColumns == nil
+            or (
+                type(options.maxColumns) == "number"
+                and options.maxColumns >= 1
+                and options.maxColumns < math.huge
+                and options.maxColumns % 1 == 0
+            ),
+        "grid maximum columns must be a positive integer or nil"
+    )
+
     for _, key in ipairs({ "columnGap", "rowGap", "marginTop" }) do
-        assert(options[key] == nil or (type(options[key]) == "number"
-            and options[key] >= 0 and options[key] < math.huge),
-            "grid " .. key .. " must be a non-negative finite number or nil")
+        assert(
+            options[key] == nil
+                or (
+                    type(options[key]) == "number"
+                    and options[key] >= 0
+                    and options[key] < math.huge
+                ),
+            "grid " .. key .. " must be a non-negative finite number or nil"
+        )
     end
+
     self:_GetRect(options)
     local grid = setmetatable({
         parentFlow = self,
@@ -1012,8 +1112,12 @@ function Grid:Finish(options)
     options = options or {}
     assert(type(options) == "table", "grid finish options must be a table")
     local marginBottom = options.marginBottom or 0
-    assert(type(marginBottom) == "number" and marginBottom >= 0 and marginBottom < math.huge,
-        "grid bottom margin must be a non-negative finite number")
+    assert(
+        type(marginBottom) == "number"
+            and marginBottom >= 0
+            and marginBottom < math.huge,
+        "grid bottom margin must be a non-negative finite number"
+    )
     self.finishOptions = shallowCopy(options)
     self.parentFlow.layout:RequestLayout()
 end
@@ -1024,42 +1128,43 @@ function Grid:_RefreshLayout()
     local x, width = parent:_GetRect(options)
     local gap = options.columnGap or parent.layout.style.columnGap
     local count = 0
+
     for _, flow in ipairs(self.flows) do
-        if flow.shown ~= false then
-            count = count + 1
-        end
-    end
-    if count == 0 then
-        return
+        if flow.shown ~= false then count = count + 1 end
     end
 
-    local columns = math.max(1, math.floor((width + gap) / (options.minColumnWidth + gap)))
+    if count == 0 then return end
+
+    local columns =
+        math.max(1, math.floor((width + gap) / (options.minColumnWidth + gap)))
     columns = math.min(columns, count, options.maxColumns or columns)
     local cellWidth = (width - (columns - 1) * gap) / columns
     local rowStart = parent.cursor + (options.marginTop or 0)
     local rowBottom = rowStart
     local column = 0
+
     for _, flow in ipairs(self.flows) do
         if flow.shown ~= false then
             if column == columns then
                 rowStart = rowBottom + (options.rowGap or 0)
                 column = 0
             end
+
             flow.x, flow.width = x + column * (cellWidth + gap), cellWidth
             flow:_RefreshLayout(rowStart)
             rowBottom = math.max(rowBottom, flow.cursor)
             column = column + 1
         end
     end
-    parent.cursor = rowBottom + (self.finishOptions and self.finishOptions.marginBottom or 0)
+
+    parent.cursor = rowBottom
+        + (self.finishOptions and self.finishOptions.marginBottom or 0)
 end
 
 function Flow:_RefreshLayout(cursor)
     self.cursor = cursor
 
-    if not isFlowShown(self) then
-        return
-    end
+    if not isFlowShown(self) then return end
 
     for _, entry in ipairs(self.entries) do
         if entry.columns then
@@ -1072,19 +1177,27 @@ function Flow:_RefreshLayout(cursor)
             self.cursor = self.cursor + entry.spacer
         else
             local frame = entry.frame
-            if entry.autoWidth and not frame:HasScript("OnSizeChanged")
-                and not lib:_LayoutSizeMatches(frame:GetWidth(), entry.width) then
+
+            if
+                entry.autoWidth
+                and not frame:HasScript("OnSizeChanged")
+                and not lib:_LayoutSizeMatches(frame:GetWidth(), entry.width)
+            then
                 entry.autoWidth = nil
             end
+
             if entry.defaultFont then
                 lib:_ApplyDefaultFont(frame, defaultFont(entry.role))
             end
+
             if entry.autoWidth then
                 local _, width = self:_GetRect(entry.placement)
+
                 if frame.SetControlWidth then
                     frame:SetControlWidth(width)
                 elseif frame._libModernSettingsAppearanceOptions then
                     local options = frame._libModernSettingsAppearanceOptions
+
                     if not lib:_LayoutSizeMatches(width, options.width) then
                         options.width = width
                         lib:_RefreshControlAppearance(frame)
@@ -1093,9 +1206,11 @@ function Flow:_RefreshLayout(cursor)
                     frame:SetWidth(width)
                 end
             end
+
             if frame._libModernSettingsControlType and frame.RefreshLayout then
                 frame:RefreshLayout()
             end
+
             self:_PlaceFrame(frame, entry.placement, entry.role, entry)
             entry.width, entry.height = frame:GetWidth(), frame:GetHeight()
             entry.allocatedWidth = entry.width
@@ -1143,7 +1258,8 @@ function lib:CreateCanvasLayout(parent, options)
         "canvas scrollbar gap must be non-negative"
     )
     assert(
-        type(style.scrollbarWidth) == "number" and style.scrollbarWidth >= 0
+        type(style.scrollbarWidth) == "number"
+            and style.scrollbarWidth >= 0
             and (not options.scrollable or style.scrollbarWidth > 0),
         "canvas scrollbar width must be non-negative, and positive for scrolling layouts"
     )
@@ -1156,8 +1272,7 @@ function lib:CreateCanvasLayout(parent, options)
         "canvas indent must be non-negative"
     )
     assert(
-        type(style.nestedColumnGap) == "number"
-            and style.nestedColumnGap >= 0,
+        type(style.nestedColumnGap) == "number" and style.nestedColumnGap >= 0,
         "canvas nested column gap must be non-negative"
     )
     assert(
@@ -1177,8 +1292,7 @@ function lib:CreateCanvasLayout(parent, options)
         "canvas row gap must be non-negative"
     )
     assert(
-        type(style.sectionMarginTop) == "number"
-            and style.sectionMarginTop >= 0,
+        type(style.sectionMarginTop) == "number" and style.sectionMarginTop >= 0,
         "canvas section top margin must be non-negative"
     )
     assert(
@@ -1197,15 +1311,19 @@ function lib:CreateCanvasLayout(parent, options)
         "canvas header bottom margin must be non-negative"
     )
     assert(contentWidth > 0, "canvas layout content width must be positive")
-    assert(canvasHeight > geometry.top + geometry.bottom,
-        "scroll viewport margins must leave a positive height")
+    assert(
+        canvasHeight > geometry.top + geometry.bottom,
+        "scroll viewport margins must leave a positive height"
+    )
 
     local layout = setmetatable({
         parent = parent,
         style = style,
         geometry = geometry,
-        contentOverflow = options.contentOverflow and shallowCopy(options.contentOverflow),
-        scrollAreaOptions = options.scrollArea and lib:_CopyScrollAreaOptions(options.scrollArea),
+        contentOverflow = options.contentOverflow
+            and shallowCopy(options.contentOverflow),
+        scrollAreaOptions = options.scrollArea
+            and lib:_CopyScrollAreaOptions(options.scrollArea),
         canvasWidth = canvasWidth,
         canvasHeight = canvasHeight,
         contentWidth = contentWidth,
@@ -1214,20 +1332,16 @@ function lib:CreateCanvasLayout(parent, options)
 
     for key in pairs(DEFAULT_STYLE) do
         local value = options.style and options.style[key]
-        if value == nil then
-            value = options[key]
-        end
+
+        if value == nil then value = options[key] end
+
         layout.styleOverrides[key] = value
     end
 
     parent:SetSize(canvasWidth, canvasHeight)
     layout.content = createContent(layout, options)
     layout.content._libModernSettingsCanvasLayout = layout
-    layout.rootFlow = layout:_CreateFlow(
-        0,
-        contentWidth,
-        style.paddingTop
-    )
+    layout.rootFlow = layout:_CreateFlow(0, contentWidth, style.paddingTop)
 
     lib._canvasLayouts[layout] = true
     parent:HookScript("OnShow", function()
@@ -1256,7 +1370,9 @@ for layout in pairs(lib._canvasLayouts) do
 
     layout.style = createStyle(options)
     layout.geometry = createGeometry(layout.style, options)
-    layout.contentWidth = layout.canvasWidth - layout.geometry.left - layout.geometry.right
+    layout.contentWidth = layout.canvasWidth
+        - layout.geometry.left
+        - layout.geometry.right
     layout.content:SetWidth(layout.contentWidth)
     layout.rootFlow.width = layout.contentWidth
 
@@ -1268,15 +1384,22 @@ for layout in pairs(lib._canvasLayouts) do
         if layout.scrollArea then
             layout.scrollArea:_ApplyGeometry(layout.geometry)
         else
-            layout.scrollArea = lib:_CreateScrollArea(layout.parent, layout.geometry, {
-                kind = "canvas",
-                scrollBox = layout.scrollBox,
-                scrollBar = layout.scrollBar,
-            })
+            layout.scrollArea =
+                lib:_CreateScrollArea(layout.parent, layout.geometry, {
+                    kind = "canvas",
+                    scrollBox = layout.scrollBox,
+                    scrollBar = layout.scrollBar,
+                })
         end
     else
         layout.content:ClearAllPoints()
-        layout.content:SetPoint("TOPLEFT", layout.parent, "TOPLEFT", layout.geometry.left, 0)
+        layout.content:SetPoint(
+            "TOPLEFT",
+            layout.parent,
+            "TOPLEFT",
+            layout.geometry.left,
+            0
+        )
     end
 
     layout:RequestLayout()

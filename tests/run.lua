@@ -6,9 +6,7 @@ LibStub = {}
 function LibStub:NewLibrary(major, minor)
     local oldMinor = minors[major]
 
-    if oldMinor and oldMinor >= minor then
-        return
-    end
+    if oldMinor and oldMinor >= minor then return end
 
     minors[major] = minor
     libraries[major] = libraries[major] or {}

@@ -1,7 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("IconPicker/Sources", MINOR) then
+
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("IconPicker/Sources", MINOR)
+then
     return
 end
 
@@ -18,22 +22,35 @@ local RAID_MARKERS = {
     { name = "Skull", keywords = "white" },
 }
 
-local NUMBER_NAMES = { "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine" }
+local NUMBER_NAMES = {
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+}
 
 local function fileTexture(value)
     local texture = Icons.Normalize(value)
     local filename
+
     if type(texture) == "string" then
         if not texture:find("\\", 1, true) then
             texture = "Interface\\Icons\\" .. texture
         end
+
         filename = texture
         -- Resolve legacy filenames once so spell/item catalogues share an entry.
         local fileID = GetFileIDFromPath(texture)
-        if fileID and fileID > 0 then
-            texture = fileID
-        end
+
+        if fileID and fileID > 0 then texture = fileID end
     end
+
     return texture, filename
 end
 
@@ -45,15 +62,25 @@ end
 -- generated name index. Resolve Blizzard's targeting paths to the client's IDs.
 local function addNativeArtwork(catalogue)
     catalogue:AddIcon({ texture = 134400, name = "Question mark" })
+
     for index, marker in ipairs(RAID_MARKERS) do
-        local texture, filename = fileTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcon_" .. index)
+        local texture, filename = fileTexture(
+            "Interface\\TargetingFrame\\UI-RaidTargetingIcon_" .. index
+        )
         catalogue:AddIcon({
             texture = texture,
             filename = filename,
-            name = "Raid target: " .. (_G["RAID_TARGET_" .. index] or marker.name),
-            keywords = "raid target marker " .. marker.name .. " " .. marker.keywords .. " rt" .. index,
+            name = "Raid target: "
+                .. (_G["RAID_TARGET_" .. index] or marker.name),
+            keywords = "raid target marker "
+                .. marker.name
+                .. " "
+                .. marker.keywords
+                .. " rt"
+                .. index,
         })
     end
+
     for number = 0, 9 do
         catalogue:AddIcon({
             texture = 6033345 + number,
@@ -69,12 +96,14 @@ end
 if lib._defaultIconCatalogue then
     local catalogue = lib._defaultIconCatalogue
     catalogue.getFilename = getFilename
+
     for _, entry in ipairs(catalogue.entries) do
         if not entry.filenameProvided then
             entry.filenameRead = nil
             entry.searchText = nil
         end
     end
+
     addNativeArtwork(catalogue)
 end
 
@@ -88,10 +117,10 @@ local CATALOGUE_SOURCES = {
 -- Pickers advance this shared job only while visible. Keep completed work when
 -- the last picker closes, but publish the catalogue only after every source.
 function lib:_AdvanceIconCatalogue()
-    if self._defaultIconCatalogue then
-        return self._defaultIconCatalogue
-    end
+    if self._defaultIconCatalogue then return self._defaultIconCatalogue end
+
     local job = self._iconCatalogueBuild
+
     if not job then
         job = {
             catalogue = self:CreateIconCatalogue({ getFilename = getFilename }),
@@ -101,6 +130,7 @@ function lib:_AdvanceIconCatalogue()
         addNativeArtwork(job.catalogue)
         self._iconCatalogueBuild = job
     end
+
     if not job.values then
         local source = CATALOGUE_SOURCES[job.sourceIndex]
         job.values = {}
@@ -113,30 +143,36 @@ function lib:_AdvanceIconCatalogue()
     end
 
     local started = debugprofilestop()
+
     for _ = 1, 16 do
         local last = math.min(job.nextIndex + 127, #job.values)
+
         for index = job.nextIndex, last do
             local texture, filename = fileTexture(job.values[index])
+
             if texture then
                 job.data.texture = texture
                 job.data.filename = filename
                 job.catalogue:AddIcon(job.data)
             end
         end
+
         job.nextIndex = last + 1
+
         if job.nextIndex > #job.values then
             job.values = nil
             job.sourceIndex = job.sourceIndex + 1
+
             if job.sourceIndex > #CATALOGUE_SOURCES then
                 self._defaultIconCatalogue = job.catalogue
                 self._iconCatalogueBuild = nil
                 return job.catalogue
             end
+
             return
         end
-        if debugprofilestop() - started >= 3 then
-            return
-        end
+
+        if debugprofilestop() - started >= 3 then return end
     end
 end
 
@@ -144,16 +180,24 @@ end
 -- The browser uses the incremental path after its window has painted.
 function lib:GetIconCatalogue()
     local catalogue
+
     repeat
         catalogue = self:_AdvanceIconCatalogue()
     until catalogue
+
     return catalogue
 end
 
 local function addPlayerIcon(catalogue, source, texture, name, identity)
-    if issecretvalue(texture) or issecretvalue(name) or issecretvalue(identity) or not texture then
+    if
+        issecretvalue(texture)
+        or issecretvalue(name)
+        or issecretvalue(identity)
+        or not texture
+    then
         return
     end
+
     local entry, changed = catalogue:AddIcon({
         texture = texture,
         name = name,
@@ -164,24 +208,37 @@ local function addPlayerIcon(catalogue, source, texture, name, identity)
 end
 
 local function addPlayerItem(catalogue, source, texture, link, itemID)
-    if issecretvalue(itemID) or not itemID then
-        return
-    end
-    local name = not issecretvalue(link) and link and link:match("%[(.-)%]") or nil
+    if issecretvalue(itemID) or not itemID then return end
+
+    local name = not issecretvalue(link) and link and link:match("%[(.-)%]")
+        or nil
+
     if not name or issecretvalue(texture) or not texture then
         source.pendingItems[itemID] = true
     end
+
     addPlayerIcon(catalogue, source, texture, name, itemID)
 end
 
 local function readSpellbook(catalogue, source)
     for lineIndex = 1, C_SpellBook.GetNumSpellBookSkillLines() do
         local line = C_SpellBook.GetSpellBookSkillLineInfo(lineIndex)
+
         if line then
             for slot = line.itemIndexOffset + 1, line.itemIndexOffset + line.numSpellBookItems do
-                local info = C_SpellBook.GetSpellBookItemInfo(slot, Enum.SpellBookSpellBank.Player)
+                local info = C_SpellBook.GetSpellBookItemInfo(
+                    slot,
+                    Enum.SpellBookSpellBank.Player
+                )
+
                 if info then
-                    addPlayerIcon(catalogue, source, info.iconID, info.name, info.spellID)
+                    addPlayerIcon(
+                        catalogue,
+                        source,
+                        info.iconID,
+                        info.name,
+                        info.spellID
+                    )
                 end
             end
         end
@@ -191,26 +248,42 @@ end
 local function readEquipment(catalogue, source)
     for slot = INVSLOT_FIRST_EQUIPPED, INVSLOT_LAST_EQUIPPED do
         local itemID = GetInventoryItemID("player", slot)
+
         if not issecretvalue(itemID) and itemID then
-            addPlayerItem(catalogue, source, GetInventoryItemTexture("player", slot),
-                GetInventoryItemLink("player", slot), itemID)
+            addPlayerItem(
+                catalogue,
+                source,
+                GetInventoryItemTexture("player", slot),
+                GetInventoryItemLink("player", slot),
+                itemID
+            )
         end
     end
 end
 
 local function readBags(catalogue, source)
     local bags = { Enum.BagIndex.Backpack }
+
     for bag = 1, NUM_BAG_SLOTS do
         bags[#bags + 1] = bag
     end
+
     if NUM_REAGENTBAG_SLOTS > 0 then
         bags[#bags + 1] = Enum.BagIndex.ReagentBag
     end
+
     for _, bag in ipairs(bags) do
         for slot = 1, C_Container.GetContainerNumSlots(bag) do
             local info = C_Container.GetContainerItemInfo(bag, slot)
+
             if info then
-                addPlayerItem(catalogue, source, info.iconFileID, info.hyperlink, info.itemID)
+                addPlayerItem(
+                    catalogue,
+                    source,
+                    info.iconFileID,
+                    info.hyperlink,
+                    info.itemID
+                )
             end
         end
     end
@@ -242,14 +315,20 @@ function lib:_QueuePlayerIconRefresh(catalogue, event, itemID, success)
         end
     elseif PLAYER_EVENTS[event] then
         queuePlayerSource(catalogue, PLAYER_EVENTS[event])
-    elseif event == "GET_ITEM_INFO_RECEIVED" and catalogue.playerSources and not issecretvalue(itemID)
-        and not issecretvalue(success) and success == true then
+    elseif
+        event == "GET_ITEM_INFO_RECEIVED"
+        and catalogue.playerSources
+        and not issecretvalue(itemID)
+        and not issecretvalue(success)
+        and success == true
+    then
         for tag, source in pairs(catalogue.playerSources) do
             if source.pendingItems[itemID] then
                 queuePlayerSource(catalogue, tag)
             end
         end
     end
+
     return catalogue.playerRefresh ~= nil
 end
 
@@ -257,37 +336,47 @@ end
 -- removing and restoring unchanged tags, preserving other sources on that icon.
 function lib:_RefreshPlayerIconCatalogue(catalogue)
     local pending = catalogue.playerRefresh
-    if InCombatLockdown() or not pending then
-        return
-    end
+
+    if InCombatLockdown() or not pending then return end
+
     catalogue.playerRefresh = nil
     catalogue.playerSources = catalogue.playerSources or {}
     local changed = false
+
     for _, definition in ipairs(PLAYER_SOURCES) do
         local tag = definition.tag
+
         if pending[tag] then
-            local source = { entries = {}, pendingItems = {} }
+            local source = {
+                entries = {},
+                pendingItems = {},
+            }
             definition.read(catalogue, source)
             local previous = catalogue.playerSources[tag]
+
             for entry in pairs(previous and previous.entries or {}) do
                 if not source.entries[entry] then
                     entry.tags[tag] = nil
                     changed = true
                 end
             end
+
             for entry in pairs(source.entries) do
                 if not entry.tags[tag] then
                     entry.tags[tag] = true
                     changed = true
                 end
             end
+
             changed = changed or source.changed
             catalogue.playerSources[tag] = source
         end
     end
+
     if changed then
         catalogue.playerRevision = (catalogue.playerRevision or 0) + 1
     end
+
     return changed == true
 end
 
@@ -297,14 +386,17 @@ function lib:GetCursorIcon()
     if InCombatLockdown() then
         return nil, "Icon selection is unavailable in combat."
     end
+
     local kind, id, _, spellID = GetCursorInfo()
+
     if issecretvalue(kind) or issecretvalue(id) or issecretvalue(spellID) then
         return nil, "This cursor icon is not readable."
     end
-    if not kind then
-        return nil
-    end
+
+    if not kind then return nil end
+
     local texture
+
     if kind == "item" then
         texture = C_Item.GetItemIconByID(id)
     elseif kind == "spell" and spellID then
@@ -317,9 +409,11 @@ function lib:GetCursorIcon()
         texture = select(2, GetMacroInfo(id))
     elseif kind == "equipmentset" then
         local setID = id
+
         if type(id) == "string" then
             setID = C_EquipmentSet.GetEquipmentSetID(id)
         end
+
         if not issecretvalue(setID) and type(setID) == "number" then
             texture = select(2, C_EquipmentSet.GetEquipmentSetInfo(setID))
         end
@@ -329,6 +423,10 @@ function lib:GetCursorIcon()
     elseif kind == "petaction" then
         texture = C_Spell.GetSpellTexture(id)
     end
+
     local icon = Icons.Normalize(texture)
-    return icon, not icon and "This drag does not provide a readable icon. Try a spell, item, macro, mount or pet." or nil
+    return icon,
+        not icon
+                and "This drag does not provide a readable icon. Try a spell, item, macro, mount or pet."
+            or nil
 end

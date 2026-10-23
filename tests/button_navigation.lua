@@ -13,7 +13,10 @@ return function(lib, makeFrame, inputState, openMenu, key)
     local checkbox = lib:CreateCheckbox(root, {
         value = false,
         onChanged = function()
-            assert(saved == "Submitted", "pending text must be committed before activation")
+            assert(
+                saved == "Submitted",
+                "pending text must be committed before activation"
+            )
             changes = changes + 1
         end,
     })
@@ -24,7 +27,8 @@ return function(lib, makeFrame, inputState, openMenu, key)
     local text = lib:CreateTextInput(body, {})
     local expansions = 0
     local header = lib:CreateExpandableHeader(root, {
-        text = "Section", expanded = false,
+        text = "Section",
+        expanded = false,
         onExpandedChanged = function(_, expanded, button)
             assert(button == "LeftButton")
             expansions = expansions + 1
@@ -35,13 +39,18 @@ return function(lib, makeFrame, inputState, openMenu, key)
     local advanced = lib:CreateCheckbox(header, { label = "Advanced" })
     advanced:SetPoint("TOPLEFT", header, "TOPLEFT", 150, 0)
     local dropdown = lib:CreateDropdown(root, {
-        choices = { { value = 1, label = "One" } }, value = 1,
+        choices = { { value = 1, label = "One" } },
+        value = 1,
     })
     dropdown:SetPoint("TOPLEFT", root, "TOPLEFT", 0, -220)
-    function dropdown.dropdown:OpenMenu() openMenu(dropdown) end
+
+    function dropdown.dropdown:OpenMenu()
+        openMenu(dropdown)
+    end
 
     local buttons = {}
     local clicks = {}
+
     for index, variant in ipairs({ "regular", "small", "square" }) do
         clicks[index] = 0
         local button = lib:CreateButton(root, {
@@ -50,7 +59,10 @@ return function(lib, makeFrame, inputState, openMenu, key)
             iconAtlas = variant == "square" and "common-icon-backarrow" or nil,
             onClick = function(owner, mouseButton)
                 assert(owner == buttons[index] and mouseButton == "LeftButton")
-                assert(saved == "Submitted", "button callbacks must see the committed input")
+                assert(
+                    saved == "Submitted",
+                    "button callbacks must see the committed input"
+                )
                 clicks[index] = clicks[index] + 1
             end,
         })
@@ -62,13 +74,19 @@ return function(lib, makeFrame, inputState, openMenu, key)
     first:SetText("Submitted")
     first.scripts.OnTabPressed(first)
     local keyboard = lib._navigationKeyboardFrame
-    assert(saved == "Submitted" and not first:HasFocus() and checkbox.highlightLocked)
+    assert(
+        saved == "Submitted"
+            and not first:HasFocus()
+            and checkbox.highlightLocked
+    )
     key("SPACE")
     assert(checkbox:GetValue() and changes == 1 and checkbox.highlightLocked)
     assert(inputState.lastSound == SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON)
     assert(not keyboard.propagateKeyboardInput)
     key("ENTER")
-    assert(not checkbox:GetValue() and changes == 2 and checkbox.highlightLocked)
+    assert(
+        not checkbox:GetValue() and changes == 2 and checkbox.highlightLocked
+    )
     assert(inputState.lastSound == SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF)
     key("UP")
     assert(changes == 2 and keyboard.propagateKeyboardInput)
@@ -76,21 +94,31 @@ return function(lib, makeFrame, inputState, openMenu, key)
     key("TAB")
     assert(not checkbox.highlightLocked and header.highlightLocked)
     header.scripts.OnLeave(header)
-    assert(header:GetNormalTexture().atlas == "common-button-tertiary-hover",
-        "mouse leave must not erase the focused header's hover appearance")
+    assert(
+        header:GetNormalTexture().atlas == "common-button-tertiary-hover",
+        "mouse leave must not erase the focused header's hover appearance"
+    )
     key("SPACE")
     assert(header:IsExpanded() and body:IsShown() and expansions == 1)
     key("ENTER")
     assert(not header:IsExpanded() and not body:IsShown() and expansions == 2)
     key("TAB")
-    assert(advanced.highlightLocked and not header.highlightLocked,
-        "focusable headers must not hide nested checkboxes from Tab traversal")
+    assert(
+        advanced.highlightLocked and not header.highlightLocked,
+        "focusable headers must not hide nested checkboxes from Tab traversal"
+    )
     key("SPACE")
-    assert(advanced:GetValue() and not header:IsExpanded() and expansions == 2,
-        "activating a nested checkbox must not activate its parent header")
+    assert(
+        advanced:GetValue() and not header:IsExpanded() and expansions == 2,
+        "activating a nested checkbox must not activate its parent header"
+    )
     key("TAB")
-    assert(keyboard.control == dropdown and not dropdown.dropdown:IsMenuOpen() and not advanced.highlightLocked,
-        "collapsed section contents must be skipped")
+    assert(
+        keyboard.control == dropdown
+            and not dropdown.dropdown:IsMenuOpen()
+            and not advanced.highlightLocked,
+        "collapsed section contents must be skipped"
+    )
     assert(not keyboard.propagateKeyboardInput)
     inputState.modifiers.shift = true
     key("TAB")
@@ -101,7 +129,11 @@ return function(lib, makeFrame, inputState, openMenu, key)
     key("ENTER")
     key("TAB")
     key("TAB")
-    assert(text:HasFocus() and not advanced.highlightLocked and keyboard.control == nil)
+    assert(
+        text:HasFocus()
+            and not advanced.highlightLocked
+            and keyboard.control == nil
+    )
     text.scripts.OnTabPressed(text)
     key("SPACE")
     assert(dropdown.dropdown:IsMenuOpen())
@@ -111,33 +143,54 @@ return function(lib, makeFrame, inputState, openMenu, key)
     for index, button in ipairs(buttons) do
         key("TAB")
         assert(keyboard.control == button and button.highlightLocked)
+
         if index <= 2 then
             button.scripts.OnLeave(button)
-            local hover = index == 2 and "common-button-tertiary-hover-small" or "common-button-tertiary-hover"
+            local hover = index == 2 and "common-button-tertiary-hover-small"
+                or "common-button-tertiary-hover"
             assert(button:GetNormalTexture().atlas == hover)
         end
+
         key("ENTER")
         key("SPACE")
-        assert(clicks[index] == 2 and button.highlightLocked and not keyboard.propagateKeyboardInput,
-            "each activation key must click each button variant once and retain focus")
+        assert(
+            clicks[index] == 2
+                and button.highlightLocked
+                and not keyboard.propagateKeyboardInput,
+            "each activation key must click each button variant once and retain focus"
+        )
     end
+
     key("TAB")
-    assert(first:HasFocus() and not buttons[3].highlightLocked and keyboard.control == nil)
+    assert(
+        first:HasFocus()
+            and not buttons[3].highlightLocked
+            and keyboard.control == nil
+    )
     inputState.modifiers.shift = true
     first.scripts.OnTabPressed(first)
+
     for index = #buttons, 1, -1 do
-        assert(keyboard.control == buttons[index] and buttons[index].highlightLocked)
+        assert(
+            keyboard.control == buttons[index]
+                and buttons[index].highlightLocked
+        )
         key("TAB")
     end
+
     inputState.modifiers.shift = false
     assert(keyboard.control == dropdown and not dropdown.dropdown:IsMenuOpen())
 
     buttons[1]:SetControlEnabled(false)
     buttons[2]:Hide()
     key("TAB")
-    assert(keyboard.control == buttons[3], "hidden and disabled action buttons must be skipped")
+    assert(
+        keyboard.control == buttons[3],
+        "hidden and disabled action buttons must be skipped"
+    )
     buttons[3]:SetEnabled(false)
     assert(keyboard.control == nil and not buttons[3].highlightLocked)
+
     for _, button in ipairs(buttons) do
         button:SetControlEnabled(true)
         button:Show()
@@ -146,7 +199,10 @@ return function(lib, makeFrame, inputState, openMenu, key)
     checkbox:_FocusForTab()
     inputState.mouseFoci = { checkbox }
     keyboard.scripts.OnEvent(keyboard, "GLOBAL_MOUSE_DOWN", "LeftButton")
-    assert(checkbox.highlightLocked, "clicking the focused control must preserve focus")
+    assert(
+        checkbox.highlightLocked,
+        "clicking the focused control must preserve focus"
+    )
     checkbox:Click("LeftButton")
     assert(changes == 3)
     inputState.mouseFoci = { root }
@@ -185,16 +241,20 @@ return function(lib, makeFrame, inputState, openMenu, key)
     keyboard.scripts.OnEvent(keyboard, "PLAYER_REGEN_ENABLED")
     assert(keyboard:IsShown() and checkbox.highlightLocked)
     first:FocusValue()
-    assert(not checkbox.highlightLocked and keyboard.control == nil,
-        "focusing an edit box must release button keyboard input immediately")
+    assert(
+        not checkbox.highlightLocked and keyboard.control == nil,
+        "focusing an edit box must release button keyboard input immediately"
+    )
     first:CancelAndClearFocus()
 
     checkbox:_FocusForTab()
     root:Hide()
     keyboard.scripts.OnHide(keyboard)
     root:Show()
-    assert(not checkbox.highlightLocked and keyboard.control == nil,
-        "hiding and reopening the window must not restore stale button focus")
+    assert(
+        not checkbox.highlightLocked and keyboard.control == nil,
+        "hiding and reopening the window must not restore stale button focus"
+    )
 
     checkbox:_FocusForTab()
     lib._loadedModules["Controls/Checkbox"] = nil
@@ -202,24 +262,40 @@ return function(lib, makeFrame, inputState, openMenu, key)
     dofile("Controls/Checkbox.lua")
     dofile("Controls/ExpandableHeader.lua")
     key("SPACE")
-    assert(changes == 4 and checkbox.highlightLocked,
-        "live upgrades must preserve focus and activate only once")
-    checkbox:SetOnChanged(function() first:FocusValue() end)
+    assert(
+        changes == 4 and checkbox.highlightLocked,
+        "live upgrades must preserve focus and activate only once"
+    )
+    checkbox:SetOnChanged(function()
+        first:FocusValue()
+    end)
     key("ENTER")
-    assert(first:HasFocus() and not checkbox.highlightLocked and keyboard.control == nil,
-        "an activation callback that opens an input must retain the new focus")
+    assert(
+        first:HasFocus()
+            and not checkbox.highlightLocked
+            and keyboard.control == nil,
+        "an activation callback that opens an input must retain the new focus"
+    )
     first:CancelAndClearFocus()
 
     buttons[1]:_FocusForTab()
     lib._loadedModules["Controls/Button"] = nil
     dofile("Controls/Button.lua")
     key("SPACE")
-    assert(clicks[1] == 3 and buttons[1].highlightLocked,
-        "compatible upgrades must preserve action-button focus and invoke one callback")
-    buttons[1]:SetOnClick(function() first:FocusValue() end)
+    assert(
+        clicks[1] == 3 and buttons[1].highlightLocked,
+        "compatible upgrades must preserve action-button focus and invoke one callback"
+    )
+    buttons[1]:SetOnClick(function()
+        first:FocusValue()
+    end)
     key("ENTER")
-    assert(first:HasFocus() and not buttons[1].highlightLocked and keyboard.control == nil,
-        "a button's input dialog must keep the focus it acquires")
+    assert(
+        first:HasFocus()
+            and not buttons[1].highlightLocked
+            and keyboard.control == nil,
+        "a button's input dialog must keep the focus it acquires"
+    )
     assert(not keyboard.propagateKeyboardInput)
     first:CancelAndClearFocus()
 end

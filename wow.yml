@@ -1,0 +1,178 @@
+# Only globals used by this repository; review additions against the WoW API.
+# Names are checked here; API member signatures and secret-value contracts are not.
+base: lua51
+globals:
+    # Lua 5.1 permits assertions without a message; tests report source locations.
+    assert:
+        args:
+            - type: any
+            - type: string
+              required: false
+    AnchorUtil:
+        any: true
+    ApproximatelyEqual:
+        any: true
+    BaseScrollBoxEvents:
+        any: true
+    ButtonFrameTemplate_HidePortrait:
+        any: true
+    C_ClassColor:
+        any: true
+    C_Container:
+        any: true
+    C_EquipmentSet:
+        any: true
+    C_Item:
+        any: true
+    C_MountJournal:
+        any: true
+    C_PetJournal:
+        any: true
+    C_Spell:
+        any: true
+    C_SpellBook:
+        any: true
+    C_Texture:
+        any: true
+    C_Timer:
+        any: true
+    C_TransmogOutfitInfo:
+        any: true
+    CLASS_SORT_ORDER:
+        any: true
+    ClearCursor:
+        any: true
+    CreateColor:
+        any: true
+    CreateFrame:
+        any: true
+    CreateIndexRangeDataProvider:
+        any: true
+    CreateScrollBoxLinearView:
+        any: true
+    CreateScrollBoxListGridView:
+        any: true
+    debugprofilestop:
+        any: true
+    DoesAncestryInclude:
+        any: true
+    DoesAncestryIncludeAny:
+        any: true
+    DropdownButtonMixin:
+        any: true
+    EditBox_ClearFocus:
+        any: true
+    EditBox_ClearHighlight:
+        any: true
+    EditBox_HighlightText:
+        any: true
+    EditBox_OnTabPressed:
+        any: true
+    Enum:
+        any: true
+    EventUtil:
+        any: true
+    GameFontDisable:
+        any: true
+    GameFontDisableLarge:
+        any: true
+    GameFontDisableSmall:
+        any: true
+    GameFontHighlight:
+        any: true
+    GameFontHighlightLarge:
+        any: true
+    GameFontHighlightOutline:
+        any: true
+    GameFontHighlightSmall:
+        any: true
+    GameFontNormal:
+        any: true
+    GameFontNormalHuge:
+        any: true
+    GameFontNormalLarge:
+        any: true
+    GameFontNormalSmall:
+        any: true
+    GameTooltip:
+        any: true
+    GetCurrentKeyBoardFocus:
+        any: true
+    GetCursorInfo:
+        any: true
+    GetCursorPosition:
+        any: true
+    GetFileIDFromPath:
+        any: true
+    GetInventoryItemID:
+        any: true
+    GetInventoryItemLink:
+        any: true
+    GetInventoryItemTexture:
+        any: true
+    GetLooseMacroItemIcons:
+        any: true
+    GetMacroInfo:
+        any: true
+    GetMacroItemIcons:
+        any: true
+    GetMouseFoci:
+        any: true
+    GRAY_FONT_COLOR:
+        any: true
+    HIGHLIGHT_FONT_COLOR:
+        any: true
+    InCombatLockdown:
+        any: true
+    INVSLOT_FIRST_EQUIPPED:
+        any: true
+    INVSLOT_LAST_EQUIPPED:
+        any: true
+    IsAltKeyDown:
+        any: true
+    IsControlKeyDown:
+        any: true
+    IsMetaKeyDown:
+        any: true
+    IsMouseButtonDown:
+        any: true
+    issecretvalue:
+        any: true
+    IsShiftKeyDown:
+        any: true
+    LibStub:
+        any: true
+    LOCALIZED_CLASS_NAMES_MALE:
+        any: true
+    MenuInputContext:
+        any: true
+    MenuResponse:
+        any: true
+    MinimalSliderWithSteppersMixin:
+        any: true
+    NORMAL_FONT_COLOR:
+        any: true
+    NUM_BAG_SLOTS:
+        any: true
+    NUM_REAGENTBAG_SLOTS:
+        any: true
+    PlaySound:
+        any: true
+    RAID_CLASS_COLORS:
+        any: true
+    ScrollBoxConstants:
+        any: true
+    ScrollUtil:
+        any: true
+    SEARCH:
+        any: true
+    SOUNDKIT:
+        any: true
+    strtrim:
+        any: true
+    UIParent:
+        any: true
+    UISpecialFrames:
+        any: true
+    UnitClass:
+        any: true

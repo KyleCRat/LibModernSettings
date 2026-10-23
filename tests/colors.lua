@@ -2,12 +2,16 @@ return function(lib, makeFrame, inputState)
     function CreateColor(r, g, b, a)
         return { r = r, g = g, b = b, a = a or 1 }
     end
+
     function UnitClass()
         return "Mage", "MAGE"
     end
-    C_ClassColor = { GetClassColor = function()
-        return CreateColor(0.25, 0.75, 1)
-    end }
+
+    C_ClassColor = {
+        GetClassColor = function()
+            return CreateColor(0.25, 0.75, 1)
+        end,
+    }
     RAID_CLASS_COLORS = {
         MAGE = C_ClassColor.GetClassColor(),
         WARRIOR = CreateColor(0.78, 0.61, 0.43),
@@ -39,18 +43,25 @@ return function(lib, makeFrame, inputState)
         [7] = CreateColor(0, 0.8, 1),
         [8] = CreateColor(0, 0.8, 1),
     }
+
     for name, quality in pairs(Enum.ItemQuality) do
         _G["ITEM_QUALITY" .. quality .. "_DESC"] = name
     end
-    C_Item = { GetItemQualityColor = function(quality)
-        local color = assert(qualityColors[quality], "invalid item quality")
-        return color.r, color.g, color.b
-    end }
+
+    C_Item = {
+        GetItemQualityColor = function(quality)
+            local color = assert(qualityColors[quality], "invalid item quality")
+            return color.r, color.g, color.b
+        end,
+    }
     UISpecialFrames = {}
+
     function ButtonFrameTemplate_HidePortrait(frame)
         frame.portraitHidden = true
     end
+
     local cursorX, cursorY = 0, 0
+
     function GetCursorPosition()
         return cursorX, cursorY
     end
@@ -59,20 +70,33 @@ return function(lib, makeFrame, inputState)
     dofile("Controls/Color.lua")
     dofile("Utilities/ColorPicker.lua")
     local Color = lib._colorUtils
+
     local function equalColor(actual, expected)
         for _, channel in ipairs({ "r", "g", "b", "a" }) do
-            assert(math.abs(actual[channel] - expected[channel]) < 0.000001, "color differs: " .. channel)
+            assert(
+                math.abs(actual[channel] - expected[channel]) < 0.000001,
+                "color differs: " .. channel
+            )
         end
     end
+
     local red = CreateColor(1, 0, 0, 0.4)
     local blue = CreateColor(0, 0, 1)
     local green = CreateColor(0, 1, 0)
 
-    for _, color in ipairs({ red, blue, green, CreateColor(0, 0, 0), CreateColor(1, 1, 1), CreateColor(0.4, 0.2, 0.8) }) do
+    for _, color in ipairs({
+        red,
+        blue,
+        green,
+        CreateColor(0, 0, 0),
+        CreateColor(1, 1, 1),
+        CreateColor(0.4, 0.2, 0.8),
+    }) do
         local h, s, v = Color.ToHSV(color)
         local r, g, b = Color.FromHSV(h, s, v)
         equalColor(CreateColor(r, g, b, color.a), color)
     end
+
     assert(Color.Hex(red, true) == "FF000066")
     assert(Color.Hex(red) == "FF0000")
     equalColor(Color.ParseHex(" #ff0000 ", 0.4), red)
@@ -81,7 +105,10 @@ return function(lib, makeFrame, inputState)
     assert(Color.ParseHex("FF0000").a == 1)
     equalColor(Color.ParseHex("FF000066", 1), red)
     equalColor(Color.ParseHex(" #ff000066 ", 1), red)
-    equalColor(Color.ParseHex("33669980", 1), CreateColor(0.2, 0.4, 0.6, 128 / 255))
+    equalColor(
+        Color.ParseHex("33669980", 1),
+        CreateColor(0.2, 0.4, 0.6, 128 / 255)
+    )
     assert(Color.ParseHex("FF000000", 1).a == 0)
     assert(Color.ParseHex("FF0000FF", 0).a == 1)
     assert(not Color.ParseHex("FF0000F", 0.4))
@@ -94,12 +121,19 @@ return function(lib, makeFrame, inputState)
     assert(not pcall(Color.Copy, { r = math.huge, g = 0, b = 0 }))
     assert(Color.Copy(red, false).a == 1)
 
-    local saved = { recent = {}, favorites = {} }
+    local saved = {
+        recent = {},
+        favorites = {},
+    }
     local palette = lib:CreateColorPalette({
         maxRecent = 2,
         maxFavorites = 2,
-        get = function() return saved end,
-        set = function(value) saved = value end,
+        get = function()
+            return saved
+        end,
+        set = function(value)
+            saved = value
+        end,
     })
     local original = saved
     palette:Record(red)
@@ -114,15 +148,22 @@ return function(lib, makeFrame, inputState)
     assert(saved.recent[1].r == 0)
     assert(palette:ToggleFavorite(red) == true)
     assert(palette:ToggleFavorite(blue) == true)
-    assert(palette:ToggleFavorite(green) == nil, "full favorites must not silently evict a saved color")
+    assert(
+        palette:ToggleFavorite(green) == nil,
+        "full favorites must not silently evict a saved color"
+    )
     assert(palette:ToggleFavorite(red) == false)
     assert(palette:ToggleFavorite(green) == true)
-    assert(not pcall(function() lib:CreateColorPalette({ get = function() end }) end))
+    assert(not pcall(function()
+        lib:CreateColorPalette({
+            get = function() end,
+        })
+    end))
 
     lib:_ClearNavigationFocus()
-    if inputState.keyboardFocus then
-        inputState.keyboardFocus:ClearFocus()
-    end
+
+    if inputState.keyboardFocus then inputState.keyboardFocus:ClearFocus() end
+
     local parent = makeFrame("Frame")
     parent:SetSize(700, 900)
     lib:EnableTabNavigation(parent)
@@ -134,9 +175,13 @@ return function(lib, makeFrame, inputState)
         width = 300,
         hasOpacity = true,
         classColor = true,
-        accentColor = function() return accent end,
+        accentColor = function()
+            return accent
+        end,
         palette = palette,
-        onChanged = function(value) notifications[#notifications + 1] = value end,
+        onChanged = function(value)
+            notifications[#notifications + 1] = value
+        end,
     })
     control:SetOnChanged(function(value)
         notifications[#notifications + 1] = value
@@ -148,29 +193,61 @@ return function(lib, makeFrame, inputState)
     assert(not control.buttons.class.selection:IsShown())
     assert(control.buttons.accent.point[4] == 38)
     assert(control.buttons.custom.point[4] == 76)
+
     for _, button in pairs(control.buttons) do
-        assert(button:GetNormalTexture().atlas == "common-button-tertiary-square-normal")
-        assert(not button:GetHighlightTexture(), "native highlights would cover the masked fill")
-        assert(not button.hover:IsShown(), "idle swatches must not show the hover border")
-        assert(button.swatch:GetWidth() == 24 and button.swatch:GetHeight() == 24)
-        assert(button.swatch.point[2] == button.swatchMask
-            and button.swatch.point[4] == 0 and button.swatch.point[5] == 0)
-        assert(button.swatch.drawLayer == "OVERLAY" and button.swatch.sublevel == 1)
-        assert(button.swatchMask.point[2] == button
-            and button.swatchMask.point[4] == 0 and button.swatchMask.point[5] == 1)
-        assert(button.swatchMask:GetWidth() == 24 and button.swatchMask:GetHeight() == 24)
-        assert(button.swatch.masks[1] == button.swatchMask and #button.swatch.masks == 1)
+        assert(
+            button:GetNormalTexture().atlas
+                == "common-button-tertiary-square-normal"
+        )
+        assert(
+            not button:GetHighlightTexture(),
+            "native highlights would cover the masked fill"
+        )
+        assert(
+            not button.hover:IsShown(),
+            "idle swatches must not show the hover border"
+        )
+        assert(
+            button.swatch:GetWidth() == 24 and button.swatch:GetHeight() == 24
+        )
+        assert(
+            button.swatch.point[2] == button.swatchMask
+                and button.swatch.point[4] == 0
+                and button.swatch.point[5] == 0
+        )
+        assert(
+            button.swatch.drawLayer == "OVERLAY" and button.swatch.sublevel == 1
+        )
+        assert(
+            button.swatchMask.point[2] == button
+                and button.swatchMask.point[4] == 0
+                and button.swatchMask.point[5] == 1
+        )
+        assert(
+            button.swatchMask:GetWidth() == 24
+                and button.swatchMask:GetHeight() == 24
+        )
+        assert(
+            button.swatch.masks[1] == button.swatchMask
+                and #button.swatch.masks == 1
+        )
         assert(button.swatchMask.texture == lib._tertiarySquareMask)
         assert(button.swatchMask.wrapHorizontal == "CLAMPTOBLACKADDITIVE")
         assert(button.swatchMask.wrapVertical == "CLAMPTOBLACKADDITIVE")
     end
+
     local customMask = control.buttons.custom.swatchMask
 
     do
         local owner = makeFrame("Frame")
         lib:EnableTabNavigation(owner)
-        for _, dimensions in ipairs({ { 28, 20 }, { 40, 28 } }) do
-            local button = lib:_CreateColorSwatch(owner, { size = dimensions[1] })
+
+        for _, dimensions in ipairs({
+            { 28, 20 },
+            { 40, 28 },
+        }) do
+            local button =
+                lib:_CreateColorSwatch(owner, { size = dimensions[1] })
             button:SetValue(red)
             assert(button.swatch:GetWidth() == dimensions[2])
             assert(button.swatch:GetHeight() == dimensions[2])
@@ -178,43 +255,78 @@ return function(lib, makeFrame, inputState)
             lib:_RefreshControlAppearance(button)
             assert(button.swatchMask == mask and #button.swatch.masks == 1)
             equalColor(button.color, red)
-            assert(button.swatch.color[4] == red.a, "masked fills must retain opacity")
+            assert(
+                button.swatch.color[4] == red.a,
+                "masked fills must retain opacity"
+            )
 
             button:SetSelected(true)
             button.scripts.OnEnter(button)
             assert(button.hover:IsShown())
             button:_FocusForTab()
             button.scripts.OnLeave(button)
-            assert(button.hover:IsShown(), "keyboard focus must preserve hover after mouse leave")
+            assert(
+                button.hover:IsShown(),
+                "keyboard focus must preserve hover after mouse leave"
+            )
             lib:_ClearNavigationFocus()
-            assert(not button.hover:IsShown() and button.selection:IsShown(),
-                "selection must persist without hover or keyboard focus")
+            assert(
+                not button.hover:IsShown() and button.selection:IsShown(),
+                "selection must persist without hover or keyboard focus"
+            )
 
             button.scripts.OnEnter(button)
             button:_FocusForTab()
             lib:_ClearNavigationFocus()
-            assert(button.hover:IsShown(), "mouse hover must persist after keyboard focus clears")
+            assert(
+                button.hover:IsShown(),
+                "mouse hover must persist after keyboard focus clears"
+            )
             button:_FocusForTab()
             button:SetControlEnabled(false)
-            assert(not button.hover:IsShown() and lib._navigationKeyboardFrame.control == nil)
+            assert(
+                not button.hover:IsShown()
+                    and lib._navigationKeyboardFrame.control == nil
+            )
             button:SetControlEnabled(true)
             assert(not button.hover:IsShown())
             button.scripts.OnEnter(button)
             button:Hide()
             button.scripts.OnHide(button)
             button:Show()
-            assert(not button.hover:IsShown(), "reopening must not restore stale hover")
+            assert(
+                not button.hover:IsShown(),
+                "reopening must not restore stale hover"
+            )
         end
+
         local texture = owner:CreateTexture(nil, "ARTWORK")
+
         for _, invalid in ipairs({ 0, -1, math.huge, 0 / 0, "40" }) do
-            assert(not pcall(lib.ApplyTertiarySquareArtwork, lib, owner, texture, invalid))
+            assert(
+                not pcall(
+                    lib.ApplyTertiarySquareArtwork,
+                    lib,
+                    owner,
+                    texture,
+                    invalid
+                )
+            )
         end
     end
+
     assert(#notifications == 0)
     local returned = control:GetValue()
     returned.r = 0
     assert(control:GetValue().r == 1 and red.r == 1)
-    assert(not pcall(function() control:SetValue({ r = 1, g = 1, b = 1, mode = "unknown" }) end))
+    assert(not pcall(function()
+        control:SetValue({
+            r = 1,
+            g = 1,
+            b = 1,
+            mode = "unknown",
+        })
+    end))
     control.buttons.class:Click()
     assert(control:GetValue().mode == "class")
     equalColor(control:GetValue(), C_ClassColor.GetClassColor())
@@ -251,17 +363,28 @@ return function(lib, makeFrame, inputState)
     assert(picker.hex:HasFocus())
     assert(#picker.messages.messages == 0)
     assert(#picker.classColors == 2, "Class must contain playable classes only")
-    assert(#picker.qualityColors == 9, "Quality must contain all item qualities")
-    assert(picker.classColors[1].label == "Mage" and picker.classColors[2].label == "Warrior")
+    assert(
+        #picker.qualityColors == 9,
+        "Quality must contain all item qualities"
+    )
+    assert(
+        picker.classColors[1].label == "Mage"
+            and picker.classColors[2].label == "Warrior"
+    )
+
     for quality = Enum.ItemQuality.Poor, Enum.ItemQuality.WoWToken do
         local entry = picker.qualityColors[quality + 1]
         equalColor(entry.color, qualityColors[quality])
         assert(entry.label == _G["ITEM_QUALITY" .. quality .. "_DESC"])
     end
+
     equalColor(picker.session.original, red)
     assert(picker.hex:GetValue() == "FF0000")
     picker:SetColor(blue)
-    assert(#notifications == count, "pending picker edits must not change the consumer")
+    assert(
+        #notifications == count,
+        "pending picker edits must not change the consumer"
+    )
     picker:Cancel()
     equalColor(control:GetValue(), red)
     assert(control:GetValue().mode == "custom")
@@ -321,12 +444,22 @@ return function(lib, makeFrame, inputState)
     picker:Apply()
     assert(picker.session and #picker.messages.messages == 1)
     assert(picker.messages.messages[1].message:find("RRGGBB"))
-    assert(picker.frame:GetHeight() == pickerHeight, "validation errors must not resize the picker")
+    assert(
+        picker.frame:GetHeight() == pickerHeight,
+        "validation errors must not resize the picker"
+    )
     assert(picker.hex:HasFocus(), "invalid hex must retain focus")
     local errorInput = picker.errorInput
     picker.messages.messages[1].close:Click()
-    assert(picker.session and picker.hex:HasFocus() and #picker.messages.messages == 0)
-    assert(picker.errorInput == errorInput, "dismissing feedback must not change validation state")
+    assert(
+        picker.session
+            and picker.hex:HasFocus()
+            and #picker.messages.messages == 0
+    )
+    assert(
+        picker.errorInput == errorInput,
+        "dismissing feedback must not change validation state"
+    )
     picker.hex:SetText("00FF00")
     picker:Apply()
     assert(control:GetValue().g == 1 and control:GetValue().a == 0.4)
@@ -343,26 +476,43 @@ return function(lib, makeFrame, inputState)
 
         picker.hex.scripts.OnTabPressed(picker.hex)
         assert(inputState.keyboardFocus ~= picker.hex)
-        assert(messages.messages[1] == notice,
-            "committing on Tab must not dismiss an existing flash message")
+        assert(
+            messages.messages[1] == notice,
+            "committing on Tab must not dismiss an existing flash message"
+        )
         picker:CommitInputs()
         picker.inputs.r:FocusValue()
         picker.inputs.r:SetText("128")
         picker.inputs.r.scripts.OnEnterPressed(picker.inputs.r)
         assert(not picker.inputError and not picker.errorInput)
-        assert(messages.messages[1] == notice,
-            "valid submission must clear validation state without dismissing feedback")
+        assert(
+            messages.messages[1] == notice,
+            "valid submission must clear validation state without dismissing feedback"
+        )
 
         picker.opacity:_HandleSliderValueChanged(60)
         picker:SetHSV(0.2, 0.4, 0.8)
         picker.classes.buttons[1]:Click()
         picker:RefreshPalettes()
-        assert(#messages.messages == 1 and messages.messages[1] == notice and notice.age == 1,
-            "color changes and palette refreshes must preserve the message and its lifetime")
-        update(messages.frame, messages.duration - 1 + messages.fadeDuration / 2)
-        assert(messages.messages[1] == notice and notice.frame.alpha > 0 and notice.frame.alpha < 1)
+        assert(
+            #messages.messages == 1
+                and messages.messages[1] == notice
+                and notice.age == 1,
+            "color changes and palette refreshes must preserve the message and its lifetime"
+        )
+        update(
+            messages.frame,
+            messages.duration - 1 + messages.fadeDuration / 2
+        )
+        assert(
+            messages.messages[1] == notice
+                and notice.frame.alpha > 0
+                and notice.frame.alpha < 1
+        )
         update(messages.frame, messages.fadeDuration)
-        assert(#messages.messages == 0 and not messages.frame:GetScript("OnUpdate"))
+        assert(
+            #messages.messages == 0 and not messages.frame:GetScript("OnUpdate")
+        )
         picker:Cancel()
     end
 
@@ -386,25 +536,44 @@ return function(lib, makeFrame, inputState)
         case.input:FocusValue()
         case.input:SetText(case.value)
         local isMouseButtonDown = IsMouseButtonDown
+
         IsMouseButtonDown = function()
             return true
         end
+
         case.input:ClearFocus()
         IsMouseButtonDown = isMouseButtonDown
-        assert(lib._pendingEditBoxCommits[case.input], "mouse-down must defer validation")
+        assert(
+            lib._pendingEditBoxCommits[case.input],
+            "mouse-down must defer validation"
+        )
         picker.apply:Click()
-        assert(picker.session and #picker.messages.messages == 1, "invalid mouse Apply must stay open")
-        assert(case.input:HasFocus() and inputState.keyboardFocus == case.input,
-            "failed Apply must restore focus to the field that reported the error")
+        assert(
+            picker.session and #picker.messages.messages == 1,
+            "invalid mouse Apply must stay open"
+        )
+        assert(
+            case.input:HasFocus() and inputState.keyboardFocus == case.input,
+            "failed Apply must restore focus to the field that reported the error"
+        )
         assert(not lib._pendingEditBoxCommits[case.input])
         case.input.scripts.OnTabPressed(case.input)
-        assert(inputState.keyboardFocus and inputState.keyboardFocus ~= case.input,
-            "Tab must work after failed mouse Apply")
+        assert(
+            inputState.keyboardFocus and inputState.keyboardFocus ~= case.input,
+            "Tab must work after failed mouse Apply"
+        )
         picker.cancel:Click()
-        assert(#picker.messages.messages == 0 and not picker.messages.frame:GetScript("OnUpdate"),
-            "closing the picker must clear its notifications")
-        assert(not picker.session and lib._navigationKeyboardFrame.control == control.buttons.custom,
-            "Cancel must restore the owning input's focus after a validation error")
+        assert(
+            #picker.messages.messages == 0
+                and not picker.messages.frame:GetScript("OnUpdate"),
+            "closing the picker must clear its notifications"
+        )
+        assert(
+            not picker.session
+                and lib._navigationKeyboardFrame.control
+                    == control.buttons.custom,
+            "Cancel must restore the owning input's focus after a validation error"
+        )
     end
 
     control:OpenPicker()
@@ -477,21 +646,35 @@ return function(lib, makeFrame, inputState)
         local emptyRowHeight = picker.favorites.frame:GetHeight()
         local columns = picker.favorites.columns
         local favorites = {}
+
         for index = 1, columns + 1 do
             favorites[index] = CreateColor(index / 20, 0.2, 0.3, 0.4)
             picker:ToggleFavorite(favorites[index])
+
             if index <= columns then
-                assert(picker.frame:GetHeight() == emptyHeight, "first-row favorites must not resize the picker")
+                assert(
+                    picker.frame:GetHeight() == emptyHeight,
+                    "first-row favorites must not resize the picker"
+                )
                 assert(picker.favorites.frame:GetHeight() == emptyRowHeight)
             end
         end
-        assert(picker.frame:GetHeight() > emptyHeight, "the next favorite must add a second row")
+
+        assert(
+            picker.frame:GetHeight() > emptyHeight,
+            "the next favorite must add a second row"
+        )
         picker:ToggleFavorite(favorites[columns + 1])
         assert(picker.frame:GetHeight() == emptyHeight)
+
         for index = 1, columns do
             picker:ToggleFavorite(favorites[index])
         end
-        assert(picker.frame:GetHeight() == emptyHeight and picker.favorites.empty:IsShown())
+
+        assert(
+            picker.frame:GetHeight() == emptyHeight
+                and picker.favorites.empty:IsShown()
+        )
 
         local quality = picker.qualities.buttons[Enum.ItemQuality.Epic + 1]
         quality:Click()
@@ -511,7 +694,10 @@ return function(lib, makeFrame, inputState)
     local oldSession = picker.session
     rgb:OpenPicker()
     lib:_CloseColorPicker(oldSession.owner, true)
-    assert(picker.session.owner == rgb, "an old owner must not close or apply another input's picker")
+    assert(
+        picker.session.owner == rgb,
+        "an old owner must not close or apply another input's picker"
+    )
     picker:Cancel()
     rgb.buttons.custom:_FocusForTab()
     assert(lib:_HandleNavigationKey(rgb.buttons.custom, "SPACE"))
@@ -542,20 +728,36 @@ return function(lib, makeFrame, inputState)
     customButton:SetHighlightTexture(legacyHighlight)
     customButton:LockHighlight()
     legacyHighlight:Show()
-    for _, module in ipairs({ "Utilities/Color", "Controls/Color", "Utilities/ColorPicker" }) do
+
+    for _, module in ipairs({
+        "Utilities/Color",
+        "Controls/Color",
+        "Utilities/ColorPicker",
+    }) do
         lib._loadedModules[module] = nil
         dofile(module .. ".lua")
     end
+
     assert(control.buttons.custom.swatchMask == customMask)
-    assert(#control.buttons.custom.swatch.masks == 1, "compatible upgrades must reuse the attached mask")
-    assert(not legacyHighlight:IsShown() and legacyHighlight.atlas == nil,
-        "upgrading must retire the old native highlight")
-    assert(not customButton.hover:IsShown() and not customButton.highlightLocked)
+    assert(
+        #control.buttons.custom.swatch.masks == 1,
+        "compatible upgrades must reuse the attached mask"
+    )
+    assert(
+        not legacyHighlight:IsShown() and legacyHighlight.atlas == nil,
+        "upgrading must retire the old native highlight"
+    )
+    assert(
+        not customButton.hover:IsShown() and not customButton.highlightLocked
+    )
     customButton.scripts.OnEnter(customButton)
     assert(customButton.hover:IsShown())
     customButton.scripts.OnLeave(customButton)
     assert(not customButton.hover:IsShown())
-    assert(lib._colorPalettePrototype == methods and lib._colorPickerPrototype == originalPrototype)
+    assert(
+        lib._colorPalettePrototype == methods
+            and lib._colorPickerPrototype == originalPrototype
+    )
     rgb:SetValue(blue)
     rgb:OpenPicker()
     assert(lib._colorPicker == picker and picker.session.owner == rgb)
@@ -566,7 +768,10 @@ return function(lib, makeFrame, inputState)
     lib._loadedModules["Controls/Color"] = nil
     lib._implementationMinor = currentMinor + 1
     dofile("Controls/Color.lua")
-    assert(lib._controlTypes.color.factory == factory, "an older embed must not replace a newer control")
+    assert(
+        lib._controlTypes.color.factory == factory,
+        "an older embed must not replace a newer control"
+    )
     lib._implementationMinor = currentMinor
     lib._loadedModules["Controls/Color"] = currentMinor
     dofile("tests/color_preview.lua")(lib, makeFrame)

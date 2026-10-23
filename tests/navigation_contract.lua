@@ -17,6 +17,7 @@ return function(lib, makeFrame, inputState, key)
         control.releases = 0
         return control
     end
+
     local methods = {
         Add = function(control, amount)
             control.value = control.value + amount
@@ -34,8 +35,14 @@ return function(lib, makeFrame, inputState, key)
         actions = {
             activate = function(control, context)
                 assert(saved == "Committed")
-                assert(context.source == "keyboard" and context.direction == nil)
-                assert(context.modifiers.control and context.modifiers.alt and context.modifiers.meta)
+                assert(
+                    context.source == "keyboard" and context.direction == nil
+                )
+                assert(
+                    context.modifiers.control
+                        and context.modifiers.alt
+                        and context.modifiers.meta
+                )
                 control:Add(1)
                 return true
             end,
@@ -53,8 +60,11 @@ return function(lib, makeFrame, inputState, key)
     lib:RegisterControlNavigation("navigationExample", options)
     local second = lib:CreateControl("navigationExample", root)
     second:SetPoint("TOPLEFT", root, "TOPLEFT", 0, -100)
-    assert(first:_GetTabInput() == first.input and second:_GetTabInput() == second.input,
-        "registration must reach both existing and future instances")
+    assert(
+        first:_GetTabInput() == first.input
+            and second:_GetTabInput() == second.input,
+        "registration must reach both existing and future instances"
+    )
 
     text:FocusValue()
     text:SetText("Committed")
@@ -73,7 +83,10 @@ return function(lib, makeFrame, inputState, key)
     inputState.modifiers.alt = false
     inputState.modifiers.meta = false
     key("UP")
-    assert(first.value == 2 and keyboard.propagateKeyboardInput, "unhandled actions must pass through")
+    assert(
+        first.value == 2 and keyboard.propagateKeyboardInput,
+        "unhandled actions must pass through"
+    )
     key("TAB")
     assert(first.releases == 1 and not first.focused and second.focused)
     inputState.modifiers.shift = true
@@ -83,56 +96,108 @@ return function(lib, makeFrame, inputState, key)
 
     -- Updating descriptors and prototypes must affect live instances without stacking hooks.
     local hooks = #first.input.scriptHooks.OnHide
+
     options.actions.activate = function(control)
         control:Add(10)
         return true
     end
+
     options.highlight = function(control, focused)
         control.focused = focused
         control.updatedHighlight = true
     end
+
     lib:RegisterControlNavigation("navigationExample", options)
     lib:RegisterControlType("navigationExample", factory, methods)
-    assert(first.focused and first.updatedHighlight and keyboard.control == first)
+    assert(
+        first.focused and first.updatedHighlight and keyboard.control == first
+    )
     assert(#first.input.scriptHooks.OnHide == hooks)
     key("SPACE")
     assert(first.value == 12)
-    options.actions.activate = function() error("registration must own a copy of the action map") end
+
+    options.actions.activate = function()
+        error("registration must own a copy of the action map")
+    end
+
     key("ENTER")
     assert(first.value == 22)
 
     for _, case in ipairs({
         { nil, "options must be a table" },
-        { { mode = "unknown" }, "mode must be" },
-        { { actions = false }, "actions must be a table" },
-        { { actions = { activate = true } }, "actions must map names to functions" },
-        { { actions = { [1] = function() end } }, "actions must map names to functions" },
+        {
+            { mode = "unknown" },
+            "mode must be",
+        },
+        {
+            { actions = false },
+            "actions must be a table",
+        },
+        {
+            { actions = { activate = true } },
+            "actions must map names to functions",
+        },
+        {
+            {
+                actions = {
+                    [1] = function() end,
+                },
+            },
+            "actions must map names to functions",
+        },
     }) do
-        local ok, message = pcall(lib.RegisterControlNavigation, lib, "navigationExample", case[1])
+        local ok, message = pcall(
+            lib.RegisterControlNavigation,
+            lib,
+            "navigationExample",
+            case[1]
+        )
         assert(not ok and message:find(case[2], 1, true))
     end
+
     for _, name in ipairs({ "input", "focus", "release", "highlight", "hover" }) do
-        local ok = pcall(lib.RegisterControlNavigation, lib, "navigationExample", { [name] = true })
+        local ok = pcall(
+            lib.RegisterControlNavigation,
+            lib,
+            "navigationExample",
+            { [name] = true }
+        )
         assert(not ok)
     end
+
     assert(not pcall(lib.RegisterControlNavigation, lib, "notRegistered", {}))
     key("ENTER")
-    assert(first.value == 32, "invalid descriptors must leave the working registration intact")
+    assert(
+        first.value == 32,
+        "invalid descriptors must leave the working registration intact"
+    )
 
     local sharedCalls = 0
-    local originalHandler = lib._navigationControlMethods._HandleNavigationAction
-    lib._navigationControlMethods._HandleNavigationAction = function(control, ...)
+    local originalHandler =
+        lib._navigationControlMethods._HandleNavigationAction
+
+    lib._navigationControlMethods._HandleNavigationAction = function(
+        control,
+        ...
+    )
         sharedCalls = sharedCalls + 1
         return originalHandler(control, ...)
     end
+
     key("SPACE")
-    assert(sharedCalls == 1 and first.value == 42,
-        "shared method upgrades must reach existing custom types without re-registering them")
+    assert(
+        sharedCalls == 1 and first.value == 42,
+        "shared method upgrades must reach existing custom types without re-registering them"
+    )
     lib._navigationControlMethods._HandleNavigationAction = originalHandler
     local dispatcher = first._GetTabInput
     lib._loadedModules["Utilities/ControlNavigation"] = nil
     dofile("Utilities/ControlNavigation.lua")
-    assert(first._GetTabInput == dispatcher and first.focused and keyboard.control == first)
+    assert(
+        first._GetTabInput == dispatcher
+            and first.focused
+            and keyboard.control == first
+    )
     assert(#first.input.scriptHooks.OnHide == hooks)
 
     first.input:SetEnabled(false)
@@ -143,7 +208,11 @@ return function(lib, makeFrame, inputState, key)
     local releases = second.releases
     second:Hide()
     second.input.scripts.OnHide(second.input)
-    assert(second.releases == releases + 1 and not second.focused and keyboard.control == nil)
+    assert(
+        second.releases == releases + 1
+            and not second.focused
+            and keyboard.control == nil
+    )
     second:Show()
     second:_FocusForTab()
     inputState.inCombat = true
@@ -192,11 +261,20 @@ return function(lib, makeFrame, inputState, key)
     second:_FocusForTab()
     editor:_FocusForTab()
     assert(focusCalls == 1 and callbackFocuses == 1 and keyboard.control == nil)
-    assert(editor.input.scripts.OnKeyDown == nil and editor.input.scripts.OnArrowPressed == nil)
-    assert(editor.input.scripts.OnEnterPressed == nil and editor.input.scripts.OnEscapePressed == nil)
+    assert(
+        editor.input.scripts.OnKeyDown == nil
+            and editor.input.scripts.OnArrowPressed == nil
+    )
+    assert(
+        editor.input.scripts.OnEnterPressed == nil
+            and editor.input.scripts.OnEscapePressed == nil
+    )
     editor.accepted = false
     editor.input.scripts.OnTabPressed(editor.input)
-    assert(commits == 1 and not following:HasFocus(), "a rejected release must stop traversal")
+    assert(
+        commits == 1 and not following:HasFocus(),
+        "a rejected release must stop traversal"
+    )
     editor.accepted = true
     editor:_FocusForTab()
     editor.input.scripts.OnTabPressed(editor.input)

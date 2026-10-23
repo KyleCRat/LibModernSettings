@@ -1,8 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Utilities/ColorPicker", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Utilities/ColorPicker", MINOR)
+then
     return
 end
 
@@ -24,10 +27,26 @@ local PALETTE_LABEL_GAP = 4
 local ACTION_BUTTON_GAP = 8
 local ACTION_BUTTON_WIDTH = (DETAIL_WIDTH - ACTION_BUTTON_GAP) / 2
 local CHANNELS = {
-    { key = "r", label = "R", max = 255 },
-    { key = "g", label = "G", max = 255 },
-    { key = "b", label = "B", max = 255 },
-    { key = "a", label = "A (%)", max = 100 },
+    {
+        key = "r",
+        label = "R",
+        max = 255,
+    },
+    {
+        key = "g",
+        label = "G",
+        max = 255,
+    },
+    {
+        key = "b",
+        label = "B",
+        max = 255,
+    },
+    {
+        key = "a",
+        label = "A (%)",
+        max = 100,
+    },
 }
 
 lib._colorPickerPrototype = lib._colorPickerPrototype or {}
@@ -35,7 +54,11 @@ local Picker = lib._colorPickerPrototype
 Picker.__index = Picker
 
 local function text(parent, label, x, y, width)
-    local region = lib:CreateText(parent, { text = label, width = width, fontObject = GameFontHighlight })
+    local region = lib:CreateText(parent, {
+        text = label,
+        width = width,
+        fontObject = GameFontHighlight,
+    })
     region:SetPoint("TOPLEFT", parent, "TOPLEFT", x, -y)
     return region
 end
@@ -62,27 +85,38 @@ local function makeDragSurface(picker, width, height, x, y, update)
     frame:SetSize(width, height)
     position(frame, x, y)
     frame:EnableMouse(true)
+
     local function fromCursor()
         local cursorX, cursorY = GetCursorPosition()
         local scale = frame:GetEffectiveScale()
-        update(Color.Clamp((cursorX / scale - frame:GetLeft()) / frame:GetWidth()),
-            Color.Clamp((frame:GetTop() - cursorY / scale) / frame:GetHeight()))
+        update(
+            Color.Clamp((cursorX / scale - frame:GetLeft()) / frame:GetWidth()),
+            Color.Clamp((frame:GetTop() - cursorY / scale) / frame:GetHeight())
+        )
     end
+
     frame:SetScript("OnMouseDown", function(self, button)
         local session = picker.session
-        if not session or button ~= "LeftButton" or not picker:CommitInputs()
-            or picker.session ~= session then
+
+        if
+            not session
+            or button ~= "LeftButton"
+            or not picker:CommitInputs()
+            or picker.session ~= session
+        then
             return
         end
+
         fromCursor()
-        if picker.session ~= session then
-            return
-        end
+
+        if picker.session ~= session then return end
+
         self:SetScript("OnUpdate", function(surface)
             if not IsMouseButtonDown("LeftButton") then
                 stopDrag(surface)
                 return
             end
+
             fromCursor()
         end)
     end)
@@ -92,9 +126,8 @@ local function makeDragSurface(picker, width, height, x, y, update)
 end
 
 function Picker:ResizeToContent()
-    if not self.paletteBottom then
-        return
-    end
+    if not self.paletteBottom then return end
+
     local height = self.paletteBottom + PAD
     self.frame:SetHeight(height)
     self.frame:SetScale(math.min(1, (UIParent:GetHeight() - 32) / height))
@@ -103,9 +136,8 @@ end
 function Picker:SetError(message, input)
     self.inputError = message ~= nil
     self.errorInput = message and input or nil
-    if message then
-        self.messages:Show(message, "error")
-    end
+
+    if message then self.messages:Show(message, "error") end
 end
 
 function Picker:Sync()
@@ -113,29 +145,51 @@ function Picker:Sync()
     local r, g, b = Color.FromHSV(self.hue, 1, 1)
     self.hueTexture:SetColorTexture(r, g, b, 1)
     self.cursor:ClearAllPoints()
-    self.cursor:SetPoint("CENTER", self.square, "TOPLEFT", self.saturation * SQUARE, -(1 - self.brightness) * SQUARE)
+    self.cursor:SetPoint(
+        "CENTER",
+        self.square,
+        "TOPLEFT",
+        self.saturation * SQUARE,
+        -(1 - self.brightness) * SQUARE
+    )
     self.hueCursor:ClearAllPoints()
-    self.hueCursor:SetPoint("CENTER", self.hueStrip, "TOP", 0, -self.hue * SQUARE)
+    self.hueCursor:SetPoint(
+        "CENTER",
+        self.hueStrip,
+        "TOP",
+        0,
+        -self.hue * SQUARE
+    )
     self.current:SetValue(color)
     self.hex:SetValue(Color.Hex(color))
+
     for _, channel in ipairs(CHANNELS) do
-        self.inputs[channel.key]:SetValue(tostring(math.floor(color[channel.key] * channel.max + 0.5)))
+        self.inputs[channel.key]:SetValue(
+            tostring(math.floor(color[channel.key] * channel.max + 0.5))
+        )
     end
+
     self.opacity:SetValue(color.a * 100)
     self:NotifyPreview()
 end
 
 function Picker:NotifyPreview()
     local session = self.session
-    if not session or not session.onPreview then
-        return
-    end
+
+    if not session or not session.onPreview then return end
+
     local color = self.color
     local previous = session.previewColor or session.original
-    if color.r == previous.r and color.g == previous.g
-        and color.b == previous.b and color.a == previous.a then
+
+    if
+        color.r == previous.r
+        and color.g == previous.g
+        and color.b == previous.b
+        and color.a == previous.a
+    then
         return
     end
+
     session.previewColor = Color.Copy(color, session.owner.hasOpacity)
     local value = Color.Copy(session.previewColor)
     value.mode = "custom"
@@ -143,9 +197,8 @@ function Picker:NotifyPreview()
 end
 
 function Picker:SetColor(value)
-    if not self.session then
-        return
-    end
+    if not self.session then return end
+
     self.color = Color.Copy(value, self.session.owner.hasOpacity)
     local hue, saturation, brightness = Color.ToHSV(self.color)
     -- Achromatic colors have no hue; retain the user's hue-strip position.
@@ -157,11 +210,11 @@ function Picker:SetColor(value)
 end
 
 function Picker:SetHSV(hue, saturation, brightness)
-    if not self.session then
-        return
-    end
+    if not self.session then return end
+
     self.hue, self.saturation, self.brightness = hue, saturation, brightness
-    self.color.r, self.color.g, self.color.b = Color.FromHSV(hue, saturation, brightness)
+    self.color.r, self.color.g, self.color.b =
+        Color.FromHSV(hue, saturation, brightness)
     self:SetError()
     self:Sync()
 end
@@ -169,27 +222,30 @@ end
 function Picker:CommitInputs()
     local session = self.session
     local valid = self.hex:CommitAndClearFocus()
+
     for _, channel in ipairs(CHANNELS) do
-        if self.session ~= session then
-            return false
-        end
+        if self.session ~= session then return false end
+
         if not self.inputs[channel.key]:CommitAndClearFocus() then
             valid = false
         end
     end
+
     local input = self.opacity.valueBox
-    if input:HasFocus() then
-        input:ClearFocus()
-    end
+
+    if input:HasFocus() then input:ClearFocus() end
+
     lib:_FlushPendingEditBoxCommit(input)
     return valid
 end
 
 function Picker:DiscardInputs()
     self.hex:CancelAndClearFocus()
+
     for _, input in pairs(self.inputs) do
         input:CancelAndClearFocus()
     end
+
     self.opacity:SetValue(self.opacity:GetValue())
     self.opacity.valueBox:ClearFocus()
 end
@@ -202,23 +258,30 @@ end
 
 function Picker:Apply()
     local session = self.session
-    if not session then
-        return
-    end
+
+    if not session then return end
+
     local valid = self:CommitInputs()
-    if self.session ~= session then
-        return
-    end
+
+    if self.session ~= session then return end
+
     if not valid or self.inputError then
         self.inputError = nil
         local input = self.errorInput
         local focused = GetCurrentKeyBoardFocus()
-        if input and input:IsVisible() and input:IsEnabled()
-            and (not focused or focused == input) then
+
+        if
+            input
+            and input:IsVisible()
+            and input:IsEnabled()
+            and (not focused or focused == input)
+        then
             input:FocusValue()
         end
+
         return
     end
+
     lib:_CloseColorPicker(self.session.owner, true, true)
 end
 
@@ -230,38 +293,46 @@ end
 
 function Picker:Populate(row, colors, y)
     position(row.frame, PAD, y)
+
     for index, entry in ipairs(colors) do
         local button = row.buttons[index]
+
         if not button then
             button = lib:_CreateColorSwatch(row.frame, { size = SWATCH_SIZE })
             row.buttons[index] = button
+
             button.onClick = function(mouseButton)
                 if mouseButton == "RightButton" then
                     self:ToggleFavorite(button.color)
                 else
                     local color = Color.Copy(button.color)
-                    if button.preserveOpacity then
-                        color.a = self.color.a
-                    end
+
+                    if button.preserveOpacity then color.a = self.color.a end
+
                     self:SetColor(color)
                 end
             end
         end
+
         button.preserveOpacity = entry.preserveOpacity
         button:SetValue(entry.color or entry)
         button:SetSelected(false)
-        position(button,
+        position(
+            button,
             row.swatchOffset + ((index - 1) % row.columns) * SWATCH_STEP,
-            math.floor((index - 1) / row.columns) * SWATCH_STEP)
+            math.floor((index - 1) / row.columns) * SWATCH_STEP
+        )
         lib:SetTooltip(button, {
             title = entry.label or ("#" .. Color.Hex(button.color)),
             text = "Left-click to use. Right-click to toggle favorite.",
         })
         button:Show()
     end
+
     for index = #colors + 1, #row.buttons do
         row.buttons[index]:Hide()
     end
+
     row.empty:SetShown(#colors == 0)
     local rows = math.max(1, math.ceil(#colors / row.columns))
     local height = SWATCH_SIZE + (rows - 1) * SWATCH_STEP
@@ -290,7 +361,8 @@ local function createPaletteRow(picker, label, emptyText)
     caption:SetHeight(SWATCH_SIZE)
     caption:SetJustifyH("RIGHT")
     caption:SetJustifyV("MIDDLE")
-    local empty = text(frame, emptyText or "", swatchOffset, 0, width - swatchOffset)
+    local empty =
+        text(frame, emptyText or "", swatchOffset, 0, width - swatchOffset)
     empty:SetFontObject(GameFontHighlightSmall)
     empty:SetHeight(SWATCH_SIZE)
     empty:SetJustifyV("MIDDLE")
@@ -305,7 +377,12 @@ local function createPaletteRow(picker, label, emptyText)
 end
 
 local function createPicker()
-    local frame = CreateFrame("Frame", "LibModernSettingsColorPicker1", UIParent, "ButtonFrameTemplate")
+    local frame = CreateFrame(
+        "Frame",
+        "LibModernSettingsColorPicker1",
+        UIParent,
+        "ButtonFrameTemplate"
+    )
     frame:Hide()
     frame:SetSize(WIDTH, 660)
     frame:SetFrameStrata("DIALOG")
@@ -346,44 +423,81 @@ local function createPicker()
         picker:Cancel()
     end)
     frame:SetScript("OnHide", function()
-        if picker.session then
-            lib:_CloseColorPicker(picker.session.owner)
-        end
+        if picker.session then lib:_CloseColorPicker(picker.session.owner) end
+
         frame:StopMovingOrSizing()
     end)
 
-    picker.square = makeDragSurface(picker, SQUARE, SQUARE, PAD, TOP, function(x, y)
-        picker:SetHSV(picker.hue, x, 1 - y)
-    end)
+    picker.square = makeDragSurface(
+        picker,
+        SQUARE,
+        SQUARE,
+        PAD,
+        TOP,
+        function(x, y)
+            picker:SetHSV(picker.hue, x, 1 - y)
+        end
+    )
     picker.hueTexture = picker.square:CreateTexture(nil, "BACKGROUND")
     picker.hueTexture:SetAllPoints()
-    gradient(picker.square, "BORDER", "HORIZONTAL", CreateColor(1, 1, 1, 1), CreateColor(1, 1, 1, 0))
-    gradient(picker.square, "ARTWORK", "VERTICAL", CreateColor(0, 0, 0, 1), CreateColor(0, 0, 0, 0))
+    gradient(
+        picker.square,
+        "BORDER",
+        "HORIZONTAL",
+        CreateColor(1, 1, 1, 1),
+        CreateColor(1, 1, 1, 0)
+    )
+    gradient(
+        picker.square,
+        "ARTWORK",
+        "VERTICAL",
+        CreateColor(0, 0, 0, 1),
+        CreateColor(0, 0, 0, 0)
+    )
     picker.cursor = picker.square:CreateTexture(nil, "OVERLAY")
     picker.cursor:SetTexture("Interface\\Buttons\\UI-ColorPicker-Buttons")
     picker.cursor:SetTexCoord(0, 0.15625, 0, 0.625)
     picker.cursor:SetSize(10, 10)
 
-    picker.hueStrip = makeDragSurface(picker, HUE_WIDTH, SQUARE, HUE_X, TOP, function(_, y)
-        picker:SetHSV(y, picker.saturation, picker.brightness)
-    end)
+    picker.hueStrip = makeDragSurface(
+        picker,
+        HUE_WIDTH,
+        SQUARE,
+        HUE_X,
+        TOP,
+        function(_, y)
+            picker:SetHSV(y, picker.saturation, picker.brightness)
+        end
+    )
+
     for index = 0, 5 do
         local r1, g1, b1 = Color.FromHSV(index / 6, 1, 1)
         local r2, g2, b2 = Color.FromHSV((index + 1) / 6, 1, 1)
-        local segment = gradient(picker.hueStrip, "BACKGROUND", "VERTICAL",
-            CreateColor(r2, g2, b2, 1), CreateColor(r1, g1, b1, 1))
+        local segment = gradient(
+            picker.hueStrip,
+            "BACKGROUND",
+            "VERTICAL",
+            CreateColor(r2, g2, b2, 1),
+            CreateColor(r1, g1, b1, 1)
+        )
         segment:ClearAllPoints()
         segment:SetPoint("TOPLEFT", 0, -index * SQUARE / 6)
         segment:SetSize(HUE_WIDTH, SQUARE / 6)
     end
+
     picker.hueCursor = picker.hueStrip:CreateTexture(nil, "OVERLAY")
     picker.hueCursor:SetSize(HUE_WIDTH + 6, 3)
     picker.hueCursor:SetColorTexture(1, 1, 1, 1)
 
-    for index, definition in ipairs({ { key = "current", label = "New" }, { key = "previous", label = "Previous" } }) do
+    for index, definition in ipairs({
+        { key = "current", label = "New" },
+        { key = "previous", label = "Previous" },
+    }) do
         local button = lib:_CreateColorSwatch(frame, {
             onClick = function(mouseButton)
-                local color = definition.key == "current" and picker.color or picker.session.original
+                local color = definition.key == "current" and picker.color
+                    or picker.session.original
+
                 if mouseButton == "RightButton" then
                     picker:ToggleFavorite(color)
                 elseif definition.key == "previous" then
@@ -395,21 +509,24 @@ local function createPicker()
         local x = DETAIL_X + (index - 1) * sampleWidth
         position(button, x, TOP)
         text(frame, definition.label, x + 38, TOP + 10, sampleWidth - 38)
-        lib:SetTooltip(button, { title = definition.label, text = "Right-click to toggle favorite." })
+        lib:SetTooltip(button, {
+            title = definition.label,
+            text = "Right-click to toggle favorite.",
+        })
         picker[definition.key] = button
     end
+
     text(frame, "Hex", DETAIL_X, TOP + 40, DETAIL_WIDTH)
     picker.hex = lib:CreateTextInput(frame, {
         width = DETAIL_WIDTH,
         maxLetters = 9, -- Eight hex digits plus an optional # prefix.
         onCommit = function(value)
-            if not picker.session then
-                return value
-            end
+            if not picker.session then return value end
+
             local color, message = Color.ParseHex(value, picker.color.a)
-            if not color then
-                return nil, message
-            end
+
+            if not color then return nil, message end
+
             picker:SetColor(color)
             return Color.Hex(picker.color)
         end,
@@ -418,6 +535,7 @@ local function createPicker()
         end,
     })
     position(picker.hex, DETAIL_X, TOP + 58)
+
     for _, channel in ipairs(CHANNELS) do
         local input = lib:CreateTextInput(frame, {
             width = 44,
@@ -425,13 +543,23 @@ local function createPicker()
             justifyH = "CENTER",
             maxLetters = 8,
             onCommit = function(value)
-                if not picker.session then
-                    return value
-                end
+                if not picker.session then return value end
+
                 local number = tonumber(value)
-                if not number or number ~= number or number < 0 or number > channel.max then
-                    return nil, channel.label .. " must be between 0 and " .. channel.max .. "."
+
+                if
+                    not number
+                    or number ~= number
+                    or number < 0
+                    or number > channel.max
+                then
+                    return nil,
+                        channel.label
+                            .. " must be between 0 and "
+                            .. channel.max
+                            .. "."
                 end
+
                 number = math.floor(number + 0.5)
                 local color = Color.Copy(picker.color)
                 color[channel.key] = number / channel.max
@@ -446,6 +574,7 @@ local function createPicker()
         input.caption:SetJustifyH("CENTER")
         picker.inputs[channel.key] = input
     end
+
     picker.opacity = lib:CreateSlider(frame, {
         label = "Opacity (%)",
         width = DETAIL_WIDTH,
@@ -465,8 +594,10 @@ local function createPicker()
     })
     position(picker.opacity, DETAIL_X, TOP + 158)
 
-    picker.favorites = createPaletteRow(picker, "Favorites", "No favorites yet.")
-    picker.recent = createPaletteRow(picker, "Recent", "Applied colors will appear here.")
+    picker.favorites =
+        createPaletteRow(picker, "Favorites", "No favorites yet.")
+    picker.recent =
+        createPaletteRow(picker, "Recent", "Applied colors will appear here.")
     picker.classes = createPaletteRow(picker, "Class")
     picker.qualities = createPaletteRow(picker, "Quality")
     -- RAID_CLASS_COLORS also includes non-playable ADVENTURER/TRAVELER tokens.
@@ -477,9 +608,11 @@ local function createPicker()
             preserveOpacity = true,
         }
     end
+
     table.sort(picker.classColors, function(a, b)
         return a.label < b.label
     end)
+
     for quality = Enum.ItemQuality.Poor, Enum.ItemQuality.WoWToken do
         local r, g, b = C_Item.GetItemQualityColor(quality)
         picker.qualityColors[#picker.qualityColors + 1] = {
@@ -488,6 +621,7 @@ local function createPicker()
             preserveOpacity = true,
         }
     end
+
     picker.cancel = lib:CreateButton(frame, {
         text = "Cancel",
         variant = "small",
@@ -505,8 +639,11 @@ local function createPicker()
             picker:Apply()
         end,
     })
-    position(picker.apply, DETAIL_X + ACTION_BUTTON_WIDTH + ACTION_BUTTON_GAP,
-        TOP + SQUARE - picker.apply:GetHeight())
+    position(
+        picker.apply,
+        DETAIL_X + ACTION_BUTTON_WIDTH + ACTION_BUTTON_GAP,
+        TOP + SQUARE - picker.apply:GetHeight()
+    )
     return picker
 end
 
@@ -514,10 +651,15 @@ function lib:_OpenColorPicker(owner)
     if self._colorPicker and self._colorPicker.session then
         self:_CloseColorPicker(self._colorPicker.session.owner)
     end
+
     self._colorPicker = self._colorPicker or createPicker()
     local picker = self._colorPicker
     local original = owner:GetValue()
-    picker.session = { owner = owner, original = original, onPreview = owner.onPreview }
+    picker.session = {
+        owner = owner,
+        original = original,
+        onPreview = owner.onPreview,
+    }
     picker.hue = 0
     picker:SetColor(original)
     picker.previous:SetValue(original)
@@ -526,6 +668,7 @@ function lib:_OpenColorPicker(owner)
     picker.inputs.a.caption:SetShown(owner.hasOpacity)
     local count = owner.hasOpacity and 4 or 3
     local width = (DETAIL_WIDTH - (count - 1) * CHANNEL_GAP) / count
+
     for index = 1, count do
         local input = picker.inputs[CHANNELS[index].key]
         local x = DETAIL_X + (index - 1) * (width + CHANNEL_GAP)
@@ -533,8 +676,15 @@ function lib:_OpenColorPicker(owner)
         position(input, x, TOP + 116)
         input.caption:SetWidth(width)
         input.caption:ClearAllPoints()
-        input.caption:SetPoint("TOPLEFT", picker.frame, "TOPLEFT", x, -(TOP + 98))
+        input.caption:SetPoint(
+            "TOPLEFT",
+            picker.frame,
+            "TOPLEFT",
+            x,
+            -(TOP + 98)
+        )
     end
+
     picker:RefreshPalettes()
     picker.frame:SetFrameLevel(owner:GetFrameLevel() + 20)
     picker.frame:Show()
@@ -543,9 +693,11 @@ end
 
 function lib:_CloseColorPicker(owner, apply, returnFocus)
     local picker = self._colorPicker
+
     if not picker or not picker.session or picker.session.owner ~= owner then
         return
     end
+
     local session = picker.session
     local color = Color.Copy(picker.color, owner.hasOpacity)
     picker.session = nil
@@ -554,14 +706,20 @@ function lib:_CloseColorPicker(owner, apply, returnFocus)
     picker:DiscardInputs()
     picker.messages:Clear()
     picker.frame:Hide()
-    if session.previewColor then
-        session.onPreview(nil)
-    end
+
+    if session.previewColor then session.onPreview(nil) end
+
     if apply and owner.enabled and owner:IsVisible() then
         owner.palette:Record(color)
         owner:_AcceptPickerColor(color)
     end
-    if returnFocus and not picker.session and owner.enabled and owner:IsVisible() then
+
+    if
+        returnFocus
+        and not picker.session
+        and owner.enabled
+        and owner:IsVisible()
+    then
         owner.buttons.custom:_FocusForTab()
     end
 end

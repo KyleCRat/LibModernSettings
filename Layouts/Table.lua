@@ -1,8 +1,11 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Layouts/Table", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Layouts/Table", MINOR)
+then
     return
 end
 
@@ -53,7 +56,10 @@ local function resolveColumns(columns, innerWidth)
     local totalWeight = 0
     local keys = {}
 
-    assert(type(columns) == "table" and #columns > 0, "table columns are required")
+    assert(
+        type(columns) == "table" and #columns > 0,
+        "table columns are required"
+    )
 
     for index = 1, #columns do
         local source = columns[index]
@@ -166,7 +172,8 @@ function TableView:_ReflowRows()
         local row = self.rows[index]
         local rowFrame = row.frame
 
-        lib:_SetLayoutPoint(rowFrame,
+        lib:_SetLayoutPoint(
+            rowFrame,
             "TOPLEFT",
             self.frame,
             "TOPLEFT",
@@ -181,6 +188,7 @@ function TableView:_ReflowRows()
     local newHeight = self.headerHeight + rowsHeight
 
     self.frame:SetHeight(newHeight)
+
     if self.onHeightChanged and newHeight ~= oldHeight then
         self.onHeightChanged(self, newHeight, oldHeight)
     end
@@ -194,12 +202,7 @@ function TableView:AddHeaderText(columnKey, text, options)
     options = shallowCopy(options)
     options.fontObject = options.fontObject or GameFontNormalSmall
 
-    return addTextToCell(
-        self.headerCells[columnKey],
-        column,
-        text,
-        options
-    )
+    return addTextToCell(self.headerCells[columnKey], column, text, options)
 end
 
 function TableView:AddRow(options)
@@ -265,9 +268,7 @@ function TableRow:SetHeight(height)
         "settings table row height must be positive"
     )
 
-    if self.frame:GetHeight() == height then
-        return
-    end
+    if self.frame:GetHeight() == height then return end
 
     self.frame:SetHeight(height)
     self.tableView:_ReflowRows()
@@ -325,9 +326,7 @@ function lib:CreateSettingsTable(parent, options)
 
     local padding = options.padding
 
-    if padding == nil then
-        padding = DEFAULT_PADDING
-    end
+    if padding == nil then padding = DEFAULT_PADDING end
 
     assert(
         type(padding) == "number" and padding >= 0,
@@ -386,12 +385,7 @@ function lib:CreateSettingsTable(parent, options)
         tableView.columnsByKey[column.key] = column
     end
 
-    tableView.headerCells = createCells(
-        header,
-        columns,
-        padding,
-        headerHeight
-    )
+    tableView.headerCells = createCells(header, columns, padding, headerHeight)
 
     return tableView
 end

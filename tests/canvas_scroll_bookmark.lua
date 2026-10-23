@@ -4,15 +4,25 @@ return function(newEnvironment, loadVersion)
 
     local function createCanvas(env, library, heights)
         local page = env.CreateFrame("Frame")
-        local layout = library:CreateCanvasLayout(page, { width = 600, height = 200, scrollable = true })
+        local layout = library:CreateCanvasLayout(page, {
+            width = 600,
+            height = 200,
+            scrollable = true,
+        })
         local frames = {}
-        local expanded = { above = false, border = true, after = true }
+        local expanded = {
+            above = false,
+            border = true,
+            after = true,
+        }
+
         for index, key in ipairs({ "above", "border", "after" }) do
             local frame = env.CreateFrame("Frame", nil, layout:GetContent())
             frame:SetSize(layout:GetContentWidth(), heights[index])
             layout:GetRootFlow():AddFrame(frame, { fillWidth = true })
             frames[key] = frame
         end
+
         layout:GetRootFlow():AddSpacer(600)
         -- Deliberately register in a different order from their visual placement.
         for _, key in ipairs({ "after", "above", "border" }) do
@@ -23,6 +33,7 @@ return function(newEnvironment, loadVersion)
                 end,
             })
         end
+
         layout:Finalize()
         env.Flush()
         return layout, frames, expanded, page
@@ -33,31 +44,48 @@ return function(newEnvironment, loadVersion)
     end
 
     local function scroll(layout, offset)
-        layout:GetScrollBox():ScrollToOffset(offset, environment.ScrollBoxConstants.NoScrollInterpolation)
+        layout:GetScrollBox():ScrollToOffset(
+            offset,
+            environment.ScrollBoxConstants.NoScrollInterpolation
+        )
     end
 
     local function checkOffset(layout, expected)
         local actual = layout:GetScrollBox():GetDerivedScrollOffset()
-        assert(math.abs(actual - expected) < 0.001,
-            "expected scroll offset " .. expected .. ", got " .. actual)
+        assert(
+            math.abs(actual - expected) < 0.001,
+            "expected scroll offset " .. expected .. ", got " .. actual
+        )
     end
 
     local function copyData(value)
         if type(value) == "table" then
-            assert(getmetatable(value) == nil, "bookmarks must not retain frame or consumer objects")
+            assert(
+                getmetatable(value) == nil,
+                "bookmarks must not retain frame or consumer objects"
+            )
             local copy = {}
+
             for key, child in pairs(value) do
                 copy[key] = copyData(child)
             end
+
             return copy
         end
-        assert(type(value) == "string" or type(value) == "number" or type(value) == "boolean",
-            "bookmarks must contain only value data, never frames or callbacks")
+
+        assert(
+            type(value) == "string"
+                or type(value) == "number"
+                or type(value) == "boolean",
+            "bookmarks must contain only value data, never frames or callbacks"
+        )
         return value
     end
 
-    local source, sourceFrames, expanded, sourcePage = createCanvas(environment, lib, { 300, 400, 300 })
-    local target, targetFrames, _, targetPage = createCanvas(environment, lib, { 100, 500, 300 })
+    local source, sourceFrames, expanded, sourcePage =
+        createCanvas(environment, lib, { 300, 400, 300 })
+    local target, targetFrames, _, targetPage =
+        createCanvas(environment, lib, { 100, 500, 300 })
     local input = lib:CreateTextInput(sourceFrames.border, { value = "Saved" })
     input:SetPoint("TOPLEFT", sourceFrames.border, "TOPLEFT", 0, -100)
     input:SetFocus()
@@ -68,7 +96,10 @@ return function(newEnvironment, loadVersion)
     local bookmark = assert(source:CaptureScrollBookmark())
     local independentCopy = copyData(bookmark)
     target:RestoreScrollBookmark(bookmark)
-    assert(target:GetScrollAnchor() == targetFrames.border, "shared keys must match across different canvases")
+    assert(
+        target:GetScrollAnchor() == targetFrames.border,
+        "shared keys must match across different canvases"
+    )
 
     -- Capture again before the target's first reflow; its actual scroll is still at zero.
     local pending = assert(target:CaptureScrollBookmark())
@@ -77,7 +108,10 @@ return function(newEnvironment, loadVersion)
     checkOffset(source, top(source, sourceFrames.border) + 70)
     checkOffset(target, top(target, targetFrames.border) + 70)
     assert(input:HasFocus() and input:GetText() == "Pending draft")
-    assert(environment.framesCreated == frameCount, "bookmark operations must not recreate controls")
+    assert(
+        environment.framesCreated == frameCount,
+        "bookmark operations must not recreate controls"
+    )
 
     -- Deferred reflows and repeated cross-form restores must not accumulate drift.
     for _, height in ipairs({ 50, 240, 120 }) do
@@ -118,6 +152,7 @@ return function(newEnvironment, loadVersion)
     for _, frame in pairs(targetFrames) do
         frame:Show()
     end
+
     target:RestoreScrollBookmark(independentCopy)
     environment.Flush()
     checkOffset(target, top(target, targetFrames.border) + 70)
@@ -177,12 +212,16 @@ return function(newEnvironment, loadVersion)
     targetFrames.border:SetParent(source:GetContent())
     target:RestoreScrollBookmark(bookmark)
     environment.Flush()
-    assert(target:GetScrollAnchor() == targetFrames.after, "reparented sections must not match")
+    assert(
+        target:GetScrollAnchor() == targetFrames.after,
+        "reparented sections must not match"
+    )
     targetFrames.border:SetParent(target:GetContent())
 
     -- Replacing a registered key supports rebuilt or pooled section frames.
     target:RestoreScrollBookmark(bookmark)
-    local replacement = environment.CreateFrame("Frame", nil, target:GetContent())
+    local replacement =
+        environment.CreateFrame("Frame", nil, target:GetContent())
     replacement:SetSize(300, 400)
     replacement:SetPoint("TOPLEFT", target:GetContent(), "TOPLEFT", 0, -350)
     local options = {
@@ -191,9 +230,11 @@ return function(newEnvironment, loadVersion)
         end,
     }
     target:RegisterScrollSection("border", replacement, options)
+
     options.isExpanded = function()
         error("registration must copy the supplied options")
     end
+
     environment.Flush()
     assert(target:GetScrollAnchor() == replacement)
     checkOffset(target, 420)
@@ -224,30 +265,94 @@ return function(newEnvironment, loadVersion)
     checkOffset(target, 100)
 
     scroll(source, source:GetContent():GetHeight() - 200)
-    assert(source:CaptureScrollBookmark() == nil, "no section intersects the unregistered footer")
+    assert(
+        source:CaptureScrollBookmark() == nil,
+        "no section intersects the unregistered footer"
+    )
 
     -- Failed public calls leave the existing registration/anchor usable.
     target:RestoreScrollBookmark(bookmark)
-    for _, key in ipairs({ "", false, 1, {} }) do
-        assert(not pcall(target.RegisterScrollSection, target, key, replacement))
+
+    for _, key in ipairs({
+        "",
+        false,
+        1,
+        {},
+    }) do
+        assert(
+            not pcall(target.RegisterScrollSection, target, key, replacement)
+        )
         assert(not pcall(target.UnregisterScrollSection, target, key))
     end
+
     assert(not pcall(target.RegisterScrollSection, target, nil, replacement))
-    assert(not pcall(target.RegisterScrollSection, target, "bad", sourceFrames.border))
-    assert(not pcall(target.RegisterScrollSection, target, "bad", target:GetContent()))
-    assert(not pcall(target.RegisterScrollSection, target, "duplicate", targetFrames.border))
-    assert(not pcall(target.RegisterScrollSection, target, "bad", replacement, false))
-    assert(not pcall(target.RegisterScrollSection, target, "bad", replacement, { isExpanded = true }))
-    for _, invalid in ipairs({ false, 1, "bookmark", {}, { version = 2 }, { version = 1, kind = "other" } }) do
+    assert(
+        not pcall(
+            target.RegisterScrollSection,
+            target,
+            "bad",
+            sourceFrames.border
+        )
+    )
+    assert(
+        not pcall(
+            target.RegisterScrollSection,
+            target,
+            "bad",
+            target:GetContent()
+        )
+    )
+    assert(
+        not pcall(
+            target.RegisterScrollSection,
+            target,
+            "duplicate",
+            targetFrames.border
+        )
+    )
+    assert(
+        not pcall(
+            target.RegisterScrollSection,
+            target,
+            "bad",
+            replacement,
+            false
+        )
+    )
+    assert(
+        not pcall(
+            target.RegisterScrollSection,
+            target,
+            "bad",
+            replacement,
+            { isExpanded = true }
+        )
+    )
+
+    for _, invalid in ipairs({
+        false,
+        1,
+        "bookmark",
+        {},
+        { version = 2 },
+        { version = 1, kind = "other" },
+    }) do
         assert(not pcall(target.RestoreScrollBookmark, target, invalid))
     end
+
     for _, invalid in ipairs({ false, "1", math.huge, 0 / 0 }) do
         local malformed = copyData(bookmark)
         malformed.offset = invalid
         assert(not pcall(target.RestoreScrollBookmark, target, malformed))
     end
+
     local malformed = copyData(bookmark)
-    malformed.fallbacks = { [1] = "a", [2] = "b", [4] = "c", [6] = "d" }
+    malformed.fallbacks = {
+        [1] = "a",
+        [2] = "b",
+        [4] = "c",
+        [6] = "d",
+    }
     assert(not pcall(target.RestoreScrollBookmark, target, malformed))
     environment.Flush()
     checkOffset(target, top(target, targetFrames.border) + 70)
@@ -263,8 +368,18 @@ return function(newEnvironment, loadVersion)
     assert(target:CaptureScrollBookmark())
     environment.Flush()
 
-    local plain = lib:CreateCanvasLayout(environment.CreateFrame("Frame"), { width = 600, height = 200 })
-    assert(not pcall(plain.RegisterScrollSection, plain, "section", plain:GetContent()))
+    local plain = lib:CreateCanvasLayout(
+        environment.CreateFrame("Frame"),
+        { width = 600, height = 200 }
+    )
+    assert(
+        not pcall(
+            plain.RegisterScrollSection,
+            plain,
+            "section",
+            plain:GetContent()
+        )
+    )
     assert(not pcall(plain.UnregisterScrollSection, plain, "section"))
     assert(not pcall(plain.CaptureScrollBookmark, plain))
     assert(not pcall(plain.RestoreScrollBookmark, plain, bookmark))
@@ -272,13 +387,17 @@ return function(newEnvironment, loadVersion)
     -- Registrations and captured values survive both library load orders.
     local upgradeEnvironment = newEnvironment()
     local oldLib = loadVersion(upgradeEnvironment, true)
-    local retained, retainedFrames = createCanvas(upgradeEnvironment, oldLib, { 300, 400, 300 })
-    retained:GetScrollBox():ScrollToOffset(top(retained, retainedFrames.border) + 35,
-        upgradeEnvironment.ScrollBoxConstants.NoScrollInterpolation)
+    local retained, retainedFrames =
+        createCanvas(upgradeEnvironment, oldLib, { 300, 400, 300 })
+    retained:GetScrollBox():ScrollToOffset(
+        top(retained, retainedFrames.border) + 35,
+        upgradeEnvironment.ScrollBoxConstants.NoScrollInterpolation
+    )
     local retainedBookmark = retained:CaptureScrollBookmark()
     local newLib = loadVersion(upgradeEnvironment, false)
     upgradeEnvironment.Flush()
-    local fresh, freshFrames = createCanvas(upgradeEnvironment, newLib, { 100, 500, 300 })
+    local fresh, freshFrames =
+        createCanvas(upgradeEnvironment, newLib, { 100, 500, 300 })
     fresh:RestoreScrollBookmark(retainedBookmark)
     upgradeEnvironment.Flush()
     checkOffset(fresh, top(fresh, freshFrames.border) + 35)

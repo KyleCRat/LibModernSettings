@@ -1,36 +1,60 @@
 local MAJOR, MINOR = "LibModernSettings-1.0", 11
 local lib = LibStub(MAJOR, true)
 
-if not lib or lib._implementationMinor ~= MINOR
-    or not lib:_BeginModule("Controls/SearchBox", MINOR) then
+if
+    not lib
+    or lib._implementationMinor ~= MINOR
+    or not lib:_BeginModule("Controls/SearchBox", MINOR)
+then
     return
 end
 
 local ACTION_STYLE = lib._inputActionSquareStyle
 
 local function validateOptions(options)
-    assert(options.value == nil or type(options.value) == "string", "value must be a string or nil")
-    assert(options.placeholder == nil or type(options.placeholder) == "string",
-        "placeholder must be a string or nil")
-    assert(options.onChanged == nil or type(options.onChanged) == "function",
-        "onChanged must be a function or nil")
-    assert(options.maxLetters == nil or (type(options.maxLetters) == "number" and options.maxLetters >= 0),
-        "maxLetters must be non-negative or nil")
+    assert(
+        options.value == nil or type(options.value) == "string",
+        "value must be a string or nil"
+    )
+    assert(
+        options.placeholder == nil or type(options.placeholder) == "string",
+        "placeholder must be a string or nil"
+    )
+    assert(
+        options.onChanged == nil or type(options.onChanged) == "function",
+        "onChanged must be a function or nil"
+    )
+    assert(
+        options.maxLetters == nil
+            or (
+                type(options.maxLetters) == "number"
+                and options.maxLetters >= 0
+            ),
+        "maxLetters must be non-negative or nil"
+    )
+
     for _, key in ipairs({ "searchIconTexture", "clearIconTexture" }) do
         local value = options[key]
-        assert(value == nil or type(value) == "string" or type(value) == "number",
-            key .. " must be a texture path, file ID, or nil")
+        assert(
+            value == nil or type(value) == "string" or type(value) == "number",
+            key .. " must be a texture path, file ID, or nil"
+        )
     end
+
     for _, key in ipairs({ "width", "height" }) do
         local value = options[key]
-        assert(value == nil or (type(value) == "number" and value > 0 and value < math.huge),
-            key .. " must be positive and finite")
+        assert(
+            value == nil
+                or (type(value) == "number" and value > 0 and value < math.huge),
+            key .. " must be positive and finite"
+        )
     end
 end
 
 local function createSearchBox(parent, options)
     validateOptions(options)
-    local input = CreateFrame("EditBox", nil, parent, "SearchBoxNineSliceTemplate")
+    local input =
+        CreateFrame("EditBox", nil, parent, "SearchBoxNineSliceTemplate")
     input:SetJustifyV("MIDDLE")
     input:SetMaxLetters(options.maxLetters or 0)
     input.instructionText = options.placeholder or SEARCH
@@ -49,14 +73,20 @@ local function createSearchBox(parent, options)
         height = ACTION_STYLE.size,
         iconSize = ACTION_STYLE.iconSize,
         iconTexture = options.clearIconTexture,
-        iconAtlas = not options.clearIconTexture and "common-search-clearbutton" or nil,
+        iconAtlas = not options.clearIconTexture
+                and "common-search-clearbutton"
+            or nil,
         tooltip = "Clear search",
         onClick = function()
             input:SetText("")
             input:ClearFocus()
         end,
     })
-    input.clearButton.icon:SetVertexColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
+    input.clearButton.icon:SetVertexColor(
+        NORMAL_FONT_COLOR.r,
+        NORMAL_FONT_COLOR.g,
+        NORMAL_FONT_COLOR.b
+    )
     input.clearButton:SetShown(input:HasFocus() or input:GetText() ~= "")
 
     -- Preserve native text, placeholder and focus behavior. Dispatch hooks
@@ -64,7 +94,13 @@ local function createSearchBox(parent, options)
     input:HookScript("OnTextChanged", function(self, userInput)
         self:_NotifySearchChanged(userInput)
     end)
-    for _, script in ipairs({ "OnEditFocusGained", "OnEditFocusLost", "OnEnable", "OnDisable" }) do
+
+    for _, script in ipairs({
+        "OnEditFocusGained",
+        "OnEditFocusLost",
+        "OnEnable",
+        "OnDisable",
+    }) do
         input:HookScript(script, function(self)
             self:_RefreshSearchState()
         end)
@@ -76,6 +112,7 @@ local function createSearchBox(parent, options)
             text = options.tooltip,
         })
     end
+
     return input
 end
 
@@ -85,7 +122,12 @@ function searchMethods:_NotifySearchChanged(userInput)
     local value = self:GetText()
     local changed = value ~= self._libModernSettingsSearchText
     self._libModernSettingsSearchText = value
-    if changed and not self._libModernSettingsSettingSearchValue and self._libModernSettingsOnChanged then
+
+    if
+        changed
+        and not self._libModernSettingsSettingSearchValue
+        and self._libModernSettingsOnChanged
+    then
         self._libModernSettingsOnChanged(value, userInput == true)
     end
 end
@@ -112,7 +154,10 @@ function searchMethods:GetValue()
 end
 
 function searchMethods:SetOnChanged(callback)
-    assert(callback == nil or type(callback) == "function", "onChanged must be a function or nil")
+    assert(
+        callback == nil or type(callback) == "function",
+        "onChanged must be a function or nil"
+    )
     self._libModernSettingsOnChanged = callback
 end
 
@@ -133,16 +178,25 @@ local function initializeSearchBox(input, options)
 end
 
 local function refreshSearchAppearance(input, options)
-    lib:_ApplyFixedControlSize(input, options.width or 270, options.height or 34)
+    lib:_ApplyFixedControlSize(
+        input,
+        options.width or 270,
+        options.height or 34
+    )
     lib:_ApplyDefaultFont(input, options.fontObject or GameFontHighlight)
-    lib:_ApplyDefaultFont(input.Instructions, options.fontObject or GameFontHighlight)
+    lib:_ApplyDefaultFont(
+        input.Instructions,
+        options.fontObject or GameFontHighlight
+    )
     input.Background:SetAtlas("common-button-tertiary-depressed-normal", false)
+
     if options.searchIconTexture then
         input.searchIcon:SetTexture(options.searchIconTexture)
         input.searchIcon:SetTexCoord(0, 1, 0, 1)
     else
         input.searchIcon:SetAtlas("common-searchbar-icon-a", false)
     end
+
     input.searchIcon:SetSize(16, 16)
     input.searchIcon:ClearAllPoints()
     input.searchIcon:SetPoint("LEFT", input, "LEFT", 8, 0)
@@ -160,7 +214,13 @@ local function refreshSearchAppearance(input, options)
     input.Instructions:SetPoint("RIGHT", input, "RIGHT", -rightInset, 0)
 end
 
-lib:RegisterControlType("searchBox", createSearchBox, searchMethods, initializeSearchBox, refreshSearchAppearance)
+lib:RegisterControlType(
+    "searchBox",
+    createSearchBox,
+    searchMethods,
+    initializeSearchBox,
+    refreshSearchAppearance
+)
 lib:RegisterControlNavigation("searchBox", {
     mode = "editBox",
     focus = function(control)

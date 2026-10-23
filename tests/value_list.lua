@@ -1,9 +1,9 @@
 return function(lib, makeFrame, inputState, key)
     local function enter(input, text)
         local focused = GetCurrentKeyBoardFocus()
-        if focused and focused ~= input then
-            focused:ClearFocus()
-        end
+
+        if focused and focused ~= input then focused:ClearFocus() end
+
         input:FocusValue()
         input:SetText(text)
         input.scripts.OnEnterPressed(input)
@@ -11,16 +11,26 @@ return function(lib, makeFrame, inputState, key)
 
     local function parseNumber(text)
         local value = tonumber(text)
+
         if not value or value ~= value or value < 0 or value == math.huge then
             return nil, "Invalid position"
         end
+
         return value
     end
 
     local function checkPosition(frame, parent, x, y)
-        local point, relativeTo, relativePoint, actualX, actualY = frame:GetPoint(1)
-        assert(point == "TOPLEFT" and relativeTo == parent and relativePoint == "TOPLEFT")
-        assert(actualX == x and actualY == y, "wrapped pills and actions must follow row-major order")
+        local point, relativeTo, relativePoint, actualX, actualY =
+            frame:GetPoint(1)
+        assert(
+            point == "TOPLEFT"
+                and relativeTo == parent
+                and relativePoint == "TOPLEFT"
+        )
+        assert(
+            actualX == x and actualY == y,
+            "wrapped pills and actions must follow row-major order"
+        )
     end
 
     local changes, errors = 0, 0
@@ -40,23 +50,40 @@ return function(lib, makeFrame, inputState, key)
             errors = errors + 1
         end,
     })
-    assert(list:GetHeight() == 34 and #list.entries == 1 and #list:GetValue() == 0)
+    assert(
+        list:GetHeight() == 34 and #list.entries == 1 and #list:GetValue() == 0
+    )
     assert(not list.removeButton:IsShown())
     assert(list.entries[1]:GetWidth() == 64)
 
     enter(list.entries[1], "20")
     assert(list:GetValue()[1] == 20 and changes == 1)
-    assert(#list.slots == 2 and list.entries[2]:HasFocus() and list.entries[2]:GetText() == "")
+    assert(
+        #list.slots == 2
+            and list.entries[2]:HasFocus()
+            and list.entries[2]:GetText() == ""
+    )
     assert(list.removeButton:IsShown())
     enter(list.entries[2], "45.5")
-    assert(#list:GetValue() == 2 and list:GetValue()[2] == 45.5 and #list.slots == 3)
+    assert(
+        #list:GetValue() == 2
+            and list:GetValue()[2] == 45.5
+            and #list.slots == 3
+    )
     list:AddEntry()
-    assert(#list.slots == 3, "adding while the final field is empty must reuse it")
+    assert(
+        #list.slots == 3,
+        "adding while the final field is empty must reuse it"
+    )
     enter(list.entries[3], "80")
     assert(#list.slots == 4 and #list:GetValue() == 3)
     assert(not list.addButton:IsEnabled())
     enter(list.entries[4], "125")
-    assert(#list:GetValue() == 4 and #list.slots == 4 and list.entries[4]:HasFocus())
+    assert(
+        #list:GetValue() == 4
+            and #list.slots == 4
+            and list.entries[4]:HasFocus()
+    )
     assert(changes == 4 and list:GetHeight() == 74)
     checkPosition(list.entries[1], list, 0, 0)
     checkPosition(list.entries[3], list, 140, 0)
@@ -72,15 +99,26 @@ return function(lib, makeFrame, inputState, key)
     assert(list.entries[4]:HasFocus() and list.entries[4]:GetText() == "125")
     list.entries[4]:SetText("Canceled")
     list.entries[4].scripts.OnEscapePressed(list.entries[4])
-    assert(changes == 4 and not list.entries[4]:HasFocus() and list.entries[4]:GetText() == "125")
+    assert(
+        changes == 4
+            and not list.entries[4]:HasFocus()
+            and list.entries[4]:GetText() == "125"
+    )
 
     list:RemoveLastEntry()
     assert(#list:GetValue() == 3 and #list.slots == 3 and changes == 5)
     assert(list.entries[3]:HasFocus() and not list.entries[4]:IsShown())
     list:RemoveLastEntry()
     list:RemoveLastEntry()
-    assert(#list.slots == 1 and #list:GetValue() == 1 and not list.removeButton:IsShown())
-    assert(list:GetHeight() == 34, "removing extra fields must release their rows")
+    assert(
+        #list.slots == 1
+            and #list:GetValue() == 1
+            and not list.removeButton:IsShown()
+    )
+    assert(
+        list:GetHeight() == 34,
+        "removing extra fields must release their rows"
+    )
     assert(list:RemoveLastEntry() == false)
     enter(list.entries[1], "")
     assert(#list:GetValue() == 0 and #list.slots == 1)
@@ -100,26 +138,34 @@ return function(lib, makeFrame, inputState, key)
     checkPosition(list.entries[4], list, 0, -80)
     checkPosition(list.removeButton, list, 70, -80)
     checkPosition(list.addButton, list, 110, -80)
-    assert(not list.scripts.OnMouseWheel and not list.entries[4].scripts.OnMouseWheel,
-        "value fields must leave mouse wheel scrolling to the containing page")
+    assert(
+        not list.scripts.OnMouseWheel
+            and not list.entries[4].scripts.OnMouseWheel,
+        "value fields must leave mouse wheel scrolling to the containing page"
+    )
+
     for _, width in ipairs({ 354, 353, 354.0001, 353.9999, 50, 270 }) do
         list:SetControlWidth(width)
         local oneRow = width >= 353.9999
         assert(list:GetHeight() == (oneRow and 34 or width == 50 and 234 or 74))
+
         for index, input in ipairs(list.entries) do
             assert(input == entries[index] and input:GetNumPoints() == 1)
             local _, _, _, x, y = input:GetPoint(1)
             assert(x >= 0 and x + input:GetWidth() <= width + 0.001)
             assert(-y + input:GetHeight() <= list:GetHeight())
         end
+
         assert(list.entries[4]:HasFocus() and list.entries[4]:GetText() == "95")
     end
+
     for _, width in ipairs({ 144, 143.9999, 144.0001 }) do
         list:SetControlWidth(width)
         checkPosition(list.entries[4], list, 0, -80)
         checkPosition(list.removeButton, list, 70, -80)
         checkPosition(list.addButton, list, 110, -80)
     end
+
     list:CommitAndClearFocus()
     assert(list:GetValue()[4] == 95)
 
@@ -132,7 +178,10 @@ return function(lib, makeFrame, inputState, key)
     list:SetValue({ 7 })
     inputState.mouseDown = false
     lib:_FlushPendingEditBoxCommits()
-    assert(list:GetValue()[1] == 7 and changes == before, "rebinding must cancel deferred edits")
+    assert(
+        list:GetValue()[1] == 7 and changes == before,
+        "rebinding must cancel deferred edits"
+    )
     list:FocusValue()
     list.entries[1]:SetText("70")
     list:SetControlEnabled(false, "Unavailable")
@@ -152,7 +201,11 @@ return function(lib, makeFrame, inputState, key)
         list:SetValue({ 99 })
     end)
     enter(list.entries[1], "80")
-    assert(list:GetValue()[1] == 99 and list.entries[1]:GetText() == "99" and #list.slots == 1)
+    assert(
+        list:GetValue()[1] == 99
+            and list.entries[1]:GetText() == "99"
+            and #list.slots == 1
+    )
     assert(not list.entries[1]:HasFocus())
 
     local formatted = lib:CreateValueList(UIParent, {
@@ -166,7 +219,9 @@ return function(lib, makeFrame, inputState, key)
     })
     assert(formatted.entries[1]:GetText() == "2s")
     enter(formatted.entries[1], "7s")
-    assert(formatted:GetValue()[1] == 7 and formatted.entries[1]:GetText() == "7s")
+    assert(
+        formatted:GetValue()[1] == 7 and formatted.entries[1]:GetText() == "7s"
+    )
     formatted:CancelAndClearFocus()
     assert(not pcall(function()
         formatted:SetOnChanged(false)
@@ -186,7 +241,10 @@ return function(lib, makeFrame, inputState, key)
         list.scripts.OnHide(list)
     end)
     enter(list.entries[1], "5")
-    assert(#list.slots == 1 and not list.entries[1]:HasFocus(), "closing during a commit must not add/focus a field")
+    assert(
+        #list.slots == 1 and not list.entries[1]:HasFocus(),
+        "closing during a commit must not add/focus a field"
+    )
 
     local root = makeFrame("Frame", UIParent)
     lib:EnableTabNavigation(root)
@@ -195,25 +253,39 @@ return function(lib, makeFrame, inputState, key)
     local field = lib:CreateField(root, {
         label = "Values",
         controlType = "valueList",
-        controlOptions = { value = { "One", "Two", "Three", "Four" }, width = 170 },
+        controlOptions = {
+            value = { "One", "Two", "Three", "Four" },
+            width = 170,
+        },
         width = 170,
     })
     field:SetPoint("TOPLEFT", root, "TOPLEFT", 0, -50)
     local tabList = field:GetControl()
     local labelHeight = field.label:GetHeight()
-    assert(tabList:GetHeight() == 114 and field:GetHeight() == labelHeight + 7 + 114)
+    assert(
+        tabList:GetHeight() == 114
+            and field:GetHeight() == labelHeight + 7 + 114
+    )
     field:SetControlWidth(354)
-    assert(tabList:GetHeight() == 34 and field:GetHeight() == labelHeight + 7 + 34)
+    assert(
+        tabList:GetHeight() == 34 and field:GetHeight() == labelHeight + 7 + 34
+    )
     field:SetControlWidth(170)
-    assert(tabList:GetHeight() == 114 and field:GetHeight() == labelHeight + 7 + 114,
-        "a ValueList must reflow as one Field and report its full wrapped height")
+    assert(
+        tabList:GetHeight() == 114
+            and field:GetHeight() == labelHeight + 7 + 114,
+        "a ValueList must reflow as one Field and report its full wrapped height"
+    )
     first:FocusValue()
     first.scripts.OnTabPressed(first)
     assert(tabList.entries[1]:HasFocus())
     tabList.entries[1].scripts.OnTabPressed(tabList.entries[1])
     assert(tabList.entries[2]:HasFocus())
     tabList.entries[2].scripts.OnTabPressed(tabList.entries[2])
-    assert(tabList.entries[3]:HasFocus(), "Tab must advance onto the next wrapped row")
+    assert(
+        tabList.entries[3]:HasFocus(),
+        "Tab must advance onto the next wrapped row"
+    )
     inputState.modifiers.shift = true
     tabList.entries[3].scripts.OnTabPressed(tabList.entries[3])
     assert(tabList.entries[2]:HasFocus())
@@ -234,33 +306,56 @@ return function(lib, makeFrame, inputState, key)
     local hookCount = #tabList.entries[1].scriptHooks.OnEnterPressed
     tabList:FocusValue()
     tabList.entries[1]:SetText("Draft")
+
     for _, name in ipairs({ "Controls/TextInput", "Controls/ValueList" }) do
         lib._loadedModules[name] = nil
         dofile(name .. ".lua")
     end
-    assert(tabList.entries[1]:GetText() == "Draft" and tabList.entries[1]:HasFocus())
+
+    assert(
+        tabList.entries[1]:GetText() == "Draft"
+            and tabList.entries[1]:HasFocus()
+    )
     assert(#tabList.entries[1].scriptHooks.OnEnterPressed == hookCount)
     enter(tabList.entries[1], "Updated")
     assert(tabList:GetValue()[1] == "Updated" and tabList.entries[2]:HasFocus())
     tabList:CancelAndClearFocus()
     local definition = lib._controlTypes.valueList.factory
     dofile("Controls/ValueList.lua")
-    assert(lib._controlTypes.valueList.factory == definition, "duplicate modules must not replace the selected implementation")
+    assert(
+        lib._controlTypes.valueList.factory == definition,
+        "duplicate modules must not replace the selected implementation"
+    )
     local minor = lib._implementationMinor
     lib._implementationMinor = minor + 1
     dofile("Controls/ValueList.lua")
-    assert(lib._controlTypes.valueList.factory == definition, "an older module must not overwrite a newer family implementation")
+    assert(
+        lib._controlTypes.valueList.factory == definition,
+        "an older module must not overwrite a newer family implementation"
+    )
     lib._implementationMinor = minor
 
     for _, options in ipairs({
-        { entryWidth = 0 }, { entryWidth = math.huge }, { maxValues = 0 },
-        { maxValues = 1.5 }, { parseValue = true }, { onError = "bad" },
-        { value = { [1] = "One", [3] = "Three" } }, { value = { "" } },
-        { value = { 0 / 0 } }, { value = { {} } }, { value = false }, { value = { 1, 2 }, maxValues = 1 },
+        { entryWidth = 0 },
+        { entryWidth = math.huge },
+        { maxValues = 0 },
+        { maxValues = 1.5 },
+        { parseValue = true },
+        { onError = "bad" },
+        { value = { [1] = "One", [3] = "Three" } },
+        { value = { "" } },
+        { value = { 0 / 0 } },
+        { value = { {} } },
+        { value = false },
+        {
+            value = { 1, 2 },
+            maxValues = 1,
+        },
     }) do
         assert(not pcall(function()
             lib:CreateValueList(UIParent, options)
         end), "invalid list options should fail")
     end
+
     print("LibModernSettings value list tests passed")
 end

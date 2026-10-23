@@ -8,13 +8,17 @@ return function(lib, makeFrame)
 
     local function equal(actual, expected)
         for _, channel in ipairs({ "r", "g", "b", "a" }) do
-            assert(math.abs(actual[channel] - expected[channel]) < 0.000001, channel .. " differs")
+            assert(
+                math.abs(actual[channel] - expected[channel]) < 0.000001,
+                channel .. " differs"
+            )
         end
     end
 
     local function preview(value)
         previews[#previews + 1] = value and Color.Copy(value) or false
         events[#events + 1] = value and "preview" or "end"
+
         if value then
             assert(value.mode == "custom")
             value.r = 0.123 -- The callback must not own the picker's draft.
@@ -33,7 +37,14 @@ return function(lib, makeFrame)
             control:SetValue(value)
         end,
     })
-    assert(not pcall(lib.CreateColor, lib, makeFrame("Frame"), { onPreview = true }))
+    assert(
+        not pcall(
+            lib.CreateColor,
+            lib,
+            makeFrame("Frame"),
+            { onPreview = true }
+        )
+    )
     assert(not pcall(control.SetOnPreview, control, true))
     control:OpenPicker()
     local picker = lib._colorPicker
@@ -72,7 +83,10 @@ return function(lib, makeFrame)
     control:ClosePicker()
     control:OpenPicker()
     picker:Cancel()
-    assert(#previews == count, "closing an unchanged picker must not end another preview")
+    assert(
+        #previews == count,
+        "closing an unchanged picker must not end another preview"
+    )
 
     control:OpenPicker()
     picker:SetColor(blue)
@@ -82,11 +96,23 @@ return function(lib, makeFrame)
     assert(applied == 1 and #control.palette:GetColors("recent") == 1)
 
     for _, close in ipairs({
-        function() control:ClosePicker() end,
-        function() picker.frame:Hide(); picker.frame.scripts.OnHide(picker.frame) end,
-        function() control:Hide(); control.scripts.OnHide(control) end,
-        function() control:SetControlEnabled(false) end,
-        function() control:SetValue(blue) end,
+        function()
+            control:ClosePicker()
+        end,
+        function()
+            picker.frame:Hide()
+            picker.frame.scripts.OnHide(picker.frame)
+        end,
+        function()
+            control:Hide()
+            control.scripts.OnHide(control)
+        end,
+        function()
+            control:SetControlEnabled(false)
+        end,
+        function()
+            control:SetValue(blue)
+        end,
     }) do
         control:Show()
         control:SetControlEnabled(true)
@@ -94,7 +120,11 @@ return function(lib, makeFrame)
         picker:SetColor(original)
         local before = #previews
         close()
-        assert(not picker.session and #previews == before + 1 and previews[#previews] == false)
+        assert(
+            not picker.session
+                and #previews == before + 1
+                and previews[#previews] == false
+        )
         equal(control:GetValue(), blue)
         assert(applied == 1)
     end
@@ -106,15 +136,19 @@ return function(lib, makeFrame)
     local replacement = 0
     control:SetOnPreview(function(value)
         replacement = replacement + 1
-        if value then
-            control:SetValue(blue)
-        end
+
+        if value then control:SetValue(blue) end
     end)
-    assert(previews[#previews] == false and replacement == 0 and not picker.session)
+    assert(
+        previews[#previews] == false and replacement == 0 and not picker.session
+    )
     control:OpenPicker()
     picker.hex:SetText("00FF00")
     picker:Apply()
-    assert(not picker.session and replacement == 2, "consumer rebinding must end the preview once")
+    assert(
+        not picker.session and replacement == 2,
+        "consumer rebinding must end the preview once"
+    )
     equal(control:GetValue(), blue)
     assert(applied == 1, "a rebound input must not receive the obsolete Apply")
 
