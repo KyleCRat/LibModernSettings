@@ -178,6 +178,15 @@ local function configureSliderInput(control)
     }) do
         target:SetScript("OnMouseWheel", onMouseWheel)
 
+        if not target._libModernSettingsInteractionHooked then
+            target._libModernSettingsInteractionHooked = true
+            target:HookScript("OnMouseDown", function(_, button)
+                if button == "LeftButton" then
+                    lib:_NotifyInteraction(control, "activate")
+                end
+            end)
+        end
+
         if not target._libModernSettingsFocusHooked then
             target._libModernSettingsFocusHooked = true
             -- Blizzard clears edit focus on global mouse-down outside the

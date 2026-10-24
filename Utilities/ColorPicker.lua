@@ -648,6 +648,8 @@ local function createPicker()
 end
 
 function lib:_OpenColorPicker(owner)
+    self:_NotifyInteraction(owner, "open")
+
     if self._colorPicker and self._colorPicker.session then
         self:_CloseColorPicker(self._colorPicker.session.owner)
     end

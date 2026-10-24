@@ -175,6 +175,7 @@ function lib:_SetNavigationFocus(control, owner)
     frame:SetAllPoints(owner)
     frame:SetFrameLevel(owner:GetFrameLevel() + 1)
     self:_RefreshNavigationKeyboard()
+    self:_NotifyInteraction(control, "focus")
 end
 
 -- Reuse the keyboard frame when upgrading an embed with dropdown-only navigation.

@@ -2636,5 +2636,6 @@ print("LibModernSettings control tests passed")
 
 dofile("tests/flash_messages.lua")(lib, makeFrame, inputState)
 dofile("tests/colors.lua")(lib, makeFrame, inputState)
+dofile("tests/interaction.lua")(lib, makeFrame)
 dofile("tests/search_box.lua")(lib, makeFrame, inputState)
 dofile("tests/icon_picker.lua")(lib, makeFrame, inputState)

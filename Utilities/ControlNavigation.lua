@@ -19,6 +19,40 @@ local function getInput(control, navigation)
     return control
 end
 
+-- Observe logical controls, including the child inputs of compound controls.
+-- This does not acquire focus or change the control's commit behavior.
+function lib:SetOnInteraction(control, callback)
+    assert(self._controlInstances[control], "expected an LMS control")
+    assert(
+        callback == nil or type(callback) == "function",
+        "interaction callback must be a function or nil"
+    )
+    control._libModernSettingsOnInteraction = callback
+end
+
+function lib:_NotifyInteraction(control, reason)
+    if
+        not control:IsVisible()
+        or control.enabled == false
+        or control.IsEnabled and not control:IsEnabled()
+    then
+        return
+    end
+
+    local owner = control
+
+    while owner do
+        local callback = owner._libModernSettingsOnInteraction
+
+        if callback then
+            if owner.enabled ~= false then callback(owner, reason) end
+            return
+        end
+
+        owner = owner:GetParent()
+    end
+end
+
 local DEFAULT_ACTIONS = {
     navigate = function(control, context)
         return lib:_NavigateTab(control, context)
@@ -147,6 +181,27 @@ function lib:_ConfigureControlNavigation(control)
     local navigation = getNavigation(control)
     local input = getInput(control, navigation)
     input._libModernSettingsNavigationControl = control
+
+    if not input._libModernSettingsInteractionHooked then
+        input._libModernSettingsInteractionHooked = true
+        input:HookScript("OnMouseDown", function(self, button)
+            if button == "LeftButton" then
+                lib:_NotifyInteraction(
+                    self._libModernSettingsNavigationControl,
+                    "activate"
+                )
+            end
+        end)
+
+        if navigation.mode == "editBox" then
+            input:HookScript("OnEditFocusGained", function(self)
+                lib:_NotifyInteraction(
+                    self._libModernSettingsNavigationControl,
+                    "focus"
+                )
+            end)
+        end
+    end
 
     if navigation.mode == "editBox" then
         input:SetScript("OnTabPressed", onEditBoxTab)

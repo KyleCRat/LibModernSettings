@@ -4,6 +4,9 @@
 
 ### Added
 
+- `SetOnInteraction(control, callback)` observes mouse activation, keyboard focus
+  and color-picker opening, including compound controls. Value refreshes remain
+  silent; consumers can coordinate editing previews without replacing input scripts.
 - Dropdowns accept `menuDirection = "up"` or `"down"` for their preferred opening
   direction. Long menus retain the normal height limit and screen centering.
 - Reusable resizable icon picker with masked tertiary-square icons, recent and

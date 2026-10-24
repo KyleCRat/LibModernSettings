@@ -386,6 +386,17 @@ input and the active editor page. Nested explicit navigation roots keep
 their own cycles. Outside a canvas or explicit root, edit boxes retain Blizzard's
 `nextEditBox`/`previousEditBox` behavior.
 
+Call `ModernSettings:SetOnInteraction(control, callback)` to observe editing intent
+without replacing input scripts or value callbacks. The callback receives the
+logical control and a reason: `"activate"` for left mouse down, `"focus"` for
+keyboard/edit-box focus, or `"open"` for opening its color picker. Compound child
+inputs notify the nearest ancestor with an observer. Hidden or disabled controls
+do not notify; hover and programmatic value refreshes are silent. Mouse activation
+and focus may both notify for the same gesture, so consumers should deduplicate
+their own state changes. Picker value changes retain their existing callbacks.
+Pass `nil` to remove the observer; rebinding replaces it without adding hooks.
+This is an activation notification, not a balanced begin/end editing session.
+
 ## Flash Messages
 
 Create one stack for an ordinary window or input-group frame and reuse it:
