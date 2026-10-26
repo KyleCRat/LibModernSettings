@@ -94,6 +94,9 @@
 
 ### Fixed
 
+- Share square-button artwork, selection and navigation with color swatches.
+  Selected choices retain their border with additive hover/focus feedback,
+  including after Apply/Cancel.
 - `SetButtonIcon()` reuses prepared button geometry, masks and fonts when swapping
   artwork; adding/removing icons or changing their dimensions still relayouts.
 - Keep fixed-width dropdown choices clickable across the full menu row,

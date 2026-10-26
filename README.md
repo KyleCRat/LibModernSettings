@@ -85,11 +85,13 @@ Every control uses an options table:
   right-side `label`. It supports optional class/accent modes and a shared picker
   with hex/RGB(A) entry, recent colors, favorites, and class/item-quality swatches. See
   [Color inputs](#color-inputs) for value, persistence and cancellation contracts.
+  Swatches share square buttons' selected artwork and additive hover/focus feedback.
 - `ApplyTertiarySquareArtwork(button, texture, buttonSize)` fits and masks an existing
   texture inside a fixed-size tertiary square. Use it for custom artwork or
   solid color fills; `CreateButton` already masks its square icons automatically.
-  Texture, color and UVs remain caller-owned. Keep button state
-  artwork below `OVERLAY` sublevel 1. It returns the attached mask and reuses it
+  Texture, color and UVs remain caller-owned. Keep normal, selected and pressed
+  artwork below `OVERLAY` sublevel 1; native additive highlights can draw above
+  the fill. It returns the attached mask and reuses it
   on later calls, including compatible library upgrades.
 - `CreateDropdown(parent, options)` creates a recessed text-input-style selector
   with an inset tertiary square caret, retaining Blizzard's native menu and selection

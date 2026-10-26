@@ -48,7 +48,7 @@ return function(lib, makeFrame)
         lib:CreateColor(makeFrame("Frame"), { defaultColor = defaultColor })
     assert(
         initial:GetValue().mode == "default"
-            and initial.buttons.default.selection:IsShown()
+            and initial.buttons.default:IsSelected()
     )
     assert(
         initial:GetValue().a == 1,
@@ -95,8 +95,8 @@ return function(lib, makeFrame)
     equal(saved, defaultColor)
     equal(saved.custom, original)
     assert(
-        control.buttons.default.selection:IsShown()
-            and not control.buttons.custom.selection:IsShown()
+        control.buttons.default:IsSelected()
+            and not control.buttons.custom:IsSelected()
     )
     local copy = control:GetValue()
     copy.r = 0

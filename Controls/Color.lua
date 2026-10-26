@@ -25,25 +25,6 @@ local function createSwatch(parent, options)
     local size = options.size or SIZE
     button:SetSize(size, size)
 
-    for method, state in pairs({
-        SetNormalTexture = "normal",
-        SetPushedTexture = "pressed",
-        SetDisabledTexture = "disabled",
-    }) do
-        local texture = lib:_CreateAtlasTexture(
-            button,
-            "BACKGROUND",
-            "common-button-tertiary-square-" .. state
-        )
-        button[method](button, texture)
-    end
-
-    button.selection = lib:_CreateAtlasTexture(
-        button,
-        "BORDER",
-        "common-button-tertiary-square-selected"
-    )
-    button.selection:Hide()
     button.swatch = button:CreateTexture(nil, "OVERLAY")
     button.onClick = options.onClick
     button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -55,7 +36,10 @@ local function createSwatch(parent, options)
     return button
 end
 
-local swatchMethods = {}
+local swatchMethods = {
+    SetSelected = lib._buttonSelectionMethods.SetSelected,
+    IsSelected = lib._buttonSelectionMethods.IsSelected,
+}
 
 function swatchMethods:SetValue(value)
     self.color = Color.Copy(value)
@@ -67,36 +51,20 @@ function swatchMethods:SetValue(value)
     )
 end
 
-function swatchMethods:SetSelected(selected)
-    self.selection:SetShown(selected == true)
-end
-
 function swatchMethods:SetControlEnabled(enabled, disabledTooltip)
     self:SetEnabled(enabled == true)
     self.swatch:SetAlpha(enabled and 1 or 0.35)
-    self.selection:SetAlpha(enabled and 1 or 0.35)
+    self:_RefreshNavigationHover()
     lib:SetControlTooltipEnabled(self, enabled, disabledTooltip)
 end
 
 local function refreshSwatchAppearance(button)
-    if not button.hover then
-        -- Retire the native highlight when updating an existing swatch.
-        local highlight = button:GetHighlightTexture()
-
-        if highlight then
-            highlight:SetTexture(nil)
-            highlight:Hide()
-            button:UnlockHighlight()
-        end
-
-        button.hover = lib:_CreateAtlasTexture(
-            button,
-            "OVERLAY",
-            "common-button-tertiary-square-hover"
-        )
-        button.hover:Hide()
+    -- Preserve selection when upgrading swatches that used a separate overlay.
+    if button.selection and button._libModernSettingsSelected == nil then
+        button._libModernSettingsSelected = button.selection:IsShown()
     end
 
+    lib:_ApplyButtonArtwork(button, "square")
     button.swatchMask =
         lib:ApplyTertiarySquareArtwork(button, button.swatch, button:GetWidth())
 end
@@ -108,12 +76,16 @@ lib:RegisterControlType(
     nil,
     refreshSwatchAppearance
 )
-lib:RegisterControlNavigation("_colorSwatch", {
-    actions = lib._buttonNavigationActions,
-    hover = function(control, highlighted)
-        control.hover:SetShown(highlighted)
-    end,
-})
+lib:RegisterControlNavigation("_colorSwatch", lib._buttonNavigation)
+
+-- Replace navigation before retiring overlays: an older embed's hover callback
+-- can still show them during the appearance refresh above.
+for control, controlType in pairs(lib._controlInstances) do
+    if controlType == "_colorSwatch" then
+        if control.selection then control.selection:Hide() end
+        if control.hover then control.hover:Hide() end
+    end
+end
 
 function lib:_CreateColorSwatch(parent, options)
     return self:CreateControl("_colorSwatch", parent, options)

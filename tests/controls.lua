@@ -779,8 +779,16 @@ local function makeFrame(frameType, parent, template)
         self.pushedTexture = texture
     end
 
+    function frame:GetPushedTexture()
+        return self.pushedTexture
+    end
+
     function frame:SetDisabledTexture(texture)
         self.disabledTexture = texture
+    end
+
+    function frame:GetDisabledTexture()
+        return self.disabledTexture
     end
 
     function frame:SetCheckedTexture(texture)

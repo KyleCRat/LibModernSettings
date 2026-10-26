@@ -60,6 +60,76 @@ local BUTTON_STYLES = {
 local DEFAULT_ICON_GAP = 4
 local DEFAULT_TEXTURE_ICON_SIZE = 16
 
+local function applyButtonTexture(button, getter, setter, layer, atlas)
+    local texture = button[getter](button)
+
+    if not texture then
+        texture = lib:_CreateAtlasTexture(button, layer, atlas)
+        button[setter](button, texture)
+    else
+        texture:SetAtlas(atlas, false)
+    end
+
+    return texture
+end
+
+-- Icon buttons and color swatches share state artwork; each owns its content.
+function lib:_ApplyButtonArtwork(button, variant)
+    local style = BUTTON_STYLES[variant]
+    button._libModernSettingsButtonStyle = style
+
+    applyButtonTexture(
+        button,
+        "GetNormalTexture",
+        "SetNormalTexture",
+        "BACKGROUND",
+        style.normal
+    )
+    applyButtonTexture(
+        button,
+        "GetPushedTexture",
+        "SetPushedTexture",
+        "BACKGROUND",
+        style.pressed
+    )
+    applyButtonTexture(
+        button,
+        "GetDisabledTexture",
+        "SetDisabledTexture",
+        "BACKGROUND",
+        style.disabled
+    )
+
+    if style.highlight then
+        local highlight = applyButtonTexture(
+            button,
+            "GetHighlightTexture",
+            "SetHighlightTexture",
+            "HIGHLIGHT",
+            style.highlight
+        )
+        highlight:SetBlendMode("ADD")
+        -- Older swatches explicitly hid this texture. The native button owns
+        -- whether the highlight is drawn for mouse hover or keyboard focus.
+        highlight:Show()
+    end
+end
+
+local selectionMethods = {}
+lib._buttonSelectionMethods = selectionMethods
+
+-- Selection is consumer-owned persistent state, not a pressed/hover effect.
+-- Clicking still calls onClick; it never toggles selection automatically.
+function selectionMethods:SetSelected(selected)
+    assert(type(selected) == "boolean", "selected must be a boolean")
+    self._libModernSettingsSelected = selected
+    self:_RefreshNavigationHover()
+end
+
+function selectionMethods:IsSelected()
+    return self._libModernSettingsSelected == true
+end
+
 local function validateButtonIcon(options, style)
     assert(
         options.iconAtlas == nil or type(options.iconAtlas) == "string",
@@ -309,25 +379,6 @@ local function createButton(parent, options)
     button:SetNormalFontObject(options.normalFont or style.normalFont)
     button:SetHighlightFontObject(options.highlightFont or style.highlightFont)
     button:SetDisabledFontObject(options.disabledFont or style.disabledFont)
-    local normalTexture =
-        lib:_CreateAtlasTexture(button, "BACKGROUND", style.normal)
-
-    button:SetNormalTexture(normalTexture)
-    button:SetPushedTexture(
-        lib:_CreateAtlasTexture(button, "BACKGROUND", style.pressed)
-    )
-    button:SetDisabledTexture(
-        lib:_CreateAtlasTexture(button, "BACKGROUND", style.disabled)
-    )
-
-    if style.highlight then
-        local highlightTexture =
-            lib:_CreateAtlasTexture(button, "HIGHLIGHT", style.highlight)
-
-        highlightTexture:SetBlendMode("ADD")
-        button:SetHighlightTexture(highlightTexture)
-    end
-
     button:SetText(options.text or "")
     button.label = label
 
@@ -348,7 +399,10 @@ local function createButton(parent, options)
     return button
 end
 
-local buttonMethods = {}
+local buttonMethods = {
+    SetSelected = selectionMethods.SetSelected,
+    IsSelected = selectionMethods.IsSelected,
+}
 
 function buttonMethods:_HandleClick(...)
     local onClick = self._libModernSettingsOnClick
@@ -364,18 +418,6 @@ function buttonMethods:SetOnClick(onClick)
         "onClick must be a function or nil"
     )
     self._libModernSettingsOnClick = onClick
-end
-
--- Selection is consumer-owned persistent state, not a pressed/hover effect.
--- Clicking still calls onClick; it never toggles selection automatically.
-function buttonMethods:SetSelected(selected)
-    assert(type(selected) == "boolean", "selected must be a boolean")
-    self._libModernSettingsSelected = selected
-    self:_RefreshNavigationHover()
-end
-
-function buttonMethods:IsSelected()
-    return self._libModernSettingsSelected == true
 end
 
 function buttonMethods:SetButtonText(text)
@@ -437,7 +479,7 @@ local function refreshButtonAppearance(button, options)
 
     button._libModernSettingsIconMaskInset = options.iconMaskInset
     lib:_ApplyFixedControlSize(button, width, height)
-    button._libModernSettingsButtonStyle = style
+    lib:_ApplyButtonArtwork(button, options.variant or "regular")
     button._libModernSettingsMinWidth = options.minWidth
         or (options.fitToContent and options.width)
         or style.minWidth
@@ -473,7 +515,7 @@ lib:RegisterControlType(
     refreshButtonAppearance
 )
 
-lib:RegisterControlNavigation("button", {
+lib._buttonNavigation = {
     actions = lib._buttonNavigationActions,
     highlight = lib._SetButtonNavigationHighlight,
     hover = function(control, highlighted)
@@ -508,7 +550,9 @@ lib:RegisterControlNavigation("button", {
             end
         end
     end,
-})
+}
+
+lib:RegisterControlNavigation("button", lib._buttonNavigation)
 
 function lib:CreateButton(parent, options)
     options = options or {}
