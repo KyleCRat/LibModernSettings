@@ -2,7 +2,7 @@
 
 LibModernSettings provides consistent modern controls for custom World of
 Warcraft Settings canvas pages and standalone options windows. It owns control
-construction, Blizzard art, value synchronization, enabled or disabled tooltip
+construction, control artwork, value synchronization, enabled or disabled tooltip
 behavior, and optional canvas layout and table geometry. The consuming addon continues to own
 SavedVariables, category registration, page composition, and runtime callbacks.
 
@@ -18,7 +18,10 @@ local ModernSettings = LibStub("LibModernSettings-1.0")
 
 Embed the library at `Libs/LibModernSettings-1.0`, including its `Media` directory.
 Bundled textures resolve from the copy selected by LibStub, so every consumer
-uses that copy's media.
+uses that copy's media. Default carets, search, clear and plus glyphs are independent
+copies of the YvSkins artwork, maintained with LMS; LibYvSkins is not required.
+Consumers using a skin library should pass its artwork through the control
+options below. Overrides belong to each control, never to shared library defaults.
 
 ## Icon picker
 
@@ -78,6 +81,8 @@ Every control uses an options table:
   click; `SetExpanded()` updates the displayed state without invoking it.
   Headers also expose `IsExpanded()`, `SetHeaderText()`, `SetHeaderIcon()`,
   `SetOnExpandedChanged()`, and `SetControlEnabled()`.
+  Optional `collapsedIconTexture` and `expandedIconTexture` override either
+  caret with a texture path or file ID; omitted states use bundled artwork.
 - `CreateCheckbox(parent, options)` creates a 34px tertiary-square checkbox.
   Use `label`, `width`, `value`, `tooltip`, and `onChanged`. Its optional
   right-side clickable caption is part of the checkbox, not a separate Field.
@@ -97,6 +102,8 @@ Every control uses an options table:
   with an inset tertiary square caret, retaining Blizzard's native menu and selection
   behavior. The input focus glow appears while keyboard-focused or open, not on
   mouse hover alone. Only the caret square uses hover, pressed and disabled art.
+  Optional `caretIconTexture` overrides the bundled downward caret with a
+  texture path or file ID.
   Use `label`, `width`, `value`, `choices` or `getChoices`,
   `tooltip`, and `onChanged`. Choice records use `{ value, label }`, with optional
   `tooltip` text, `tooltipTitle` and `enabled = false`. Add `{ type = "title", label = "Group" }`
@@ -196,7 +203,7 @@ Every control uses an options table:
 - `CreateSearchBox(parent, options)` / `searchBox` uses Blizzard's native search
   text/placeholder behavior with an LMS tertiary-square clear button.
   Optional `searchIconTexture` and `clearIconTexture` accept texture paths or file
-  IDs; omitted artwork uses native glyphs. Use `value`, `placeholder`, `width`, `height`,
+  IDs; omitted artwork uses LMS's bundled glyphs. Use `value`, `placeholder`, `width`, `height`,
   `fontObject`, `maxLetters`, `tooltip`, `enabled` and `onChanged(text, userInput)`.
   `GetValue()` returns the current query immediately; `SetValue(text)` updates it
   silently. `SetOnChanged(callback)` replaces the callback. Native typing and
@@ -208,6 +215,8 @@ Every control uses an options table:
   that wrap to fit the available width. Use `controlType = "valueList"` in a Field
   or canvas. Pills remain part of one input, with 34px rows and 6px gaps; the control
   grows and shrinks automatically so following content stays below it.
+  The add button uses the bundled plus glyph; `addIconTexture` accepts a texture
+  path or file ID to override it. Remove retains Blizzard's trash-can artwork.
   `value` is a dense array of non-empty strings or finite numbers, defaulting to
   `{}`. `SetValue()` and `GetValue()` copy the array. Blank fields are omitted from
   the saved value, and at least one field remains available.

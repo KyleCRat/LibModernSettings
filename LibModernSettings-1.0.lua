@@ -6,11 +6,20 @@ if not lib then return end
 
 -- Owned media follows the selected standalone package or canonical embed.
 local libraryFolder = addonName == MAJOR and "" or "Libs\\" .. MAJOR .. "\\"
-lib._tertiarySquareMask = "Interface\\AddOns\\"
+local texturePath = "Interface\\AddOns\\"
     .. addonName
     .. "\\"
     .. libraryFolder
-    .. "Media\\Textures\\common-button-tertiary-square-mask.tga"
+    .. "Media\\Textures\\"
+lib._tertiarySquareMask = texturePath
+    .. "common-button-tertiary-square-mask.tga"
+lib._defaultIcons = {
+    caretUp = texturePath .. "Vertex-Caret-Up.tga",
+    caretDown = texturePath .. "Vertex-Caret-Down.tga",
+    search = texturePath .. "Vertex-Search.tga",
+    close = texturePath .. "Vertex-Close.tga",
+    plus = texturePath .. "Vertex-Plus.tga",
+}
 
 lib._implementationMinor = MINOR
 lib._loadedModules = lib._loadedModules or {}

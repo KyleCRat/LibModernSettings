@@ -55,6 +55,27 @@ return function(lib, makeFrame, inputState, key)
     )
     assert(not list.removeButton:IsShown())
     assert(list.entries[1]:GetWidth() == 64)
+    assert(list.addButton.icon.texture == lib._defaultIcons.plus)
+    assert(list.removeButton.icon.atlas == "common-icon-delete")
+
+    for _, texture in ipairs({ "Test\\Plus.tga", 123 }) do
+        local custom =
+            lib:CreateValueList(UIParent, { addIconTexture = texture })
+        local defaultPlus = lib._defaultIcons.plus
+        lib._defaultIcons.plus = "NewerEmbed\\Vertex-Plus.tga"
+        lib:_RefreshControlAppearance(list)
+        lib:_RefreshControlAppearance(custom)
+        assert(list.addButton.icon.texture == lib._defaultIcons.plus)
+        assert(custom.addButton.icon.texture == texture)
+        custom:SetControlEnabled(false)
+        assert(custom.addButton.icon.texture == texture)
+        assert(custom.addButton.icon.alpha == 0.5)
+        custom:SetControlEnabled(true)
+        assert(custom.addButton.icon.alpha == 1)
+        assert(custom.removeButton.icon.atlas == "common-icon-delete")
+        lib._defaultIcons.plus = defaultPlus
+        lib:_RefreshControlAppearance(list)
+    end
 
     enter(list.entries[1], "20")
     assert(list:GetValue()[1] == 20 and changes == 1)
@@ -336,6 +357,8 @@ return function(lib, makeFrame, inputState, key)
     lib._implementationMinor = minor
 
     for _, options in ipairs({
+        { addIconTexture = false },
+        { addIconTexture = {} },
         { entryWidth = 0 },
         { entryWidth = math.huge },
         { maxValues = 0 },

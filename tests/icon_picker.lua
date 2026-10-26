@@ -176,6 +176,7 @@ return function(lib, makeFrame, inputState)
         history = history,
         searchIconTexture = "Test\\Search.tga",
         clearIconTexture = "Test\\Close.tga",
+        caretIconTexture = "Test\\Caret.tga",
     })
 
     for _, shelf in pairs(picker.shelves) do
@@ -186,6 +187,9 @@ return function(lib, makeFrame, inputState)
     assert(picker.search._libModernSettingsControlType == "searchBox")
     assert(picker.search.searchIcon.texture == "Test\\Search.tga")
     assert(picker.search.clearButton.icon.texture == "Test\\Close.tga")
+    assert(picker.filter.dropdown.Arrow.texture == "Test\\Caret.tga")
+    assert(picker.category.dropdown.Arrow.texture == "Test\\Caret.tga")
+    assert(picker.artworkType.dropdown.Arrow.texture == "Test\\Caret.tga")
 
     for _, dropdown in ipairs({ picker.category, picker.artworkType }) do
         assert(

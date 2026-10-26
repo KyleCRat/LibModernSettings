@@ -31,6 +31,19 @@ function lib:_CreateAtlasTexture(owner, layer, atlas)
     return texture
 end
 
+function lib:_ApplyCaretArtwork(texture, iconTexture, enabled)
+    texture:SetTexture(iconTexture)
+    texture:SetTexCoord(0, 1, 0, 1)
+    texture:SetRotation(0)
+    texture:SetVertexColor(
+        NORMAL_FONT_COLOR.r,
+        NORMAL_FONT_COLOR.g,
+        NORMAL_FONT_COLOR.b
+    )
+    texture:SetDesaturated(not enabled)
+    texture:SetAlpha(enabled and 1 or 0.5)
+end
+
 function lib:_ApplyTertiarySquareMask(button, artwork, buttonSize, inset)
     assert(
         type(buttonSize) == "number"

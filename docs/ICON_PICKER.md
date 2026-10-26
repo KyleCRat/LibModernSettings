@@ -35,8 +35,10 @@ picker:Open({
 Create and retain a picker per editing owner outside combat. Multiple instances have separate windows and
 sessions; the default catalogue is shared. Clicking a window raises it normally.
 Creation options `searchIconTexture` and `clearIconTexture` customize the shared
-search control's glyphs using file IDs or texture paths. AirAuras supplies these
-through LibYvSkins; LMS itself has no skin-library dependency.
+search control's glyphs using file IDs or texture paths. Omit them to use LMS's
+bundled search and clear artwork, without a skin-library dependency.
+`caretIconTexture` overrides the three filter dropdowns' caret. AirAuras passes
+YvSkins assets for these glyphs so their ownership stays with its skin library.
 Horizontal resizing snaps to whole icon columns; vertical resizing is continuous.
 The grid uses an explicit native stride to avoid losing a column to fractional
 frame measurements at different UI scales. Resize work runs only during a gesture.

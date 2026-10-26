@@ -178,13 +178,35 @@ return function(lib, makeFrame, inputState)
     input:SetOnChanged(nil)
     input:SetValue("")
     assert(input.Instructions:IsShown() and changes == 5)
-    local nativeArtwork = lib:CreateSearchBox(UIParent, {})
-    assert(nativeArtwork.searchIcon.atlas == "common-searchbar-icon-a")
-    assert(nativeArtwork.clearButton.icon.atlas == "common-search-clearbutton")
+    local defaultArtwork = lib:CreateSearchBox(UIParent, {})
+    assert(defaultArtwork.searchIcon.texture == lib._defaultIcons.search)
+    assert(defaultArtwork.clearButton.icon.texture == lib._defaultIcons.close)
     assert(
-        not nativeArtwork.clearButton:IsShown()
-            and nativeArtwork.Instructions:IsShown()
+        not defaultArtwork.clearButton:IsShown()
+            and defaultArtwork.Instructions:IsShown()
     )
+
+    local defaultSearch, defaultClose =
+        lib._defaultIcons.search, lib._defaultIcons.close
+    lib._defaultIcons.search = "NewerEmbed\\Vertex-Search.tga"
+    lib._defaultIcons.close = "NewerEmbed\\Vertex-Close.tga"
+    lib:_RefreshControlAppearance(defaultArtwork)
+    lib:_RefreshControlAppearance(input)
+    assert(
+        defaultArtwork.searchIcon.texture == lib._defaultIcons.search
+            and defaultArtwork.clearButton.icon.texture
+                == lib._defaultIcons.close,
+        "default glyphs follow the accepted embed instead of retaining the old asset path"
+    )
+    assert(
+        input.searchIcon.texture == "Test\\Search.tga"
+            and input.clearButton.icon.texture == "Test\\Close.tga",
+        "explicit artwork overrides survive an embed change"
+    )
+    lib._defaultIcons.search, lib._defaultIcons.close =
+        defaultSearch, defaultClose
+    lib:_RefreshControlAppearance(defaultArtwork)
+
     local tall = lib:CreateSearchBox(UIParent, { height = 50 })
     assert(
         tall.clearButton:GetWidth() == square:GetWidth()

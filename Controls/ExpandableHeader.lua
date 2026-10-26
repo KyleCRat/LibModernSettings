@@ -25,13 +25,6 @@ local HEADER_ATLASES = {
     disabled = "common-button-tertiary-disabled",
 }
 
-local TOGGLE_ATLAS = "common-dropdown-icon-next"
-local TOGGLE_DISABLED_ATLAS = "common-dropdown-icon-next-disabled"
-local TOGGLE_COLLAPSED_ROTATION = math.pi * 0.5
-local TOGGLE_EXPANDED_ROTATION = math.pi * 1.5
-local TOGGLE_COLLAPSED_Y_OFFSET = -1
-local TOGGLE_EXPANDED_Y_OFFSET = 2
-
 local function assertPositiveOption(value, name)
     assert(
         value == nil or (type(value) == "number" and value > 0),
@@ -83,31 +76,39 @@ end
 local function updateToggleState(header)
     local enabled = header._libModernSettingsHeaderEnabled ~= false
     local expanded = header._libModernSettingsHeaderExpanded == true
+    local options = header._libModernSettingsAppearanceOptions
+    local optionName = expanded and "expandedIconTexture"
+        or "collapsedIconTexture"
+    local iconName = expanded and "caretUp" or "caretDown"
 
-    header.toggleIcon:SetAtlas(
-        enabled and TOGGLE_ATLAS or TOGGLE_DISABLED_ATLAS,
-        true
+    lib:_ApplyCaretArtwork(
+        header.toggleIcon,
+        options and options[optionName] or lib._defaultIcons[iconName],
+        enabled
     )
     header.toggleIcon:SetSize(DEFAULT_TOGGLE_SIZE, DEFAULT_TOGGLE_SIZE)
-    header.toggleIcon:SetRotation(
-        expanded and TOGGLE_EXPANDED_ROTATION or TOGGLE_COLLAPSED_ROTATION
-    )
     lib:_SetLayoutPoint(
         header.toggleIcon,
         "RIGHT",
         header,
         "RIGHT",
         -DEFAULT_RIGHT_PADDING,
-        expanded and TOGGLE_EXPANDED_Y_OFFSET or TOGGLE_COLLAPSED_Y_OFFSET
+        0
     )
-    header.toggleIcon:SetDesaturated(false)
-    header.toggleIcon:SetAlpha(1)
 end
 
 local function createExpandableHeader(parent, options)
     assertPositiveOption(options.width, "width")
     assertPositiveOption(options.height, "height")
     assertPositiveOption(options.iconSize, "iconSize")
+
+    for _, key in ipairs({ "expandedIconTexture", "collapsedIconTexture" }) do
+        local value = options[key]
+        assert(
+            value == nil or type(value) == "string" or type(value) == "number",
+            key .. " must be a texture path, file ID, or nil"
+        )
+    end
 
     local header = CreateFrame("Button", nil, parent)
 

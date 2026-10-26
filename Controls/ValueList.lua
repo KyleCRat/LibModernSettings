@@ -175,6 +175,12 @@ local function layoutValueList(control)
 end
 
 local function createValueList(parent, options)
+    assert(
+        options.addIconTexture == nil
+            or type(options.addIconTexture) == "string"
+            or type(options.addIconTexture) == "number",
+        "addIconTexture must be a texture path, file ID, or nil"
+    )
     for _, key in ipairs({ "parseValue", "formatValue", "onChanged", "onError" }) do
         assert(
             options[key] == nil or type(options[key]) == "function",
@@ -220,7 +226,7 @@ local function createValueList(parent, options)
     control.revision = 0
     control.addButton = lib:CreateButton(control, {
         variant = "square",
-        iconAtlas = "common-icon-plus",
+        iconTexture = options.addIconTexture or lib._defaultIcons.plus,
         tooltip = "Add a value",
         onClick = function()
             control:AddEntry()
@@ -460,6 +466,18 @@ end
 local function refreshValueListAppearance(control, options)
     lib:_ApplyInputWidth(control, options.width or DEFAULT_WIDTH)
     control.entryWidth = options.entryWidth or DEFAULT_ENTRY_WIDTH
+
+    local button = control.addButton
+    local buttonOptions = button._libModernSettingsAppearanceOptions
+    buttonOptions.iconAtlas = nil
+    buttonOptions.iconTexture = options.addIconTexture or lib._defaultIcons.plus
+    lib:_RefreshControlAppearance(button)
+    button.icon:SetVertexColor(
+        NORMAL_FONT_COLOR.r,
+        NORMAL_FONT_COLOR.g,
+        NORMAL_FONT_COLOR.b
+    )
+
     control:RefreshLayout()
 end
 

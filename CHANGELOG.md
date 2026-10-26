@@ -87,6 +87,10 @@
 
 ### Changed
 
+- Bundle default up/down carets, search/clear glyphs and the value-list plus
+  without requiring LibYvSkins. Accept per-control texture overrides for each,
+  including icon-picker filter carets. Defaults follow the copy selected by
+  LibStub during compatible upgrades; consumer overrides remain independent.
 - Dropdowns use a 34px recessed text-input body and focus glow with an inset
   square caret. Only the caret presses down; native menus and navigation remain.
   Review fixed labeled-row heights and old dropdown edge compensations;

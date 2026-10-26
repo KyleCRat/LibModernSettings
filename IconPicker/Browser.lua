@@ -107,6 +107,7 @@ local function makeInputs(picker)
     picker.input:SetPoint("RIGHT", picker.preview, "LEFT", -8, 0)
 
     picker.filter = lib:CreateDropdown(frame, {
+        caretIconTexture = picker.caretIconTexture,
         width = 186,
         value = "all",
         choices = picker.filters,
@@ -129,6 +130,7 @@ local function makeInputs(picker)
     picker.search:SetPoint("TOPLEFT", 18, -102)
     picker.search:SetPoint("RIGHT", picker.filter, "LEFT", -8, 0)
     picker.category = lib:CreateDropdown(frame, {
+        caretIconTexture = picker.caretIconTexture,
         value = "all",
         choices = Icons.ArtworkCategories,
         tooltip = "Choose an artwork category, then optionally narrow it by type. Categories use words in icon filenames and combine with the source and search above.",
@@ -139,6 +141,7 @@ local function makeInputs(picker)
     picker.category:SetPoint("TOPLEFT", 18, -146)
     picker.category:SetPoint("TOPRIGHT", frame, "TOP", -4, -146)
     picker.artworkType = lib:CreateDropdown(frame, {
+        caretIconTexture = picker.caretIconTexture,
         value = "all",
         choices = Icons.ArtworkCategories[1].types,
         tooltip = "Choose an artwork category on the left to enable its specific types. All types includes the whole chosen category.",

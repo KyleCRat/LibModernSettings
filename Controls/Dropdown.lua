@@ -188,7 +188,6 @@ local function configureDropdownButton(control)
         0
     )
     dropdown.Arrow:SetSize(ACTION_STYLE.iconSize, ACTION_STYLE.iconSize)
-    dropdown.Arrow:SetRotation(math.pi * 1.5)
     dropdown.Text:ClearAllPoints()
     dropdown.Text:SetPoint("LEFT", dropdown, "LEFT", TEXT_INSET, 0)
     dropdown.Text:SetPoint(
@@ -314,6 +313,12 @@ local function configureDropdownVisibility(control)
 end
 
 local function createDropdown(parent, options)
+    assert(
+        options.caretIconTexture == nil
+            or type(options.caretIconTexture) == "string"
+            or type(options.caretIconTexture) == "number",
+        "caretIconTexture must be a texture path, file ID, or nil"
+    )
     assert(
         options.menuWidth == nil
             or (
@@ -461,10 +466,11 @@ function dropdownMethods:_RefreshButtonState()
         "common-button-tertiary-square-" .. state,
         false
     )
-    dropdown.Arrow:SetAtlas(
-        enabled and "common-dropdown-icon-next"
-            or "common-dropdown-icon-next-disabled",
-        false
+    local options = self._libModernSettingsAppearanceOptions
+    lib:_ApplyCaretArtwork(
+        dropdown.Arrow,
+        options and options.caretIconTexture or lib._defaultIcons.caretDown,
+        enabled
     )
     lib:_SetLayoutPoint(
         dropdown.Arrow,

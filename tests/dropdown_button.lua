@@ -37,9 +37,9 @@ return function(lib, upgraded)
             and button.arrowBackground.point[4] == -4
     )
     assert(button.Arrow.point[2] == button.arrowBackground)
-    assert(
-        button.Arrow:GetWidth() == 12 and button.Arrow.rotation == math.pi * 1.5
-    )
+    assert(button.Arrow:GetWidth() == 12 and button.Arrow.rotation == 0)
+    assert(button.Arrow.texture == lib._defaultIcons.caretDown)
+    assert(not button.Arrow.desaturated and button.Arrow.alpha == 1)
     assert(button.Text.justifyV == "MIDDLE" and button.Text:GetHeight() == 34)
     assert(select(4, button.Text:GetPoint(1)) == 12)
     assert(select(2, button.Text:GetPoint(2)) == button.arrowBackground)
@@ -99,8 +99,10 @@ return function(lib, upgraded)
     assert(
         button.arrowBackground.atlas == "common-button-tertiary-square-disabled"
     )
-    assert(button.Arrow.atlas == "common-dropdown-icon-next-disabled")
+    assert(button.Arrow.texture == lib._defaultIcons.caretDown)
+    assert(button.Arrow.desaturated and button.Arrow.alpha == 0.5)
     control:SetControlEnabled(true)
+    assert(not button.Arrow.desaturated and button.Arrow.alpha == 1)
     assert(button.Background.atlas == "common-button-tertiary-depressed-normal")
     assert(control:GetValue() == 1)
 
@@ -121,6 +123,29 @@ return function(lib, upgraded)
     assert(button.focusTexture == focus)
     assert(control:GetValue() == 2)
 
+    for _, texture in ipairs({ "Test\\Caret.tga", 123 }) do
+        local custom = lib:CreateDropdown(nil, { caretIconTexture = texture })
+        local defaultCaret = lib._defaultIcons.caretDown
+        lib._defaultIcons.caretDown = "NewerEmbed\\Vertex-Caret-Down.tga"
+        lib:_RefreshControlAppearance(control)
+        lib:_RefreshControlAppearance(custom)
+        assert(control.dropdown.Arrow.texture == lib._defaultIcons.caretDown)
+        assert(custom.dropdown.Arrow.texture == texture)
+        custom:SetControlEnabled(false)
+        assert(custom.dropdown.Arrow.texture == texture)
+        assert(custom.dropdown.Arrow.alpha == 0.5)
+        custom:SetControlEnabled(true)
+        assert(custom.dropdown.Arrow.alpha == 1)
+        lib._defaultIcons.caretDown = defaultCaret
+        lib:_RefreshControlAppearance(control)
+    end
+
+    for _, texture in ipairs({ false, {} }) do
+        assert(not pcall(function()
+            lib:CreateDropdown(nil, { caretIconTexture = texture })
+        end))
+    end
+
     assert(
         upgraded.dropdown:GetHeight() == 34 and upgraded:GetHeight() == 60,
         "upgrades must preserve explicit row heights while replacing the old button art"
@@ -136,6 +161,11 @@ return function(lib, upgraded)
     assert(
         upgraded.dropdown.arrowBackground.atlas
             == "common-button-tertiary-square-normal"
+    )
+    assert(
+        upgraded.dropdown.Arrow.texture == lib._defaultIcons.caretDown
+            and upgraded.dropdown.Arrow.rotation == 0,
+        "existing dropdowns replace rotated atlas carets during appearance upgrades"
     )
     assert(
         #upgraded.dropdown.callbacks.OnMenuOpen == 1

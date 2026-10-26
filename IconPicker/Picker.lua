@@ -754,6 +754,7 @@ function lib:CreateIconPicker(parent, options)
         filters = filters,
         searchIconTexture = options.searchIconTexture,
         clearIconTexture = options.clearIconTexture,
+        caretIconTexture = options.caretIconTexture,
         rememberFilters = options.rememberFilters == true,
         categoryValue = "all",
         typeValue = "all",

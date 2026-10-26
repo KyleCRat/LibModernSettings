@@ -167,6 +167,25 @@ testDuplicateCopy()
 
 -- Textures belong to the accepted embed, even when another copy loads later.
 do
+    local iconFiles = {
+        caretUp = "Vertex-Caret-Up.tga",
+        caretDown = "Vertex-Caret-Down.tga",
+        search = "Vertex-Search.tga",
+        close = "Vertex-Close.tga",
+        plus = "Vertex-Plus.tga",
+    }
+
+    for _, filename in pairs(iconFiles) do
+        local file = assert(io.open("Media/Textures/" .. filename, "rb"))
+        file:close()
+    end
+
+    local function checkIconPaths(library, prefix)
+        for name, filename in pairs(iconFiles) do
+            assert(library._defaultIcons[name] == prefix .. filename)
+        end
+    end
+
     local environment = createEnvironment()
     loadLibraryMinor(environment, PREVIOUS_MINOR, "OlderConsumer")
     local lib = environment.LibStub(MAJOR)
@@ -176,15 +195,27 @@ do
                 .. MAJOR
                 .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga"
     )
+    checkIconPaths(
+        lib,
+        "Interface\\AddOns\\OlderConsumer\\Libs\\"
+            .. MAJOR
+            .. "\\Media\\Textures\\"
+    )
 
     loadLibraryMinor(environment, CURRENT_MINOR, "NewerConsumer")
     local selectedPath = "Interface\\AddOns\\NewerConsumer\\Libs\\"
         .. MAJOR
         .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga"
     assert(lib._tertiarySquareMask == selectedPath)
+    local selectedPrefix = "Interface\\AddOns\\NewerConsumer\\Libs\\"
+        .. MAJOR
+        .. "\\Media\\Textures\\"
+    checkIconPaths(lib, selectedPrefix)
     loadLibraryMinor(environment, PREVIOUS_MINOR, "LateOlderConsumer")
     loadLibraryMinor(environment, CURRENT_MINOR, "EqualConsumer")
     assert(lib._tertiarySquareMask == selectedPath)
+    checkIconPaths(lib, selectedPrefix)
+    assert(environment.LibStub("LibYvSkins-1.0", true) == nil)
 
     local standalone = createEnvironment()
     loadLibraryMinor(standalone, CURRENT_MINOR)
@@ -193,6 +224,10 @@ do
             == "Interface\\AddOns\\"
                 .. MAJOR
                 .. "\\Media\\Textures\\common-button-tertiary-square-mask.tga"
+    )
+    checkIconPaths(
+        standalone.LibStub(MAJOR),
+        "Interface\\AddOns\\" .. MAJOR .. "\\Media\\Textures\\"
     )
 end
 

@@ -72,10 +72,7 @@ local function createSearchBox(parent, options)
         width = ACTION_STYLE.size,
         height = ACTION_STYLE.size,
         iconSize = ACTION_STYLE.iconSize,
-        iconTexture = options.clearIconTexture,
-        iconAtlas = not options.clearIconTexture
-                and "common-search-clearbutton"
-            or nil,
+        iconTexture = options.clearIconTexture or lib._defaultIcons.close,
         tooltip = "Clear search",
         onClick = function()
             input:SetText("")
@@ -190,12 +187,10 @@ local function refreshSearchAppearance(input, options)
     )
     input.Background:SetAtlas("common-button-tertiary-depressed-normal", false)
 
-    if options.searchIconTexture then
-        input.searchIcon:SetTexture(options.searchIconTexture)
-        input.searchIcon:SetTexCoord(0, 1, 0, 1)
-    else
-        input.searchIcon:SetAtlas("common-searchbar-icon-a", false)
-    end
+    input.searchIcon:SetTexture(
+        options.searchIconTexture or lib._defaultIcons.search
+    )
+    input.searchIcon:SetTexCoord(0, 1, 0, 1)
 
     input.searchIcon:SetSize(16, 16)
     input.searchIcon:ClearAllPoints()
@@ -205,6 +200,9 @@ local function refreshSearchAppearance(input, options)
     clearOptions.width = ACTION_STYLE.size
     clearOptions.height = ACTION_STYLE.size
     clearOptions.iconSize = ACTION_STYLE.iconSize
+    clearOptions.iconTexture = options.clearIconTexture
+        or lib._defaultIcons.close
+    clearOptions.iconAtlas = nil
     lib:_RefreshControlAppearance(clear)
     lib:_SetLayoutPoint(clear, "RIGHT", input, "RIGHT", -ACTION_STYLE.inset, 0)
     local rightInset = ACTION_STYLE.size + ACTION_STYLE.inset * 2

@@ -1687,12 +1687,12 @@ assert(expandableHeader.icon:GetHeight() == 20)
 assert(expandableHeader.icon:IsShown())
 assert(expandableHeader.label.points[1][2] == expandableHeader.icon)
 assert(expandableHeader.toggleIcon.drawLayer == "OVERLAY")
-assert(expandableHeader.toggleIcon.atlas == "common-dropdown-icon-next")
+assert(expandableHeader.toggleIcon.texture == lib._defaultIcons.caretDown)
 assert(expandableHeader.toggleIcon:GetWidth() == 17)
 assert(expandableHeader.toggleIcon:GetHeight() == 17)
-assert(expandableHeader.toggleIcon.rotation == math.pi * 0.5)
+assert(expandableHeader.toggleIcon.rotation == 0)
 local collapsedToggleYOffset = expandableHeader.toggleIcon.point[5]
-assert(type(collapsedToggleYOffset) == "number")
+assert(collapsedToggleYOffset == 0)
 assert(expandableHeader:IsExpanded() == false)
 
 expandableHeader.scripts.OnEnter(expandableHeader)
@@ -1708,9 +1708,10 @@ assert(
 
 expandableHeader.scripts.OnClick(expandableHeader, "LeftButton")
 assert(expandableHeader:IsExpanded() == true)
-assert(expandableHeader.toggleIcon.rotation == math.pi * 1.5)
+assert(expandableHeader.toggleIcon.texture == lib._defaultIcons.caretUp)
+assert(expandableHeader.toggleIcon.rotation == 0)
 local expandedToggleYOffset = expandableHeader.toggleIcon.point[5]
-assert(type(expandedToggleYOffset) == "number")
+assert(expandedToggleYOffset == 0)
 assert(#expandedChanges == 1)
 assert(expandedChanges[1].header == expandableHeader)
 assert(expandedChanges[1].expanded == true)
@@ -1732,20 +1733,50 @@ expandableHeader:SetControlEnabled(false, "Unavailable")
 assert(expandableHeader.enabled == false)
 assert(expandableHeader.icon.desaturated == true)
 assert(expandableHeader.icon.alpha == 0.5)
-assert(
-    expandableHeader.toggleIcon.atlas == "common-dropdown-icon-next-disabled"
-)
-assert(expandableHeader.toggleIcon.desaturated == false)
-assert(expandableHeader.toggleIcon.alpha == 1)
+assert(expandableHeader.toggleIcon.texture == lib._defaultIcons.caretDown)
+assert(expandableHeader.toggleIcon.desaturated == true)
+assert(expandableHeader.toggleIcon.alpha == 0.5)
 assert(expandableHeader.disabledTooltip == "Unavailable")
 
 expandableHeader:SetControlEnabled(true)
 assert(expandableHeader.enabled == true)
 assert(expandableHeader.icon.desaturated == false)
 assert(expandableHeader.icon.alpha == 1)
-assert(expandableHeader.toggleIcon.atlas == "common-dropdown-icon-next")
+assert(expandableHeader.toggleIcon.texture == lib._defaultIcons.caretDown)
 assert(expandableHeader.toggleIcon.desaturated == false)
 assert(expandableHeader.toggleIcon.alpha == 1)
+
+do
+    local header = lib:CreateExpandableHeader(nil, {
+        collapsedIconTexture = "Test\\Caret-Down.tga",
+        expandedIconTexture = 123,
+    })
+    assert(header.toggleIcon.texture == 123)
+    header:SetExpanded(false)
+    assert(header.toggleIcon.texture == "Test\\Caret-Down.tga")
+    header:SetControlEnabled(false)
+    assert(header.toggleIcon.texture == "Test\\Caret-Down.tga")
+    assert(header.toggleIcon.alpha == 0.5)
+    header:SetControlEnabled(true)
+    assert(header.toggleIcon.alpha == 1)
+    header:SetExpanded(true)
+    lib:_RefreshControlAppearance(header)
+    assert(header.toggleIcon.texture == 123)
+    assert(expandableHeader.toggleIcon.texture == lib._defaultIcons.caretDown)
+
+    local partial =
+        lib:CreateExpandableHeader(nil, { expandedIconTexture = 456 })
+    partial:SetExpanded(false)
+    assert(partial.toggleIcon.texture == lib._defaultIcons.caretDown)
+
+    for _, key in ipairs({ "collapsedIconTexture", "expandedIconTexture" }) do
+        for _, value in ipairs({ false, {} }) do
+            assert(not pcall(function()
+                lib:CreateExpandableHeader(nil, { [key] = value })
+            end))
+        end
+    end
+end
 
 local labeledDropdown = lib:CreateDropdown(nil, {
     label = "Profile",
