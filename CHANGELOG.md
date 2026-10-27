@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.11.0] - 2026-10-27
 
 ### Added
 
@@ -87,6 +87,8 @@
 
 ### Changed
 
+- Standardize Lua formatting and include standalone StyLua/Selene configuration
+  for contributors.
 - Bundle default up/down carets, search/clear glyphs and the value-list plus
   without requiring LibYvSkins. Accept per-control texture overrides for each,
   including icon-picker filter carets. Defaults follow the copy selected by
@@ -118,6 +120,12 @@
   their width changes, without rebuilding controls or discarding pending edits.
   Defer child-driven Field resizing until native size callbacks finish, keeping
   wrapped inputs and labels measurable when adding or removing rows.
+
+### Upgrade Notes
+
+- Use LibStub MINOR 12 within the existing `LibModernSettings-1.0` API family.
+- Include the library's `Media` directory. Consumers using a skin library should
+  continue passing its glyph overrides; bundled defaults require no skin library.
 
 ## [1.10.0] - 2026-10-12
 

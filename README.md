@@ -6,7 +6,7 @@ construction, control artwork, value synchronization, enabled or disabled toolti
 behavior, and optional canvas layout and table geometry. The consuming addon continues to own
 SavedVariables, category registration, page composition, and runtime callbacks.
 
-Release `1.10.0` uses the `LibModernSettings-1.0` API family with LibStub MINOR `11`.
+Release `1.11.0` uses the `LibModernSettings-1.0` API family with LibStub MINOR `12`.
 
 ## Embedding
 
