@@ -1,5 +1,27 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Add standalone `CreateTab` header controls with bundled artwork, selection,
+  disabled states, keyboard navigation and pending-edit handling. Pixel-aligned
+  slices retain their corners across movement, resizing and scale changes.
+  `SetTabAppearance` supports optional per-control header/flat styling without
+  a skin-library dependency or replacement click/selection behavior.
+- Add `CreateSideTab` with fixed-aspect Blizzard side-tab artwork, independent
+  selected/hover states, icons, tooltips and keyboard navigation.
+- Add a separate `CreateTexturePicker` with unmasked previews, manual paths/file
+  IDs and Apply/Reset/Cancel. Top tabs organize Circles, Shapes, Bars, Alerts,
+  Runes and the complete Blizzard atlas catalogue. Bundle useful WeakAuras
+  artwork with its license; known file and atlas dimensions preserve proportions.
+  Optional `mediaPath` keeps persisted artwork paths in the consumer's own embed.
+  Category tabs use the standard LMS control; optional `styleCategoryTab` applies
+  consumer styling to those controls.
+  Pool visible previews and load the atlas catalogue only when requested.
+  Side tabs switch to an independent icon browser while preserving the draft.
+  The texture browser has no history, favorites or search.
+
 ## [1.11.0] - 2026-10-27
 
 ### Added

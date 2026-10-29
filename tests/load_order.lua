@@ -181,6 +181,13 @@ do
     end
 
     local function checkIconPaths(library, prefix)
+        assert(library._texturePath == prefix)
+        assert(
+            library._headerTabTexture
+                == prefix
+                    .. "common-header-tab\\common-header-tab-atlas.tga"
+        )
+
         for name, filename in pairs(iconFiles) do
             assert(library._defaultIcons[name] == prefix .. filename)
         end

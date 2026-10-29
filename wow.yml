@@ -12,6 +12,8 @@ globals:
         any: true
     ApproximatelyEqual:
         any: true
+    PixelUtil.GetPixelToUIUnitFactor:
+        args: []
     BaseScrollBoxEvents:
         any: true
     ButtonFrameTemplate_HidePortrait:

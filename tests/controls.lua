@@ -20,6 +20,13 @@ NORMAL_FONT_COLOR = { r = 1, g = 0.82, b = 0 }
 GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
 SEARCH = "Search"
 UIParent = { width = 1600, height = 1000 }
+-- The standalone fixture supplies Blizzard's physical-pixel conversion API.
+-- selene: allow(incorrect_standard_library_use)
+PixelUtil = {
+    GetPixelToUIUnitFactor = function()
+        return 1
+    end,
+}
 
 function UIParent:GetParent()
     return nil
@@ -304,6 +311,7 @@ local function makeRegion()
     end
 
     function region:SetSize(width, height)
+        self.sizeWrites = (self.sizeWrites or 0) + 1
         self.width = width
         self.height = height
     end
@@ -392,6 +400,14 @@ local function makeRegion()
 
     function region:SetTexCoord(...)
         self.texCoord = { ... }
+    end
+
+    function region:SetSnapToPixelGrid(enabled)
+        self.pixelSnapping = enabled
+    end
+
+    function region:SetTexelSnappingBias(bias)
+        self.pixelBias = bias
     end
 
     function region:SetGradient(...)
@@ -501,6 +517,11 @@ local function makeFontString()
             "FontString:SetText(): Font not set"
         )
         self.text = text
+    end
+
+    function fontString:SetFont(path, size, flags)
+        self.font = { path, size, flags }
+        self.fontObject = nil
     end
 
     function fontString:GetStringWidth()
@@ -619,6 +640,15 @@ local function makeFrame(frameType, parent, template)
 
     function frame:GetBottom()
         return self:GetTop() - self:GetHeight()
+    end
+
+    function frame:GetRect()
+        if not self.width or not self.height then return end
+
+        return self:GetLeft(),
+            self:GetBottom(),
+            self:GetWidth(),
+            self:GetHeight()
     end
 
     function frame:GetCenter()
@@ -2678,3 +2708,6 @@ dofile("tests/colors.lua")(lib, makeFrame, inputState)
 dofile("tests/interaction.lua")(lib, makeFrame)
 dofile("tests/search_box.lua")(lib, makeFrame, inputState)
 dofile("tests/icon_picker.lua")(lib, makeFrame, inputState)
+dofile("tests/side_tab.lua")(lib, makeFrame)
+dofile("tests/tab.lua")(lib, makeFrame)
+dofile("tests/texture_picker.lua")(lib, makeFrame, inputState)

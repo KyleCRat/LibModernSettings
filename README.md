@@ -20,6 +20,7 @@ Embed the library at `Libs/LibModernSettings-1.0`, including its `Media` directo
 Bundled textures resolve from the copy selected by LibStub, so every consumer
 uses that copy's media. Default carets, search, clear and plus glyphs are independent
 copies of the YvSkins artwork, maintained with LMS; LibYvSkins is not required.
+The standard header tab includes its own artwork and renderer as well.
 Consumers using a skin library should pass its artwork through the control
 options below. Overrides belong to each control, never to shared library defaults.
 
@@ -35,9 +36,46 @@ The bundled icon-name index is generated from wowdev's current listfile.
 [Update it with the standalone PowerShell script](docs/ICON_DATA.md); no media
 database addon or in-game network access is needed.
 
+## Texture picker
+
+`CreateTexturePicker(parent, options)` supplies a separate texture browser with
+Circles, Shapes, Bars, Alerts, Runes and Atlases tabs, unmasked previews and side
+tabs for switching to an icon-picker instance. Useful shapes are bundled;
+WeakAuras does not need to be installed.
+See [the texture-picker contract](docs/TEXTURE_PICKER.md) for draft ownership,
+preview sizing, persistent media paths and cancellation behavior. Library code
+uses the root MIT license; bundled WeakAuras artwork retains its separate
+[GPL-2.0 license and attribution](Media/Textures/WeakAuras/README.md).
+
 ## Controls
 
 Every control uses an options table:
+
+- `CreateTab(parent, options)` creates a header tab with the bundled artwork.
+  Supply `text`, `width` (default 100), `height` (default 32), `selected`,
+  `enabled`, `tooltip`, `disabledTooltip` and `onClick`. The returned button
+  owns `SetSelected`, `IsSelected`, `SetOnClick`, `SetControlEnabled`, keyboard
+  navigation and pending-edit validation. Selection is consumer-owned; clicks
+  request a page change without selecting it automatically. Use native `SetText`
+  and frame setters for labels and layout.
+  `SetTabAppearance(options)` changes only presentation; omit options to restore
+  the default. Supported fields are `mode = "header" | "flat"`, `texture`
+  (the same atlas layout as the bundled file), `fontObject`, `font`, `fontSize`,
+  `fontFlags`, and `colors`. Colors are RGBA arrays named `border`, `accent`,
+  `highlight`, `text`, `selectedText` and `flatAccent`; omitted colors use the
+  defaults, and color alpha defaults to 1. Appearance tables are copied.
+  Visible tabs compare public bounds for ancestor movement and effective-scale
+  changes; unchanged geometry performs no texture writes or allocations.
+  `RefreshTabGeometry()` permits an immediate refresh after layout.
+  YvSkins consumers can opt in with `context:StyleSettingsTab(tab, options)`;
+  the base LMS control does not require YvSkins.
+
+- `CreateSideTab(parent, options)` creates a fixed-aspect icon tab using
+  `common-sidetab`, `common-sidetab-selected` and `common-sidetab-hover`.
+  Supply `iconAtlas` or `iconTexture`, optional `iconSize` (up to 32), `tooltip`,
+  `selected` and `onClick`. The consumer controls selection with `SetSelected`;
+  clicking does not toggle it. Supports `IsSelected`, `SetOnClick`,
+  `SetControlEnabled` and normal LMS keyboard navigation.
 
 - `CreateButton(parent, options)` creates regular, small, or square tertiary
   buttons.

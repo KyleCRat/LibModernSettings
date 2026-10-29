@@ -11,6 +11,9 @@ local texturePath = "Interface\\AddOns\\"
     .. "\\"
     .. libraryFolder
     .. "Media\\Textures\\"
+lib._texturePath = texturePath
+lib._headerTabTexture = texturePath
+    .. "common-header-tab\\common-header-tab-atlas.tga"
 lib._tertiarySquareMask = texturePath
     .. "common-button-tertiary-square-mask.tga"
 lib._defaultIcons = {

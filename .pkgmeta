@@ -13,3 +13,4 @@ ignore:
     - tools
     - TODO.md
     - Media/Textures/common-button-tertiary-square-mask.afphoto
+    - Media/Textures/common-header-tab/common-header-tab-atlas.afphoto

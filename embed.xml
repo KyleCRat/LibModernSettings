@@ -2,6 +2,7 @@
 ..\FrameXML\UI.xsd">
     <Script file="LibModernSettings-1.0.lua"/>
     <Script file="Utilities\Atlas.lua"/>
+    <Script file="Utilities\TabArtwork.lua"/>
     <Script file="Utilities\Tooltip.lua"/>
     <Script file="Utilities\EditBoxCommit.lua"/>
     <Script file="Utilities\KeyboardNavigation.lua"/>
@@ -12,6 +13,8 @@
     <Script file="Utilities\FlashMessages.lua"/>
     <Script file="Layouts\Control.lua"/>
     <Script file="Controls\Button.lua"/>
+    <Script file="Controls\SideTab.lua"/>
+    <Script file="Controls\Tab.lua"/>
     <Script file="Controls\ExpandableHeader.lua"/>
     <Script file="Controls\Checkbox.lua"/>
     <Script file="Controls\Dropdown.lua"/>
@@ -33,4 +36,7 @@
     <Script file="IconPicker\Filters.lua"/>
     <Script file="IconPicker\Browser.lua"/>
     <Script file="IconPicker\Picker.lua"/>
+    <Script file="TexturePicker\Catalogue.lua"/>
+    <Script file="TexturePicker\Browser.lua"/>
+    <Script file="TexturePicker\Picker.lua"/>
 </Ui>

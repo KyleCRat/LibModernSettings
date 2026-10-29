@@ -1,5 +1,25 @@
 # In-Game Validation
 
+Texture-picker tests cover atlas/bundled-file proportions, category changes,
+pending path commits, draft transfer in both directions, reset/apply/cancel,
+stale owners, combat closure, lazy catalogue reuse, consumer-owned media paths,
+shipped asset dimensions, optional tab styling, selection after rejected input
+and existing objects across compatible loads. Side-tab
+tests cover fixed artwork proportions, selected/hover separation, consumer-owned
+selection, keyboard focus, disabled state and compatible control updates.
+In game, check all six top tabs at minimum window size, then select rings,
+square borders, wide bars and wide/tall atlases. Scroll and resize, then switch
+categories and browsers with an unapplied path or icon ID. Cancel from each
+browser and verify no saved change. Repeat with WeakAuras disabled and with a
+different addon owning the selected LMS implementation.
+Check the original icon picker separately; it must retain its prior behavior.
+
+Standalone header-tab tests run with no YvSkins loaded. They cover consumer-owned
+selection, keyboard activation, rejected input, disabled state, appearance resets,
+copied colors, movement/scaling, compact geometry, unchanged-geometry writes and
+compatible control reloads. In game, check editor and picker tabs through Modern
+and Flat changes; verify keyboard focus and selection survive those changes.
+
 Search-box tests cover native placeholder behavior, custom search/clear textures,
 live callbacks, silent values, consumer normalization, disable/re-enable,
 keyboard focus and both embed load orders. In game, type, clear with the
