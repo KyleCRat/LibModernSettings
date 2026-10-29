@@ -4,7 +4,7 @@
 -- Commit: 041822f2ed2efcc866eb728296e190038897539f
 -- Source SHA-256: 91b9b089c682ba96ae7c4a814c28d466b0693a86bdab24ea65126cc818f4e863
 -- Community filenames are search metadata, not verified gameplay relationships.
-local MAJOR, MINOR = "LibModernSettings-1.0", 12
+local MAJOR, MINOR = "LibModernSettings-1.0", 13
 local lib = LibStub(MAJOR, true)
 if not lib or lib._implementationMinor ~= MINOR
     or not lib:_BeginModule("IconPicker/NameData", MINOR) then

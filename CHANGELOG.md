@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.12.0] - 2026-10-29
 
 ### Added
 
@@ -21,6 +21,14 @@
   Pool visible previews and load the atlas catalogue only when requested.
   Side tabs switch to an independent icon browser while preserving the draft.
   The texture browser has no history, favorites or search.
+
+### Upgrade Notes
+
+- Use LibStub MINOR 13 within the existing `LibModernSettings-1.0` API family.
+- Include the complete `Media` directory for header tabs and texture choices,
+  including the bundled WeakAuras artwork's license and attribution.
+- YvSkins styling is optional and requires its `StyleSettingsTab` API; the
+  header control and texture browser work without a skin library.
 
 ## [1.11.0] - 2026-10-27
 
@@ -148,35 +156,3 @@
 - Use LibStub MINOR 12 within the existing `LibModernSettings-1.0` API family.
 - Include the library's `Media` directory. Consumers using a skin library should
   continue passing its glyph overrides; bundled defaults require no skin library.
-
-## [1.10.0] - 2026-10-12
-
-### Added
-
-- Reusable scroll areas for native lists and canvas layouts, with inset spacing
-  presets, compact content spacing, and independent border overrides. Existing
-  canvas spacing remains unchanged unless the new options are selected.
-- Buttons accept texture-file icons through `iconTexture`, alongside existing
-  atlas icons. `SetButtonIcon()` updates either source on retained buttons.
-- Canvas columns support vertical alignment to center or bottom-align content
-  of different heights.
-
-### Changed
-
-- Square icon buttons automatically clip artwork to the tertiary border's
-  corners while preserving icon sizing and aspect ratio.
-
-### Upgrade Notes
-
-- Use LibStub MINOR 11 within the existing `LibModernSettings-1.0` API family.
-
-## [1.9.0] - 2026-10-12
-
-### Added
-
-- Persistent selected states for regular, small, and square buttons via
-  `selected`, `SetSelected()`, and `IsSelected()`, using native tertiary artwork.
-
-### Upgrade Notes
-
-- Use LibStub MINOR 10 within the existing `LibModernSettings-1.0` API family.
