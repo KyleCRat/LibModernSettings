@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Add `CreateGradientPicker` with angle, numbered color stops, live preview,
+  and Apply/Reset/Cancel. Stops remain ordered and at least 3% apart, with
+  cursor movement measured at the current scale. Drafts and callbacks use
+  copied values; stale owners and combat close without applying.
+- Add right content padding and `SetContentPadding` for standalone scroll
+  areas. Content margins change without moving the scrollbar or replacing
+  native widgets and views.
+
+### Upgrade Notes
+
+- The development implementation uses LibStub MINOR 14 in the existing API
+  family so older embeds cannot mask the new picker and padding methods.
+
 ## [1.12.0] - 2026-10-29
 
 ### Added

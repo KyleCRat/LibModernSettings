@@ -351,4 +351,58 @@ do
     assert(lib._iconUtils.ArtworkCategories == selectedCategories)
 end
 
+-- A new picker remains available whichever addon owns the first embed. Existing
+-- picker objects and drafts acquire methods through the same retained prototype.
+do
+    local paths = {
+        "GradientPicker/Model.lua",
+        "GradientPicker/Browser.lua",
+        "GradientPicker/Picker.lua",
+    }
+    local function loadGradient(environment, minor)
+        for _, path in ipairs(paths) do
+            local file = assert(io.open(path, "rb"))
+            local source = file:read("*a")
+            file:close()
+            source = source:gsub(
+                '(local MAJOR, MINOR = "LibModernSettings%-1%.0", )%d+',
+                "%1" .. minor,
+                1
+            )
+            local chunk = assert(loadstring(source, "@" .. path))
+            setfenv(chunk, environment)
+            chunk()
+        end
+    end
+    for _, oldFirst in ipairs({ true, false }) do
+        local environment = createEnvironment()
+        if oldFirst then
+            loadLibraryMinor(environment, PREVIOUS_MINOR, "OlderAddon")
+        end
+        loadLibraryMinor(environment, CURRENT_MINOR, "AirChat")
+        loadGradient(environment, CURRENT_MINOR)
+        local selected = environment.LibStub(MAJOR)
+        local constructor, prototype =
+            selected.CreateGradientPicker, selected._gradientPickerPrototype
+        local value = assert(selected._gradientUtils.Normalize())
+        local object = setmetatable({ value = value }, prototype)
+        loadLibraryMinor(environment, PREVIOUS_MINOR, "OlderAddon")
+        loadGradient(environment, PREVIOUS_MINOR)
+        loadGradient(environment, CURRENT_MINOR)
+        assert(selected.CreateGradientPicker == constructor)
+        assert(object:GetValue().stops[1].position == 0)
+        local getValue = object.GetValue
+        loadLibraryMinor(environment, CURRENT_MINOR + 1, "NewerAddon")
+        loadGradient(environment, CURRENT_MINOR + 1)
+        assert(
+            selected._gradientPickerPrototype == prototype
+                and object.value == value
+        )
+        assert(object.GetValue ~= getValue and object:GetValue().angle == 0)
+        loadLibraryMinor(environment, CURRENT_MINOR, "AirChat")
+        loadGradient(environment, CURRENT_MINOR)
+        assert(selected._implementationMinor == CURRENT_MINOR + 1)
+    end
+end
+
 print("LibModernSettings mixed load-order tests passed")

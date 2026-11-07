@@ -145,6 +145,26 @@ return function(newEnvironment, loadVersion)
         "a native view must be initialized once"
     )
 
+    local retainedBox, retainedBar = list:GetScrollBox(), list:GetScrollBar()
+    local margins = { left = 12, right = 23, top = 17, bottom = 29 }
+    list:SetContentPadding(margins)
+    margins.left = 100
+    point(retainedBox, "TOPLEFT", 12, -17)
+    point(retainedBox, "BOTTOMRIGHT", -51, 29)
+    point(retainedBar, "TOPRIGHT", -7, -6)
+    point(retainedBar, "BOTTOMRIGHT", -7, 5)
+    assert(list:GetContentWidth() == 267 and list:GetViewportHeight() == 594)
+    assert(retainedBox.initCount == 1 and retainedBox.nativeView == nativeView)
+    assert(not pcall(list.SetContentPadding, list, { right = -1 }))
+    point(retainedBox, "BOTTOMRIGHT", -51, 29)
+    list:SetContentPadding({ left = 0, right = 0, top = 0, bottom = 0 })
+    point(retainedBox, "TOPLEFT", 4, -6)
+    point(retainedBox, "BOTTOMRIGHT", -28, 5)
+    assert(
+        list:GetScrollBox() == retainedBox
+            and list:GetScrollBar() == retainedBar
+    )
+
     local plain = lib:CreateScrollArea(frame(300, 200), {
         preset = "none",
         kind = "canvas",
@@ -187,7 +207,7 @@ return function(newEnvironment, loadVersion)
     assert(legacy:GetContentWidth() == 368)
     assert(regular:GetContentWidth() == 701 and custom:GetContentWidth() == 251)
     assert(
-        list:GetContentWidth() == 294
+        list:GetContentWidth() == 298
             and list:GetScrollBox().nativeView == nativeView
     )
     point(list:GetScrollBar(), "TOPRIGHT", -7, -6)

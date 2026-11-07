@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibModernSettings-1.0", 13
+local MAJOR, MINOR = "LibModernSettings-1.0", 14
 local lib = LibStub(MAJOR, true)
 
 if
@@ -112,7 +112,10 @@ function lib:_ResolveScrollAreaGeometry(options)
             left,
             dimension(padding.left, spacing.left, "left content padding")
         ),
-        right = right + width + gap,
+        right = right
+            + width
+            + gap
+            + dimension(padding.right, 0, "right content padding"),
         top = top,
         bottom = bottom,
         paddingTop = math.max(
@@ -196,7 +199,7 @@ function Area:_ConfigureMouseWheel()
     frame:SetScript("OnMouseWheel", onMarginMouseWheel)
 end
 
-function Area:_ApplyGeometry(geometry)
+function Area:_ApplyGeometry(geometry, contentOnly)
     self.geometry = geometry
     local top, bottom = geometry.top, geometry.bottom
 
@@ -223,6 +226,8 @@ function Area:_ApplyGeometry(geometry)
         bottom
     )
 
+    if contentOnly then return end
+
     self.scrollBar:ClearAllPoints()
     self.scrollBar:SetWidth(geometry.scrollbarWidth)
     self.scrollBar:SetPoint(
@@ -239,6 +244,27 @@ function Area:_ApplyGeometry(geometry)
         -geometry.scrollbarRight,
         geometry.bottom
     )
+end
+
+function Area:SetContentPadding(padding)
+    assert(self.options, "SetContentPadding requires a standalone scroll area")
+    local options = lib:_CopyScrollAreaOptions(self.options)
+    options.contentPadding = padding
+    options = lib:_CopyScrollAreaOptions(options)
+    local geometry = lib:_ResolveScrollAreaGeometry(options)
+    self.options = options
+    local previous = self.geometry
+    if
+        previous.left == geometry.left
+        and previous.right == geometry.right
+        and previous.paddingTop == geometry.paddingTop
+        and previous.paddingBottom == geometry.paddingBottom
+    then
+        return
+    end
+    -- Keep the native widgets and caller's view. The scrollbar's anchors and
+    -- size are independent of text/content padding, including right padding.
+    self:_ApplyGeometry(geometry, true)
 end
 
 -- Initialize after configuring the native list view or creating canvas children.

@@ -7,6 +7,7 @@ behavior, and optional canvas layout and table geometry. The consuming addon con
 SavedVariables, category registration, page composition, and runtime callbacks.
 
 Release `1.12.0` uses the `LibModernSettings-1.0` API family with LibStub MINOR `13`.
+The unreleased development implementation uses MINOR `14`.
 
 ## Embedding
 
@@ -46,6 +47,44 @@ See [the texture-picker contract](docs/TEXTURE_PICKER.md) for draft ownership,
 preview sizing, persistent media paths and cancellation behavior. Library code
 uses the root MIT license; bundled WeakAuras artwork retains its separate
 [GPL-2.0 license and attribution](Media/Textures/WeakAuras/README.md).
+
+## Gradient picker
+
+`CreateGradientPicker(parent, { palette = optionalColorPalette })` creates a
+separate native window with angle, color/opacity, numbered stops and
+Apply/Reset/Cancel. Reuse the returned picker for later editing sessions.
+
+```lua
+local picker = ModernSettings:CreateGradientPicker(UIParent)
+picker:Open({
+    addonName = "MyAddon",
+    sourceName = "Window background",
+    value = currentGradient,
+    defaultValue = defaultGradient,
+    isValid = function() return editorStillOwnsThisWindow() end,
+    onPreview = function(value) renderPreview(value) end,
+    onApply = function(value) saveGradient(value) end,
+    onClose = function(applied) renderSavedGradient() end,
+})
+```
+
+A gradient is `{ angle = degrees, stops = { ... } }`. Each stop contains
+`position` (0 to 1) and `r, g, b, a` (0 to 1; omitted alpha defaults to 1).
+Use 2 to 24 stops. Drafts sort positions stably and separate coincident stops
+by at least 3% without removing colors. Dragging and numeric edits clamp against
+neighboring stops; handles never cross or overlap. End colors extend to the
+edges without adding editable stops. Angles use degrees, with zero left to right.
+The angle control accepts 0 through 360. Values must be ordinary public numbers.
+
+`Open` requires nonempty `addonName`/`sourceName` and `onApply`; other callbacks
+are optional. Values and defaults are copied at opening. `GetValue()` returns
+a copy; `SetValue(value)` replaces the draft silently. User edits call
+`onPreview(value)` at most 30 times per second. Only `Apply()` calls `onApply`,
+which may reject with `false, message` and retain the draft. `Reset()` previews
+the supplied default (or an opaque black-to-white gradient). `Close()`, Escape,
+the X, combat or a false `isValid()` discard the draft. `onClose(applied)` runs
+once; the consumer restores its saved rendering there. Close immediately when
+editor/profile ownership changes. The library owns no SavedVariables.
 
 ## Controls
 
@@ -621,7 +660,7 @@ own wheel behavior; the pane's click, motion and script handling is unchanged.
 | `preset` | `"inset"`: border clearance of 4px left, 6px right/top, 5px bottom. `"none"` starts with zero border clearance. Neither draws a border. |
 | `contentSpacing` | `"regular"`: 16px content margins and scrollbar gap. `"compact"`: 8px content margins and a 4px scrollbar gap for rows that already have internal padding. |
 | `borderInsets` | Partial `{ left, right, top, bottom }` overrides for another border. Unspecified edges retain the preset. |
-| `contentPadding` | Partial `{ left, top, bottom }` content margins, measured from the parent's edges, not added to the border clearance. A thicker border becomes the minimum safe margin. |
+| `contentPadding` | Partial `{ left, right, top, bottom }` margins. Left/top/bottom are measured from the parent's edges, with the border clearance as their minimum. Right defaults to zero and adds space between the content and the reserved scrollbar gap. |
 | `scrollbarGap` | Space between the content and the scrollbar column; overrides the spacing preset. |
 | `scrollbarWidth` | 17px, reserving the native arrows and hit area as well as the narrower track. |
 | `kind` | `"list"` creates `WowScrollBoxList`; `"canvas"` creates `WowScrollBox` for a caller-owned linear view and content frame. |
@@ -636,6 +675,10 @@ Areas expose:
 - `Init(view)`: connects the appropriate native view once, after configuring
   list rows or creating canvas children. Does not change the view's padding.
 - `GetScrollBox()` / `GetScrollBar()`: the native widgets.
+- `SetContentPadding(padding)`: changes a standalone area's margins using the
+  same copied, validated options. Preserves the scrollbar's position, native
+  widgets and view. The caller updates content measurements and reading position
+  if required; this method does not reset or replace the data provider.
 - `GetContentWidth()` / `GetViewportHeight()`: current available dimensions.
 - `GetContentInsets()`: left, right, top, bottom offsets from the parent. The
   right offset includes the scrollbar reservation, useful for header alignment.

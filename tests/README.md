@@ -1,5 +1,15 @@
 # In-Game Validation
 
+Gradient-picker tests cover copied drafts, stop separation, scaled cursor
+movement, numeric edits before selection, color cancellation, Apply rejection,
+stale owners, combat closure, pooled artwork and compatible loads. In game,
+drag stops against both neighbors and outside the track, move the picker and
+repeat at another UI scale. Check the angle preview, transparent colors,
+Apply/Reset/Cancel and reopening. Close or change the owning editor/profile
+with a pending edit; no preview should remain. Test with an older LMS embed
+loading first. Text padding checks must leave the scrollbar fixed on all four
+sides, including while scrolled through the middle of a long list.
+
 Texture-picker tests cover atlas/bundled-file proportions, category changes,
 pending path commits, draft transfer in both directions, reset/apply/cancel,
 stale owners, combat closure, lazy catalogue reuse, consumer-owned media paths,

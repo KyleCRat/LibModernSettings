@@ -39,4 +39,7 @@
     <Script file="TexturePicker\Catalogue.lua"/>
     <Script file="TexturePicker\Browser.lua"/>
     <Script file="TexturePicker\Picker.lua"/>
+    <Script file="GradientPicker\Model.lua"/>
+    <Script file="GradientPicker\Browser.lua"/>
+    <Script file="GradientPicker\Picker.lua"/>
 </Ui>
